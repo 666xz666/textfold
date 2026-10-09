@@ -47,6 +47,25 @@ def outline(doc, here):
     return "\n".join(rows)
 
 
+def tables_of(doc, chunk, limit=1500, most=3):
+    """The section's tables as text, a row a line (they are not units: a section's summary should still know them).
+    A section without one gets nothing, so its prompt, and its cached answer, stay as they were."""
+    from bs4 import BeautifulSoup
+    out = []
+    for b in doc["blocks"]:
+        html = b.get("html") or ""
+        table = (b["k"] == "fig" and b.get("kind") == "table") or (b["k"] == "raw" and "<table" in html and "ltx_equation" not in html)
+        if b.get("chunk") == chunk["id"] and table and "<table" in html:   # (not an equation's table)
+            soup = BeautifulSoup(html, "lxml")
+            for m in soup.find_all("math"):   # a formula once, as its TeX (not its MathML and its TeX again)
+                m.replace_with(f"${m['alttext']}$" if m.get("alttext") else m.get_text(" ", strip=True))
+            rows = [" | ".join(c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])) for tr in soup.find_all("tr")]
+            text = "\n".join(r for r in rows if r.strip(" |")).replace("\u200b", "")
+            if text:
+                out.append(text[:limit] + (" …" if len(text) > limit else ""))
+    return out[:most]
+
+
 def prompt_for(doc, chunk):
     U, A = doc["units"], doc["atoms"]
     abstract = " ".join(plain(U[u]["toks"], A) for u in doc["chunks"][0]["units"]) if doc["chunks"] and doc["chunks"][0]["id"] == "abstract" else ""
@@ -62,6 +81,8 @@ def prompt_for(doc, chunk):
         lines = [f"[U{n}] {kind}"] + [f"  {i}: {plain(u['toks'][s:e], A)}" for i, (s, e) in enumerate(u["sents"])]
         blocks.append("\n".join(lines))
     head = f"{chunk['num']} {chunk['title']}".strip()
+    tables = tables_of(doc, chunk)
+    context = ("\n\nTables in this section, for context (they are not units; a takeaway may use what they show):\n\n" + "\n\n".join(tables)) if tables else ""
     return f"""Paper: {doc['meta']['title']}
 
 Paper abstract, for context:
@@ -74,7 +95,7 @@ This section: {head}
 
 Its units in reading order. A unit is a paragraph, a list item, or a figure or table caption; each unit's sentences are numbered from 0.
 
-{chr(10).join(blocks)}
+{chr(10).join(blocks)}{context}
 
 A reader zooms out of this paper level by level: full text, then key sentences, then brief, then takeaway, then topic. Write the short levels for every unit, and one takeaway for the whole section.
 

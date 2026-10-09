@@ -51,6 +51,8 @@ def normalize(html, resolve_img=None, sizes=False):
     _sanitize(root, sizes)
     _math(soup, root)
     _footnotes(soup, root)
+    if sizes:   # the Markdown path (a README, a document, a web page, a converted PDF): its tables that are not data
+        _unfold_tables(soup, root)
     _loose_images(soup, root)
     _images(soup, root, resolve_img)
     _tables(soup, root)
@@ -305,6 +307,56 @@ def _images(soup, root, resolve_img):
             for x in list(cap.contents):
                 p.append(x.extract())
             cap.replace_with(_caption(soup, p))
+
+
+BLOCK = ["p", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "blockquote", "table", "div", "figure"]
+
+
+def _unfold_tables(soup, root):
+    """Tables that hold text, not data, read as text: a layout's table (a screenshot beside its paragraph, in one to
+    three rows) gives its cells' contents in reading order; a table of short names each with a sentence (a README's
+    features, a comparison in words) becomes a list, "name: sentence", so its sentences fold like any other."""
+    def words(el):
+        return len(el.get_text(" ", strip=True).split())
+
+    for t in root.find_all("table"):
+        if t.find_parent("table") is not None or t.parent is None:
+            continue   # a table inside another: the outer one decides
+        rows = [r for r in t.find_all("tr") if r.find_parent("table") is t]
+        cells = [r.find_all(["td", "th"], recursive=False) for r in rows]
+        if not rows or not any(cells):
+            continue
+        ncol = max(len(c) for c in cells)
+        if len(rows) <= 3 and ncol <= 3 and (t.find("img") is not None or any(words(c) >= 30 for r in cells for c in r)):
+            out = []
+            for c in (c for r in cells for c in r):
+                if not c.get_text(strip=True) and c.find("img") is None:
+                    continue
+                if c.find(BLOCK, recursive=False) is not None:
+                    out.extend(list(c.contents))
+                else:
+                    p = soup.new_tag("p")
+                    for x in list(c.contents):
+                        p.append(x.extract())
+                    out.append(p)
+            for x in out:
+                t.insert_before(x.extract() if isinstance(x, Tag) else NavigableString(str(x)))
+            t.decompose()
+            continue
+        head = rows[0].find("th") is not None or t.find("thead") is not None
+        body = [r for r in (cells[1:] if head else cells) if len(r) == 2]
+        if ncol == 2 and len(body) >= 2 and all(words(a) <= 6 for a, _ in body) and sum(words(b) for _, b in body) / len(body) >= 8:
+            ul = soup.new_tag("ul")
+            for a, b in body:
+                li, name = soup.new_tag("li"), soup.new_tag("strong")
+                for x in list(a.contents):
+                    name.append(x.extract())
+                li.append(name)
+                li.append(NavigableString(": "))
+                for x in list(b.contents):
+                    li.append(x.extract())
+                ul.append(li)
+            t.replace_with(ul)
 
 
 def _tables(soup, root):
