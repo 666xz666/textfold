@@ -226,6 +226,32 @@ since), under CC BY-SA 4.0.
 The model is still told it reads a paper, and the levels are made in English first: a document in another language
 is read with English levels over its own text. Making the levels in the document's language is the next step.
 
+## PDFs and web pages
+
+A PDF dropped on the landing is read in the browser first (pdf.js, `refsOf` in app.js): an arXiv id from its margin
+stamp, a DOI from its metadata or its first page (only the first: the second is often the references). `POST /api/pdfs`
+takes the file with what was found (`X-Refs`): a paper that resolves is generated from its online version, the file
+kept as its `source.pdf` once it is fetched; an arXiv paper without HTML falls back to the file. Anything else goes to
+the PDF engine (`engine.py`): MinerU 4, pinned, in `<app data>/engine` (a PaperFold install in its old place is used
+there), installed from the landing, the settings or `textfold engine install`. Its command line only (`mineru-kit
+parse --format zip`), never the `mineru` document library. Fast is MinerU's flash tier (seconds, no model; formulas as
+pictures); accurate is advanced (a vision model, several seconds a page), with `--disable-image-analysis`.
+`pdfdoc.py` turns `structured_content.json` into the document: running heads and page numbers out, the title from the
+page or the file, heading depth from numbering, a figure's panels grouped under the caption that names it, figures from
+after the references put before them, short front matter dropped. A file that waits for the engine is kept in
+`uploads/` with a note of its name and language beside it, and converted once the engine is installed.
+
+The server has two queues (`Jobs`): generation (model calls) and the engine (installs, conversions), each one job at a
+time; a conversion's `next` is the generation that follows it. A converted PDF opens as soon as it is stored.
+
+Any other link is a web page (`webpage.py`): fetched with TextFold's own user agent, its hidden elements removed (they
+are where text meant for a model is put), its article taken out by trafilatura as Markdown and stored through the
+Markdown path. Too little text (`web-notext`), a refusal (`web-blocked`), and a link to a PDF (fetched, then read as a
+dropped PDF) each have their own answer.
+
+`TEXTFOLD_NO_MODELS=1` makes a server find no model at all (no agent, no bridge, no provider): for test servers and CI,
+so that nothing calls a model by accident. Without a model a document is still fetched and parsed, and reads as written.
+
 ## No other server
 
 A page asks no other server for anything: no font service, no CDN. The fonts (Inter, Source Serif 4, as woff2 subsets)
@@ -258,6 +284,11 @@ textfold/jats.py     JATS XML → semantic HTML (PubMed Central, Europe PMC, bio
 textfold/epmc.py     papers from Europe PMC by PMC or PPR id, link or DOI (pmc…, ppr…)
 textfold/biorxiv.py  preprints from bioRxiv and medRxiv, from their own JATS (biorxiv-…, medrxiv-…)
 textfold/wiki.py     Wikipedia articles, any language edition (wiki-<lang>-<page id>)
+textfold/github.py   a GitHub repository's README (gh-<owner>--<repo>)
+textfold/webpage.py  any other web page: its article (trafilatura), hidden text removed first (web-<host>-<hash>)
+textfold/engine.py   the PDF engine: MinerU in a Python of its own under the app data folder; install, removal, conversion
+textfold/pdfdoc.py   a converted PDF as a document: MinerU's structured output into Markdown and HTML (pdf-<file hash>)
+textfold/pdf.py      a paper's original PDF for the side-by-side view (source.pdf)
 textfold/tokens.py   tokenizer, sentence splitter, LCS alignment
 textfold/ladder.py   one model call per section; validation; written words aligned to source words for the morph
 textfold/links.py    argument links, one call over the whole paper
@@ -271,6 +302,7 @@ textfold/models.py   one catalog of agent and API models; settings; resolving a 
 textfold/llm.py      the call (cached) for every kind of model; llm_openai.py: OpenAI-compatible endpoints
 textfold/build.py    reader pages: app mode (served) and static mode (one file)
 textfold/notes.py    the reader's notes (docs/notes-format.md) and questions answered by the model
+textfold/fold.py     the TextFold format (docs/format.md) and a document at one level as Markdown (textfold get)
 textfold/web/   reader.js (render + FLIP morph), app.js (sidebar, landing, settings, jobs), i18n.js, CSS, templates
 tools/zoombench.py  zoom smoothness as the screen sees it (GPU, 2x, Chrome's frame trace), on out/compare/<id>/ pages
 tools/readme_assets.py  the README's pictures, made from a real paper in the reader

@@ -34,6 +34,8 @@ Your agent writes more than you have time to read. A [Claude Code mod](https://c
 ## What's new
 
 - **October 9, 2026: PaperFold is now TextFold.** The same reader, named for everything it folds: papers, READMEs, Wikipedia articles and your agent's replies. Links to the old repository lead here, `python3 -m adr` still runs, and your settings move over by themselves.
+- **October 9, 2026: any web page, and PDFs.** Paste any web page's link and read its article at five levels, without the text the page hides from its readers. Drop a PDF: when it names a paper that can be read online, that version opens with your PDF beside it; any other PDF is converted on your computer by the PDF engine, which the landing offers to install.
+- **October 9, 2026: for agents.** `textfold get <link> --level topic` prints a document's map, and `--section` unfolds the part that matters. Each line a model wrote is marked as such and anchored to the sentences it rests on, in the [TextFold format](docs/format.md).
 - **October 8, 2026: any GitHub README.** Paste a repository's link and read its README at five levels, with its logo, badges and GIFs as on GitHub. A Markdown file keeps the HTML written in it, and the sidebar groups papers, Wikipedia articles, READMEs and documents.
 - **October 8, 2026: read beside the original.** **Original**, at the top of a paper, opens its PDF at the left (from arXiv, PubMed Central or bioRxiv) and shows each paragraph on its page as you read. A new paper opens as soon as it can be read, while its levels are written.
 - **October 7, 2026: your agent's replies fold too.** [TextFold](#in-claude-code) puts the five levels on every Claude Code reply. Press 5 for the answer in one sentence, 1 for every word.
@@ -87,9 +89,9 @@ python3 -m pip install -r requirements.txt
 python3 -m textfold serve
 ```
 
-The first time, [connect a model](#connect-a-model); then paste the link or DOI of a paper on arXiv, PubMed Central, bioRxiv or medRxiv, a Wikipedia article, or a GitHub repository (its README), or drag in a Markdown file, and pick a language.
+The first time, [connect a model](#connect-a-model); then paste the link of any web page, the link or DOI of a paper on arXiv, PubMed Central, bioRxiv or medRxiv, a Wikipedia article, or a GitHub repository (its README), or drag in a PDF or a Markdown file, and pick a language.
 
-You need Python 3.9 or newer (the one macOS ships with works). An arXiv paper needs its HTML version, as most papers since late 2023 have; a bioRxiv or medRxiv preprint, or a Wikipedia article in any language, is read from the site itself; any other paper needs its open full text in [Europe PMC](https://europepmc.org) (open-access articles in PubMed Central, and preprints such as Research Square's); a Markdown file needs nothing.
+You need Python 3.9 or newer (the one macOS ships with works). An arXiv paper needs its HTML version, as most papers since late 2023 have; a bioRxiv or medRxiv preprint, or a Wikipedia article in any language, is read from the site itself; any other paper needs its open full text in [Europe PMC](https://europepmc.org) (open-access articles in PubMed Central, and preprints such as Research Square's); a Markdown file needs nothing. A PDF that names a paper TextFold can read online opens in that version; any other PDF needs the PDF engine (MinerU, about 3.4 GB), which the landing offers to install, as does `textfold engine install`.
 
 ## Connect a model
 
@@ -122,6 +124,18 @@ python3 -m textfold export 2201.11903
 ```
 
 This writes one self-contained HTML file to `out/2201.11903/` that opens anywhere without a server. TextFold's license covers its code: a paper, and the levels and translations made from it, stay under the license its authors chose, shown under every title. Most arXiv papers allow reading but not redistribution, so share a page only when that license allows it, as Creative Commons licenses do.
+
+## For agents and scripts
+
+`textfold get` gives a document one level at a time, coarsest first, so an agent reads the map before it spends its context on the whole text:
+
+```bash
+textfold get https://arxiv.org/abs/2201.11903        # the map: every section's topic
+textfold get 2201.11903 --level key --section 3      # one section: its points, each with its reason
+textfold get report.pdf --json                       # the whole document, in the TextFold format
+```
+
+A document not folded yet is folded first, with the model you connected. Every line a model wrote is marked as such and anchored to the author's sentences it rests on: [docs/format.md](docs/format.md) describes the format, for any program that reads or writes folded text.
 
 ## In Claude Code
 

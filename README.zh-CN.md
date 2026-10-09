@@ -34,6 +34,8 @@ Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.
 ## 最新
 
 - **2026 年 10 月 9 日：PaperFold 改名为 TextFold。** 还是同一个阅读器，新名字涵盖它能折叠的一切：论文、README、维基百科条目，以及 agent 的回答。旧仓库的链接会自动跳到这里，`python3 -m adr` 照样能用，设置也会自动搬过来。
+- **2026 年 10 月 9 日：任意网页和 PDF。** 粘贴任何网页的链接，就能在五个层级上读它的正文，网页对读者隐藏的文字会被去掉。拖入一个 PDF：如果它是一篇网上能读到的论文，就打开网上的版本，你的 PDF 放在旁边对照；其他 PDF 由本机的 PDF 引擎转换，首页会提示安装。
+- **2026 年 10 月 9 日：给 agent 用。** `textfold get <链接> --level topic` 输出一份文档的地图，`--section` 再展开需要的那一节。模型写的每一行都标明是模型写的，并且指回它依据的原文句子，格式见 [TextFold 格式](docs/format.md)。
 - **2026 年 10 月 8 日：读任何 GitHub README。** 粘贴仓库链接，就能在五个层级上读它的 README，logo、徽章和动图都和 GitHub 上一样。Markdown 文件里写的 HTML 也会保留，侧栏按论文、维基百科、GitHub 和文档分组。
 - **2026 年 10 月 8 日：对照原文读。** 论文页顶部的 **原文** 会在左边打开它的 PDF（来自 arXiv、PubMed Central 或 bioRxiv），读到哪一段，就标出它在原页上的位置。新论文解析完就能打开，缩放层级在后台生成。
 - **2026 年 10 月 7 日：Agent 的回答也能折叠了。** [TextFold](#在-claude-code-里) 把五个层级放到 Claude Code 的每条回答上。按 5 看一句话的答案，按 1 看每一个字。
@@ -87,9 +89,9 @@ python3 -m pip install -r requirements.txt
 python3 -m textfold serve
 ```
 
-第一次使用先[连接一个模型](#连接模型)，然后粘贴 arXiv、PubMed Central、bioRxiv、medRxiv 上论文的链接或 DOI、维基百科条目，或者 GitHub 仓库（读它的 README），也可以拖入一个 Markdown 文件，再选择语言。
+第一次使用先[连接一个模型](#连接模型)，然后粘贴任何网页的链接、arXiv、PubMed Central、bioRxiv、medRxiv 上论文的链接或 DOI、维基百科条目，或者 GitHub 仓库（读它的 README），也可以拖入一个 PDF 或 Markdown 文件，再选择语言。
 
-需要 Python 3.9 或更新的版本（macOS 自带的就可以）。arXiv 论文要有 arXiv 生成的 HTML 版本，2023 年底以来的论文大多都有；bioRxiv 和 medRxiv 的预印本、任何语言的维基百科条目，都直接从网站读取；其他论文要在 [Europe PMC](https://europepmc.org) 有开放全文（PubMed Central 的开放获取文章，以及 Research Square 等平台的预印本）；Markdown 文件没有这个要求。
+需要 Python 3.9 或更新的版本（macOS 自带的就可以）。arXiv 论文要有 arXiv 生成的 HTML 版本，2023 年底以来的论文大多都有；bioRxiv 和 medRxiv 的预印本、任何语言的维基百科条目，都直接从网站读取；其他论文要在 [Europe PMC](https://europepmc.org) 有开放全文（PubMed Central 的开放获取文章，以及 Research Square 等平台的预印本）；Markdown 文件没有这个要求。PDF 如果是网上能读到的论文，就打开网上的版本；其他 PDF 需要 PDF 引擎（MinerU，约 3.4 GB），首页会提示安装，也可以运行 `textfold engine install`。
 
 ## 连接模型
 
@@ -122,6 +124,18 @@ python3 -m textfold export 2201.11903
 ```
 
 这会在 `out/2201.11903/` 里生成一个自包含的 HTML 文件，不需要服务器，在哪里都能打开。TextFold 的许可证只管代码：论文本身，以及由它生成的各层级和译文，仍然适用作者选择的许可证，标在每篇论文的标题下方。arXiv 上多数论文只允许阅读，不允许转载，只有论文的许可证允许时（比如 Creative Commons），才把页面分享出去。
+
+## 给 agent 和脚本用
+
+`textfold get` 一次给出一份文档的一个层级，从最概括的开始。agent 可以先读地图，再决定把上下文花在哪一节：
+
+```bash
+textfold get https://arxiv.org/abs/2201.11903        # 地图：每一节的主题
+textfold get 2201.11903 --level key --section 3      # 某一节：每个要点和它的理由
+textfold get report.pdf --json                       # 整份文档，TextFold 格式
+```
+
+还没折叠过的文档会先用你连接的模型折叠。模型写的每一行都标明是模型写的，并且指回它依据的作者原句：[docs/format.md](docs/format.md) 说明了这个格式，任何读写折叠文本的程序都可以用。
 
 ## 在 Claude Code 里
 

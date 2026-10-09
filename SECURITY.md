@@ -11,7 +11,8 @@ is published, with credit to you if you wish.
 TextFold runs on your own computer and reads text from places it does not control. It is built so that this text
 cannot act on your computer, and so that it cannot steer the model that folds it:
 
-- The local server listens on 127.0.0.1 only, and refuses requests sent by other sites (it checks a request's origin).
+- The local server listens on 127.0.0.1 only, and refuses any change asked for by another site (it checks the origin
+  of every request that writes).
 - Text from Europe PMC, bioRxiv, medRxiv, Wikipedia, GitHub READMEs, Markdown files, web pages and converted PDFs
   passes through an allowlist before the reader shows it: no script, no event handler, no `javascript:` link, no
   frame, no form, no embedded object.
