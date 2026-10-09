@@ -13,6 +13,7 @@ A translation whose English base has since been regenerated is reported as stale
 import json
 import os
 import re
+import sys
 import time
 from pathlib import Path
 
@@ -20,9 +21,22 @@ from . import ladder
 from .fetch import paper_id
 from .parse import parse
 
-ROOT = Path(__file__).resolve().parent.parent   # the code: textfold/, web/
-# the reader's papers and exports: the project folder when run from it, the app's data folder when packaged
-DATA = Path(os.environ.get("TEXTFOLD_DATA") or os.environ.get("PAPERFOLD_DATA") or ROOT)   # (its name before TextFold, still read)
+ROOT = Path(__file__).resolve().parent.parent   # the project folder, when run from a clone of it
+SOURCE = (ROOT / "pyproject.toml").exists()     # run from a clone (else installed with pip)
+
+
+def app_data():
+    """The system's place for an application's own data (the desktop app's too, so both read one library)."""
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "TextFold"
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "TextFold"
+    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "textfold"
+
+
+# the reader's papers and exports: the project folder when run from it, the system's data folder when installed with
+# pip, or the folder TEXTFOLD_DATA names (the desktop app's; PAPERFOLD_DATA, its name before TextFold, is still read)
+DATA = Path(os.environ.get("TEXTFOLD_DATA") or os.environ.get("PAPERFOLD_DATA") or (ROOT if SOURCE else app_data()))
 HOME = Path.home() / ".textfold"   # the reader's settings and keys, outside the project folder
 # where they were kept under earlier names, newest first: PaperFold, Dynamic Reader (read, never removed)
 OLD_HOMES = (Path.home() / ".paperfold", Path.home() / ".dynamic-reader")

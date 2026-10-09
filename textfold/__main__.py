@@ -14,6 +14,9 @@ from . import build, local, pipeline
 
 
 def main():
+    if sys.argv[1:2] == ["--version"]:
+        from . import __version__
+        return print(f"TextFold {__version__}")
     if len(sys.argv) > 1 and sys.argv[1] == "serve":
         ap = argparse.ArgumentParser(prog="textfold serve")
         ap.add_argument("--port", type=int, default=3017)

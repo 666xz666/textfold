@@ -22,6 +22,10 @@ python3 -m pip install -r requirements.txt   # beautifulsoup4, lxml, Pillow
 python3 -m textfold serve                    # http://localhost:3017  (ThoughtDAG keeps 3001)
 ```
 
+The same code is a Python package (`pyproject.toml`): `python3 -m pip wheel . --no-deps` builds it, with the reader's
+pages (`textfold/web/`) inside, and `pip install textfold` gives the `textfold` command. Run from a clone, papers are
+kept in the clone; installed, in the system's folder for app data (`store.app_data()`, shared with the desktop app).
+
 The landing takes a link or ID (arXiv, PubMed Central, Europe PMC, bioRxiv, medRxiv, a DOI, Wikipedia), or a Markdown
 file (the dashed box under the bar, or dropped anywhere on the page), and a language; a line under the bar names
 the sources it reads; the sidebar lists every paper generated so far. In a paper,
@@ -32,7 +36,7 @@ parts (figures, tables, theorems, references, equations). The interface speaks t
 or the one chosen in Settings (kept in the browser, `pf-ui-lang`). A question is answered in the language it is
 asked in, the interface's when that is unclear.
 
-Where things are kept: the code in the project (`textfold/`, `web/`); papers and exports in `papers/` and `out/` of the
+Where things are kept: the code in the project (`textfold/`, with the reader's pages in `textfold/web/`); papers and exports in `papers/` and `out/` of the
 project, or wherever `TEXTFOLD_DATA` points (`PAPERFOLD_DATA`, its earlier name, is read too); settings and keys in
 `~/.textfold/`.
 
@@ -225,7 +229,7 @@ is read with English levels over its own text. Making the levels in the document
 ## No other server
 
 A page asks no other server for anything: no font service, no CDN. The fonts (Inter, Source Serif 4, as woff2 subsets)
-and KaTeX live in `web/vendor/`. The app serves them from `/static/vendor/`; a gallery copies them into its `assets/`
+and KaTeX live in `textfold/web/vendor/`. The app serves them from `/static/vendor/`; a gallery copies them into its `assets/`
 beside the pages; a single exported file carries the Latin faces inside, and KaTeX too when the model wrote math that
 matches no formula of the paper. (Loading Google Fonts sends a visitor's IP address to Google, which a German court
 found unlawful without consent in 2022.)
@@ -267,7 +271,7 @@ textfold/models.py   one catalog of agent and API models; settings; resolving a 
 textfold/llm.py      the call (cached) for every kind of model; llm_openai.py: OpenAI-compatible endpoints
 textfold/build.py    reader pages: app mode (served) and static mode (one file)
 textfold/notes.py    the reader's notes (docs/notes-format.md) and questions answered by the model
-web/            reader.js (render + FLIP morph), app.js (sidebar, landing, settings, jobs), i18n.js, CSS, templates
+textfold/web/   reader.js (render + FLIP morph), app.js (sidebar, landing, settings, jobs), i18n.js, CSS, templates
 tools/zoombench.py  zoom smoothness as the screen sees it (GPU, 2x, Chrome's frame trace), on out/compare/<id>/ pages
 tools/readme_assets.py  the README's pictures, made from a real paper in the reader
 ```

@@ -20,7 +20,7 @@ Then open `http://localhost:3017` and connect a model (the README says how).
 ## Good places to start
 
 - **A paper that reads wrong.** Open an issue with its arXiv ID, the level and language, and the paragraph (a screenshot is fine). Most fixes go in `textfold/parse.py`, which turns arXiv's HTML into paragraphs, formulas and citations.
-- **A language.** Reading languages are listed in `textfold/langs.py`; the interface's words are in `web/i18n.js`, in twelve languages.
+- **A language.** Reading languages are listed in `textfold/langs.py`; the interface's words are in `textfold/web/i18n.js`, in twelve languages.
 - **A model provider.** Presets and model lists are in `textfold/providers.py` and `textfold/models.py`.
 
 ## Pull requests

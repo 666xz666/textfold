@@ -2,7 +2,7 @@
   app     served by the local server, with the sidebar, the language menu that can generate, settings
   static  one self-contained file (python -m textfold export): CSS, JS, data and images all inside
 
-A page asks no other server for anything. Its fonts (Inter, Source Serif 4) and KaTeX are kept in web/vendor: the app
+A page asks no other server for anything. Its fonts (Inter, Source Serif 4) and KaTeX are kept in textfold/web/vendor: the app
 serves them, a gallery keeps them beside its pages (assets), and a single file carries them inside.
 """
 import base64
@@ -11,13 +11,14 @@ import json
 import re
 import urllib.parse
 from html import escape
+from pathlib import Path
 
 from PIL import Image
 
 from . import store
 from .fetch import fetch_images
 
-WEB = store.ROOT / "web"
+WEB = Path(__file__).resolve().parent / "web"   # the reader's pages, styles, scripts and vendor files
 VENDOR = WEB / "vendor"
 APP_ASSETS = "/static/vendor/"
 

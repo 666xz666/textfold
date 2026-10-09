@@ -6,7 +6,9 @@ import urllib.request
 from html import unescape
 from pathlib import Path
 
-UA = {"User-Agent": "TextFold/0.9 (research prototype; github.com/chenxiachan/textfold)"}
+from . import __version__
+
+UA = {"User-Agent": f"TextFold/{__version__} (research prototype; github.com/chenxiachan/textfold)"}
 
 
 def paper_id(ref):

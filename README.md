@@ -74,13 +74,20 @@ A paper asks you to hold its whole argument in mind while you read it one paragr
 ## Get started
 
 ```bash
+python3 -m pip install textfold
+textfold serve
+```
+
+Open `http://localhost:3017`, which the last command prints. Your papers are kept in your system's folder for app data, the one the desktop app uses. To run it from the code instead (papers kept in the clone):
+
+```bash
 git clone https://github.com/chenxiachan/textfold.git
 cd textfold
 python3 -m pip install -r requirements.txt
 python3 -m textfold serve
 ```
 
-Open `http://localhost:3017`, which the last command prints. The first time, [connect a model](#connect-a-model); then paste the link or DOI of a paper on arXiv, PubMed Central, bioRxiv or medRxiv, a Wikipedia article, or a GitHub repository (its README), or drag in a Markdown file, and pick a language.
+The first time, [connect a model](#connect-a-model); then paste the link or DOI of a paper on arXiv, PubMed Central, bioRxiv or medRxiv, a Wikipedia article, or a GitHub repository (its README), or drag in a Markdown file, and pick a language.
 
 You need Python 3.9 or newer (the one macOS ships with works). An arXiv paper needs its HTML version, as most papers since late 2023 have; a bioRxiv or medRxiv preprint, or a Wikipedia article in any language, is read from the site itself; any other paper needs its open full text in [Europe PMC](https://europepmc.org) (open-access articles in PubMed Central, and preprints such as Research Square's); a Markdown file needs nothing.
 

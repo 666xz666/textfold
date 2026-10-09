@@ -16,3 +16,8 @@ launch/
 desktop/
 # the maintainer's working log, kept on this computer
 STATUS.md
+
+# a pip build from the clone
+build/
+dist/
+*.egg-info/
