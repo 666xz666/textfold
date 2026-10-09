@@ -22,6 +22,8 @@ Then open `http://localhost:3017` and connect a model (the README says how).
 - **A paper that reads wrong.** Open an issue with its arXiv ID, the level and language, and the paragraph (a screenshot is fine). Most fixes go in `textfold/parse.py`, which turns arXiv's HTML into paragraphs, formulas and citations.
 - **A language.** Reading languages are listed in `textfold/langs.py`; the interface's words are in `textfold/web/i18n.js`, in twelve languages.
 - **A model provider.** Presets and model lists are in `textfold/providers.py` and `textfold/models.py`.
+- **A web page or a PDF that reads wrong.** Web pages go through `textfold/webpage.py`, PDFs through `textfold/pdfdoc.py` (the PDF engine's output into paragraphs, headings, figures and formulas).
+- **The format.** Programs that read or write folded text follow [docs/format.md](docs/format.md); a reader of it in another language is welcome.
 
 ## Pull requests
 
@@ -29,4 +31,6 @@ Then open `http://localhost:3017` and connect a model (the README says how).
 - Match the code around it: plain names, and comments that say why rather than what.
 - Keep keys and papers out of commits. Settings and keys live in `~/.textfold/`; papers and their levels in `papers/`, which git ignores.
 
-By contributing, you agree that your work is released under the [Apache License 2.0](LICENSE).
+Sign off every commit (`git commit -s`). The line it adds, `Signed-off-by: Your Name <you@example.com>`, certifies the [Developer Certificate of Origin](https://developercertificate.org): that you wrote the change, or have the right to submit it, under this project's license. Your work is then released under the [Apache License 2.0](LICENSE).
+
+A security problem goes to [SECURITY.md](SECURITY.md), not to an issue.
