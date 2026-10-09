@@ -4,6 +4,8 @@
   python -m textfold <arxiv id or url> [--lang zh] ...   generate from the command line, then export
   python -m textfold notes.md [--lang zh] ...           the same for a Markdown file
   python -m textfold export <arxiv id>                   one self-contained HTML file in out/<id>/
+  textfold get <link or file> [--level topic] [--section 3] [--json]   a document at one level (for a person or an agent)
+  textfold engine status | install | remove              the PDF engine (MinerU, about 3.4 GB)
 """
 import argparse
 import sys
@@ -11,6 +13,66 @@ import time
 from pathlib import Path
 
 from . import build, local, pipeline
+
+
+def _say(*a):
+    print(*a, file=sys.stderr, flush=True)
+
+
+def get(a):
+    """A document at one level, on stdout: written first when it has no levels yet (a model is called), unless
+    --no-generate. A PDF goes through the PDF engine; a Markdown file is read as it is."""
+    from . import engine, fold, models, pdfdoc, store
+    f = Path(a.ref).expanduser()
+    if f.is_file() and f.suffix.lower() == ".pdf":
+        data = f.read_bytes()
+        pid = pdfdoc.pid_of(data)
+        if not (store.pdir(pid) / "meta.json").exists():
+            if not engine.where():
+                _say("This PDF needs the PDF engine: textfold engine install")
+                return 2
+            tier = models.load_settings().get("pdf_tier") or "fast"
+            out = store.DATA / "uploads" / f"{pid}-{tier}"
+            engine.convert(f, out, tier, progress=lambda s, d, t: _say(f"  converting {d}/{t}") if t else None, log=lambda line: None)
+            pdfdoc.store_pdf(pid, out, pdfdoc.read_output(out), f.name, tier)
+            (store.pdir(pid) / "source.pdf").write_bytes(data)
+    elif f.is_file():
+        pid = local.import_file(f)
+    else:
+        pid = store.resolve(a.ref)
+    try:
+        spec = None if a.no_generate else models.resolve(None)
+    except RuntimeError:
+        spec = None
+    try:
+        pipeline.generate(pid, a.lang, spec, progress=lambda s, d, t: _say(f"  {s} {d}/{t}") if t and s != "done" else None, log=lambda line: None)
+    except RuntimeError as e:   # fetched and parsed; its levels need a model: the local ones, said so
+        if "No model" not in str(e):
+            raise
+        _say("No model: the written levels are the author's first sentences (connect one with textfold serve, Settings).")
+    d = fold.document(pid, a.lang)
+    if a.json:
+        import json
+        print(json.dumps(d, ensure_ascii=False, indent=1))
+    else:
+        print(fold.markdown(d, a.level, a.section), end="")
+    return 0
+
+
+def engine_cmd(args):
+    from . import engine
+    what = args[0] if args else "status"
+    if what == "install":
+        engine.install(progress=lambda s, d, t: _say(f"  {s} ({d}/{t})"), log=_say)
+    elif what == "remove":
+        engine.uninstall()
+    elif what != "status":
+        _say("textfold engine status | install | remove")
+        return 2
+    st = engine.status()
+    print(f"PDF engine: {'installed' if st['installed'] else 'not installed'} (MinerU {st['version']})"
+          + (f", {st['bytes'] / 1e9:.1f} GB in {st['path']}" if st["installed"] else ""))
+    return 0
 
 
 def main():
@@ -23,6 +85,18 @@ def main():
         a = ap.parse_args(sys.argv[2:])
         from .server import serve
         return serve(a.port)
+    if len(sys.argv) > 1 and sys.argv[1] == "get":
+        from .fold import LEVELS
+        ap = argparse.ArgumentParser(prog="textfold get", description="A document at one level: the map first, then the parts that matter, deeper.")
+        ap.add_argument("ref", help="a link (any web page, arXiv, PubMed Central, bioRxiv, Wikipedia, GitHub), an arXiv id, a DOI, or a .md or .pdf file")
+        ap.add_argument("--level", default="topic", choices=LEVELS, help="topic (a map of the sections) ... full (every word); default topic")
+        ap.add_argument("--section", help="one section: its number (3.2), its id (S3), or its place in the list (1 is the first)")
+        ap.add_argument("--lang", default="en", help="the language to read it in (en, zh, de, ...); default en")
+        ap.add_argument("--json", action="store_true", help="the whole document in the TextFold format (docs/format.md)")
+        ap.add_argument("--no-generate", action="store_true", help="call no model: the levels already written, or the local ones")
+        return sys.exit(get(ap.parse_args(sys.argv[2:])))
+    if len(sys.argv) > 1 and sys.argv[1] == "engine":
+        return sys.exit(engine_cmd(sys.argv[2:]))
     if len(sys.argv) > 1 and sys.argv[1] == "export":
         print(build.export(sys.argv[2]))
         return
