@@ -45,10 +45,11 @@ OLD_HOMES = (Path.home() / ".paperfold", Path.home() / ".dynamic-reader")
 # a paper's id: an arXiv id; or, stored when it was first opened, a document from this computer (local.py:
 # md-<title words>-<hash>), a paper from Europe PMC (epmc.py: pmc<n>, ppr<n>) or a preprint from bioRxiv or medRxiv
 # (biorxiv.py: biorxiv-<DOI suffix>), a Wikipedia article (wiki.py: wiki-<language>-<page id>), a GitHub README
-# (github.py: gh-<owner>--<repository>) or a PDF read by the PDF engine (pdfdoc.py: pdf-<file hash>)
+# (github.py: gh-<owner>--<repository>), a PDF read by the PDF engine (pdfdoc.py: pdf-<file hash>) or any other web
+# page (webpage.py: web-<host>-<address hash>)
 ARXIV_ID = re.compile(r"\d{4}\.\d{4,5}")
 IMPORTED_ID = re.compile(r"md-[a-z0-9]+(?:-[a-z0-9]+)*|pmc\d{4,9}|ppr\d{4,9}|(?:biorxiv|medrxiv)-[0-9.]{3,40}|wiki-[a-z][a-z-]{1,15}-\d{1,10}"
-                         r"|gh-[a-z0-9-]{1,39}--[a-z0-9._-]{1,100}|pdf-[0-9a-f]{16}")
+                         r"|gh-[a-z0-9-]{1,39}--[a-z0-9._-]{1,100}|pdf-[0-9a-f]{16}|web-[a-z0-9-]{1,40}-[0-9a-f]{12}")
 
 
 def valid_id(pid):
@@ -64,7 +65,8 @@ def resolve(ref):
     link; a bioRxiv or medRxiv link or DOI (read from the server itself: its own text, its newest version); a PubMed
     Central or Europe PMC preprint id or link; any other DOI, looked up in Europe PMC (ValueError("no-fulltext") when
     it holds no open full text); a Wikipedia article's link (ValueError("no-article") when there is no such article);
-    a GitHub repository's link (its README; read when the paper is generated)."""
+    a GitHub repository's link (its README; read when the paper is generated); any other web page's link (its article,
+    read when it is generated)."""
     from . import biorxiv, epmc, github, wiki   # (they store through this module)
     ref = (ref or "").strip()
     if ref.startswith(("md-", "pdf-")):
@@ -90,6 +92,9 @@ def resolve(ref):
         return pid
     if doi:
         return epmc.by_doi(doi)
+    if re.match(r"https?://[^\s/]+\.[^\s/]+", ref, re.I):   # any other web page: its article
+        from . import webpage
+        return webpage.register(ref)
     return paper_id(ref)
 
 

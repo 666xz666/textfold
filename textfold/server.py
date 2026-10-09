@@ -36,12 +36,14 @@ import tempfile
 import threading
 import time
 import traceback
+import urllib.parse
+import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-from . import agents, bridges, build, engine, langs, llm, local, models, notes, pdf, pdfdoc, pipeline, providers, store
+from . import agents, bridges, build, engine, fetch, langs, llm, local, models, notes, pdf, pdfdoc, pipeline, providers, store
 
 STATIC = {"app.js": "text/javascript", "app.css": "text/css", "reader.js": "text/javascript",
           "reader.css": "text/css", "i18n.js": "text/javascript"}
@@ -194,10 +196,38 @@ class Jobs:
                 if job.get("attach") and str(e) == "no-html" and not stop.is_set():
                     self._fallback(job)   # an arXiv paper without its HTML version: its PDF, converted here
                     continue
+                if str(e) == "web-pdf" and not stop.is_set():
+                    try:
+                        self._pdf_link(job)   # a link to a PDF: the file, as if it had been dropped on the landing
+                        continue
+                    except Exception as e2:
+                        e = e2
                 self._end(job, e, stop)
                 continue
             job["finished"] = time.time()
             PAGES.pop(job["pid"], None)
+
+    def _pdf_link(self, job):
+        url = (store.pdir(job["pid"]) / "url.txt").read_text().strip()
+        with urllib.request.urlopen(urllib.request.Request(url, headers=fetch.UA), timeout=90) as r:
+            data = r.read(pdf.LIMIT + 1)
+        if data[:5] != b"%PDF-" or len(data) > pdf.LIMIT:
+            raise ValueError("not-pdf")
+        shutil.rmtree(store.pdir(job["pid"]), ignore_errors=True)   # (only its address was there)
+        pid = pdfdoc.pid_of(data)
+        name = Path(urllib.parse.urlparse(url).path).name or "document.pdf"
+        f = store.DATA / "uploads" / f"{pid}.pdf"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(data)
+        job["finished"] = time.time()
+        if (store.pdir(pid) / "meta.json").exists():   # read before
+            f.unlink()
+            job.update(status="moved", next=self.submit(pid, job["lang"], False)["id"])
+        elif engine.where():
+            job.update(status="moved", next=self.convert(pid, f, name, job["lang"])["id"])
+        else:
+            self.wait_for_engine(pid, f, name, job["lang"])
+            job.update(status="error", error="needs-engine", upload=pid)
 
     def _fallback(self, job):
         file = Path(job["attach"])

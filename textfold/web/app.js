@@ -62,8 +62,8 @@
         (j ? stopBtn(j, T) : `<button type="button" class="sb-del" data-del="${p.id}" title="${esc(T.del_paper)}" aria-label="${esc(T.del_paper)}">×</button>`) + '</div>';
     };
     // papers, Wikipedia articles, GitHub READMEs and documents of one's own, each under its name when there is more than one kind
-    const kindOf = (id) => (/^wiki-/.test(id) ? 'wiki' : /^gh-/.test(id) ? 'gh' : /^(md|pdf)-/.test(id) ? 'doc' : 'paper');
-    const groups = [['paper', T.papers], ['wiki', T.g_wiki], ['gh', 'GitHub'], ['doc', T.g_docs]]
+    const kindOf = (id) => (/^wiki-/.test(id) ? 'wiki' : /^gh-/.test(id) ? 'gh' : /^web-/.test(id) ? 'web' : /^(md|pdf)-/.test(id) ? 'doc' : 'paper');
+    const groups = [['paper', T.papers], ['wiki', T.g_wiki], ['gh', 'GitHub'], ['web', T.g_web], ['doc', T.g_docs]]
       .map(([k, name]) => [name, papers.filter((p) => kindOf(p.id) === k)]).filter(([, ps]) => ps.length);
     const listed_ = groups.length > 1
       ? groups.map(([name, ps]) => `<div class="sb-group">${esc(name)}</div>${ps.map(item).join('')}`).join('')
@@ -213,7 +213,8 @@
   const errText = (msg) => (msg === 'no-html' ? t().no_html : msg === 'bad-ref' ? t().bad_ref : msg === 'no-model' ? t().no_model
     : msg === 'not-markdown' || msg === 'empty' ? t().md_only : msg === 'no-fulltext' ? t().no_fulltext
     : msg === 'no-readme' ? t().no_readme : msg === 'github-limit' ? t().github_limit : msg === 'needs-engine' ? t().pdf_needs
-    : msg === 'busy' ? t().engine_busy : msg === 'not-pdf' ? t().not_pdf : msg === 'too-large' ? t().pdf_large : msg);
+    : msg === 'busy' ? t().engine_busy : msg === 'not-pdf' ? t().not_pdf : msg === 'too-large' ? t().pdf_large
+    : msg === 'web-notext' ? t().web_notext : msg === 'web-pdf' ? t().web_pdf : msg === 'web-blocked' ? t().web_blocked : msg);
 
   // ── on a reader page: generate a language, or regenerate the current one ──
   if (PAPER) {
@@ -461,7 +462,7 @@
       e.preventDefault();
       err.hidden = true;
       const ref = document.getElementById('ref').value.trim();
-      if (!/\d{4}\.\d{4,5}|PMC\d{4,}|PPR\d{4,}|10\.\d{4,9}\/\S|wikipedia\.org\/|github\.com\/[\w.-]+\/[\w.-]+/i.test(ref)) { fail(t().bad_ref); return; }   // arXiv, Europe PMC, a DOI, Wikipedia, a GitHub repository
+      if (!/\d{4}\.\d{4,5}|PMC\d{4,}|PPR\d{4,}|10\.\d{4,9}\/\S|^https?:\/\/[^\s/]+\.[^\s/]+/i.test(ref)) { fail(t().bad_ref); return; }   // an arXiv or Europe PMC id, a DOI, any web page's link
       if (!modelName) { fail(t().no_model); return; }   // connect a model first (the card below)
       start(ref);
     };

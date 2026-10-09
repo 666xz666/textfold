@@ -25,6 +25,7 @@ dependencies = [
     "markdown-it-py",
     "mdit-py-plugins",
     "latex2mathml",
+    "trafilatura",
 ]
 
 [project.optional-dependencies]

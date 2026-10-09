@@ -5,5 +5,7 @@ Pillow
 markdown-it-py
 mdit-py-plugins
 latex2mathml
+# any web page's article
+trafilatura
 # only for the Anthropic API (Claude Code, Codex, Pi and OpenAI-compatible providers need nothing more):
 # anthropic
