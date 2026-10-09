@@ -12,7 +12,7 @@ import time
 from . import langs, llm, store
 from .tokens import plain
 
-FORMAT, VERSION = "paperfold/notes", 1   # (files written before the name PaperFold say "dynamic-reader/notes")
+FORMAT, VERSION = "textfold/notes", 1   # (files written under earlier names say "paperfold/notes" or "dynamic-reader/notes")
 _LOCK = threading.Lock()   # the server answers on several threads; one writer at a time
 
 

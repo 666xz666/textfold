@@ -70,7 +70,7 @@
     const pend = (j) => `<div class="sb-row"><div class="sb-item pending"><span class="sb-t">${esc(j.title || j.pid)}</span>` +
       `<span class="sb-m"><span class="sb-id">${j.pid}</span></span>${progress(j, T)}</div>${stopBtn(j, T)}</div>`;
     const html = `
-      <div class="sb-head"><a class="sb-brand" href="/">${MARK}<span>PaperFold</span></a>
+      <div class="sb-head"><a class="sb-brand" href="/">${MARK}<span>TextFold</span></a>
         <button type="button" class="sb-toggle" aria-label="${esc(T.collapse)}" title="${esc(T.collapse)}">‹</button></div>
       <div class="sb-rail">
         <a class="rail-btn rail-home" href="/" title="${esc(T.home)}">${MARK}</a>

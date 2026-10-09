@@ -11,7 +11,7 @@ import os
 import shutil
 
 from . import agents, bridges, providers
-from .store import HOME, OLD_HOME
+from .store import HOME, OLD_HOMES
 
 SETTINGS = HOME / "settings.json"
 # How much the model may think, per task, in levels every caller maps onto its own (llm.py). Not a setting: a reader is
@@ -28,9 +28,10 @@ ANTHROPIC_PRESET = {"id": "anthropic", "name": "Anthropic", "base": "https://api
 
 def load_settings():
     s = {"model": None, "efforts": {}, "providers": [], "use_thoughtdag_env": False}
-    if not SETTINGS.exists() and (OLD_HOME / "settings.json").exists():   # from before the name PaperFold: copied, kept
+    old_home = next((h for h in OLD_HOMES if (h / "settings.json").exists()), None)
+    if not SETTINGS.exists() and old_home:   # from before the name TextFold: copied, kept
         SETTINGS.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(OLD_HOME / "settings.json", SETTINGS)
+        shutil.copy2(old_home / "settings.json", SETTINGS)
         os.chmod(SETTINGS, 0o600)
     if SETTINGS.exists():
         old = json.loads(SETTINGS.read_text())

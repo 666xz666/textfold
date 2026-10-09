@@ -1,4 +1,4 @@
-/* PaperFold: one paper, five zoom levels.
+/* TextFold: one paper, five zoom levels.
    Serif = the author's words (Full, Key). Sans = written summaries (Brief, Takeaway, Topic).
    Ink: at every level, the words that survive the next zoom-out are darker. */
 :root {
@@ -569,7 +569,7 @@ html.morphing .chatbtn { pointer-events: none; }
 .nl-del.sure { font: 600 11.5px var(--sans); color: #fff; background: var(--r-gap); white-space: nowrap; }
 .nl-x { flex: none; border-top: 1px solid var(--line-2); margin-top: 4px; padding-top: 4px; }
 /* the paper as it stands, printed (Export PDF of the paper, or ⌘P): the column alone, the margins under their
-   paragraphs, the argument links left out, a line naming the level on top and the PaperFold mark at the end */
+   paragraphs, the argument links left out, a line naming the level on top and the TextFold mark at the end */
 .print-head, .print-mark { display: none; }
 @media print {
   html.printing-paper, html.printing-paper body { background: #fff !important; padding: 0 !important; margin: 0 !important; }

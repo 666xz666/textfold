@@ -1,4 +1,4 @@
-"""The local server: python -m adr serve  ->  http://localhost:3017  (ThoughtDAG keeps 3001)
+"""The local server: python -m textfold serve  ->  http://localhost:3017  (ThoughtDAG keeps 3001)
 
   GET  /                      landing: paste a link, pick a language, the list of papers
   GET  /p/<id>?lang=xx        a paper in the reader
@@ -26,7 +26,7 @@
   POST /api/openrouter/start   {back}: the OpenRouter consent URL (OAuth PKCE); GET /oauth/openrouter is its return
 
 Loopback only, and POSTs from other origins are refused. Settings and keys live in
-~/.paperfold/settings.json (mode 600), never in the project folder, which may be synced or shared.
+~/.textfold/settings.json (mode 600), never in the project folder, which may be synced or shared.
 """
 import json
 import queue
@@ -201,12 +201,12 @@ def make_handler(jobs):
                     back = back if back.startswith("/") else "/"
                     to = f"{back}#or-minted" if key else f"{back}#or-failed={quote(err or '')}"
                     if desktop:   # this tab is the system browser's: the app, waiting for the key, takes it from here
-                        page = (f'<!doctype html><meta charset="utf-8"><title>PaperFold</title><body style="font-family:system-ui;'
+                        page = (f'<!doctype html><meta charset="utf-8"><title>TextFold</title><body style="font-family:system-ui;'
                                 f'display:grid;place-items:center;height:100vh;margin:0;background:#FAF9F7;color:#1f1d1a">'
                                 f'<div style="text-align:center;line-height:1.7"><h2>{"✓" if key else "✕"} OpenRouter</h2>'
-                                f'<p style="color:#6b6558">{"回到 PaperFold 即可，本页可以关闭。<br>Return to PaperFold; this tab can be closed." if key else (err or "")}</p></div>')
+                                f'<p style="color:#6b6558">{"回到 TextFold 即可，本页可以关闭。<br>Return to TextFold; this tab can be closed." if key else (err or "")}</p></div>')
                         return self.send(200, page, "text/html; charset=utf-8")
-                    page = (f'<!doctype html><meta charset="utf-8"><title>PaperFold</title><body style="font-family:system-ui;'
+                    page = (f'<!doctype html><meta charset="utf-8"><title>TextFold</title><body style="font-family:system-ui;'
                             f'display:grid;place-items:center;height:100vh;margin:0;background:#FAF9F7;color:#1f1d1a">'
                             f'<div style="text-align:center"><h2>{"✓ OpenRouter" if key else "OpenRouter ✕"}</h2></div>'
                             f'<script>location.replace({json.dumps(to)})</script>')
@@ -406,7 +406,7 @@ def serve(port=3017):
     # look for the agents on this computer while the server comes up
     threading.Thread(target=agents.scan, kwargs={"log": print}, daemon=True).start()
     httpd = ThreadingHTTPServer(("127.0.0.1", port), make_handler(jobs))
-    print(f"PaperFold on http://localhost:{port}")
+    print(f"TextFold on http://localhost:{port}")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

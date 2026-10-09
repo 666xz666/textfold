@@ -161,7 +161,7 @@ def _rpc(args, requests, timeout=30, cwd=None):
 def _codex_models(path):
     got = _rpc([path, "app-server"], [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize",
-         "params": {"clientInfo": {"name": "paperfold", "title": "PaperFold", "version": "0.4"}, "capabilities": None}},
+         "params": {"clientInfo": {"name": "textfold", "title": "TextFold", "version": "0.4"}, "capabilities": None}},
         {"jsonrpc": "2.0", "method": "initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "model/list", "params": {}}])
     rows = (got.get(2) or {}).get("result", {}).get("data", [])

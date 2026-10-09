@@ -1,6 +1,6 @@
-# Contributing to PaperFold
+# Contributing to TextFold
 
-Thank you for helping. PaperFold is small on purpose: a Python server with no framework, and a reader in plain JavaScript. How it works, and where everything lives, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Thank you for helping. TextFold is small on purpose: a Python server with no framework, and a reader in plain JavaScript. How it works, and where everything lives, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## One rule above the others
 
@@ -9,24 +9,24 @@ No change may make the zoom less smooth. If you touch the reader, measure before
 ## Set up
 
 ```bash
-git clone https://github.com/chenxiachan/paperfold.git
-cd paperfold
+git clone https://github.com/chenxiachan/textfold.git
+cd textfold
 python3 -m pip install -r requirements.txt
-python3 -m adr serve
+python3 -m textfold serve
 ```
 
 Then open `http://localhost:3017` and connect a model (the README says how).
 
 ## Good places to start
 
-- **A paper that reads wrong.** Open an issue with its arXiv ID, the level and language, and the paragraph (a screenshot is fine). Most fixes go in `adr/parse.py`, which turns arXiv's HTML into paragraphs, formulas and citations.
-- **A language.** Reading languages are listed in `adr/langs.py`; the interface's words are in `web/i18n.js`, in twelve languages.
-- **A model provider.** Presets and model lists are in `adr/providers.py` and `adr/models.py`.
+- **A paper that reads wrong.** Open an issue with its arXiv ID, the level and language, and the paragraph (a screenshot is fine). Most fixes go in `textfold/parse.py`, which turns arXiv's HTML into paragraphs, formulas and citations.
+- **A language.** Reading languages are listed in `textfold/langs.py`; the interface's words are in `web/i18n.js`, in twelve languages.
+- **A model provider.** Presets and model lists are in `textfold/providers.py` and `textfold/models.py`.
 
 ## Pull requests
 
 - One change per pull request: what it changes, why, and how you checked it.
 - Match the code around it: plain names, and comments that say why rather than what.
-- Keep keys and papers out of commits. Settings and keys live in `~/.paperfold/`; papers and their levels in `papers/`, which git ignores.
+- Keep keys and papers out of commits. Settings and keys live in `~/.textfold/`; papers and their levels in `papers/`, which git ignores.
 
 By contributing, you agree that your work is released under the [Apache License 2.0](LICENSE).

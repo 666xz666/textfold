@@ -63,7 +63,7 @@ def call(prompt, schema, spec, system, timeout):
     }
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {spec.get('api_key') or 'none'}"}
     if "openrouter.ai" in base:
-        headers["X-Title"] = "PaperFold"
+        headers["X-Title"] = "TextFold"
     ways = reasoning(base, level)
     key = (base, spec["model"], level)
     shapes = [(r, jm) for r in ways for jm in (True, False)]   # each reasoning shape with JSON mode, then without

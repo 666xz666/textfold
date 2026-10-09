@@ -1,10 +1,12 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" width="72" alt="PaperFold">
+<img src="docs/assets/logo.svg" width="72" alt="TextFold">
 
-# PaperFold
+# TextFold
 
 **缩放任何文字，读得更明白**
+
+<sub>原名 PaperFold</sub>
 
 <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-6B5CE7?style=flat-square">
 <img alt="12 种语言" src="https://img.shields.io/badge/languages-12-6B5CE7?style=flat-square">
@@ -31,6 +33,7 @@ Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.
 
 ## 最新
 
+- **2026 年 10 月 9 日：PaperFold 改名为 TextFold。** 还是同一个阅读器，新名字涵盖它能折叠的一切：论文、README、维基百科条目，以及 agent 的回答。旧仓库的链接会自动跳到这里，`python3 -m adr` 照样能用，设置也会自动搬过来。
 - **2026 年 10 月 8 日：读任何 GitHub README。** 粘贴仓库链接，就能在五个层级上读它的 README，logo、徽章和动图都和 GitHub 上一样。Markdown 文件里写的 HTML 也会保留，侧栏按论文、维基百科、GitHub 和文档分组。
 - **2026 年 10 月 8 日：对照原文读。** 论文页顶部的 **原文** 会在左边打开它的 PDF（来自 arXiv、PubMed Central 或 bioRxiv），读到哪一段，就标出它在原页上的位置。新论文解析完就能打开，缩放层级在后台生成。
 - **2026 年 10 月 7 日：Agent 的回答也能折叠了。** [TextFold](#在-claude-code-里) 把五个层级放到 Claude Code 的每条回答上。按 5 看一句话的答案，按 1 看每一个字。
@@ -38,7 +41,7 @@ Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.
 
 ## 读论文，脑子里少装一点
 
-读论文时，你得一段一段地往下读，同时在脑子里撑住整篇的论证。PaperFold 替你撑住它：折起来，看清各节怎样一步步推进；在关心的地方展开；你正在读的那句话始终留在屏幕上。
+读论文时，你得一段一段地往下读，同时在脑子里撑住整篇的论证。TextFold 替你撑住它：折起来，看清各节怎样一步步推进；在关心的地方展开；你正在读的那句话始终留在屏幕上。
 
 | | 层级 | 每一段变成 | 谁的话 |
 |:-:|---|---|---|
@@ -71,10 +74,10 @@ Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.
 ## 开始使用
 
 ```bash
-git clone https://github.com/chenxiachan/paperfold.git
-cd paperfold
+git clone https://github.com/chenxiachan/textfold.git
+cd textfold
 python3 -m pip install -r requirements.txt
-python3 -m adr serve
+python3 -m textfold serve
 ```
 
 在浏览器里打开 `http://localhost:3017`（最后一条命令会打印这个地址）。第一次使用先[连接一个模型](#连接模型)，然后粘贴 arXiv、PubMed Central、bioRxiv、medRxiv 上论文的链接或 DOI、维基百科条目，或者 GitHub 仓库（读它的 README），也可以拖入一个 Markdown 文件，再选择语言。
@@ -83,11 +86,11 @@ python3 -m adr serve
 
 ## 连接模型
 
-PaperFold 用你已有的模型，不需要注册账号。启动时它会自己去找；一个都没找到时，首页会给出接入的方式。
+TextFold 用你已有的模型，不需要注册账号。启动时它会自己去找；一个都没找到时，首页会给出接入的方式。
 
 | 你有 | 怎么做 |
 |---|---|
-| Claude Code、Codex 或 Pi | 什么都不用做，PaperFold 会自动找到并使用。 |
+| Claude Code、Codex 或 Pi | 什么都不用做，TextFold 会自动找到并使用。 |
 | ChatGPT 订阅 | 点 **使用我的 ChatGPT 订阅**。电脑上会启动一个小的本地桥，用你的账号登录（需要 Node.js）。 |
 | 什么都还没有 | 点 **OpenRouter 一键授权**。授权一次，免费模型马上可用。 |
 | 一个 API key | **设置 › 添加供应商**：Anthropic、OpenAI、DeepSeek、通义千问、智谱 GLM、Kimi、MiniMax、Google、Ollama，或任何 OpenAI 兼容接口。 |
@@ -108,10 +111,10 @@ PaperFold 用你已有的模型，不需要注册账号。启动时它会自己�
 ## 分享一篇论文
 
 ```bash
-python3 -m adr export 2201.11903
+python3 -m textfold export 2201.11903
 ```
 
-这会在 `out/2201.11903/` 里生成一个自包含的 HTML 文件，不需要服务器，在哪里都能打开。PaperFold 的许可证只管代码：论文本身，以及由它生成的各层级和译文，仍然适用作者选择的许可证，标在每篇论文的标题下方。arXiv 上多数论文只允许阅读，不允许转载，只有论文的许可证允许时（比如 Creative Commons），才把页面分享出去。
+这会在 `out/2201.11903/` 里生成一个自包含的 HTML 文件，不需要服务器，在哪里都能打开。TextFold 的许可证只管代码：论文本身，以及由它生成的各层级和译文，仍然适用作者选择的许可证，标在每篇论文的标题下方。arXiv 上多数论文只允许阅读，不允许转载，只有论文的许可证允许时（比如 Creative Commons），才把页面分享出去。
 
 ## 在 Claude Code 里
 
@@ -125,8 +128,8 @@ TextFold 把五个层级放到 Claude Code 的每条回答上。按 5 看一句�
 需要 Claude Code 2.1.287 或更新的版本，在终端里或桌面应用的 Code 标签页里都能用。
 
 ```bash
-claude plugin marketplace add chenxiachan/paperfold
-claude plugin install textfold@paperfold
+claude plugin marketplace add chenxiachan/textfold
+claude plugin install textfold@textfold
 ```
 
 | 键 | 层级 | 你看到的 |
@@ -151,7 +154,7 @@ claude plugin install textfold@paperfold
 
 <div align="center">
 
-**如果 PaperFold 让读论文轻松了一些，点个 ⭐ star，让更多人看到它。**
+**如果 TextFold 让读论文轻松了一些，点个 ⭐ star，让更多人看到它。**
 
 </div>
 
@@ -159,6 +162,6 @@ claude plugin install textfold@paperfold
 
 <div align="center">
 
-[Apache 2.0](./LICENSE) © 2026 Xia Chen · [开发文档](docs/DEVELOPMENT.md) · [参与贡献](CONTRIBUTING.md) · [反馈](https://github.com/chenxiachan/paperfold/issues)
+[Apache 2.0](./LICENSE) © 2026 Xia Chen · [开发文档](docs/DEVELOPMENT.md) · [参与贡献](CONTRIBUTING.md) · [反馈](https://github.com/chenxiachan/textfold/issues)
 
 </div>

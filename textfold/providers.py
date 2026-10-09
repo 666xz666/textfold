@@ -5,7 +5,7 @@ Two sources, as in ThoughtDAG:
   ui    providers added in the settings: an OpenAI-compatible base URL and key; its /models is probed
         and the reader picks which models to offer
 One difference: ThoughtDAG keeps UI keys in the browser and sends them with each request; here generation
-runs in the background on the server, so they are kept in ~/.paperfold/settings.json (mode 600).
+runs in the background on the server, so they are kept in ~/.textfold/settings.json (mode 600).
 Every provider except Anthropic is spoken to through the OpenAI-compatible protocol (llm_openai.py).
 """
 import json
@@ -15,10 +15,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .store import HOME, OLD_HOME, ROOT
+from .store import HOME, OLD_HOMES, ROOT
 
 THOUGHTDAG_ENV = ROOT.parent / "thoughtdag-main" / ".env"
-ENV_FILES = [ROOT / ".env", HOME / ".env", OLD_HOME / ".env"]
+ENV_FILES = [ROOT / ".env", HOME / ".env"] + [h / ".env" for h in OLD_HOMES]
 
 # ThoughtDAG server.mjs:70-179. Anthropic's defaults are the current models (ThoughtDAG still lists sonnet-5).
 ENV_PROVIDERS = [

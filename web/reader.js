@@ -1,4 +1,4 @@
-// PaperFold: the paper at five zoom levels, morphing word by word.
+// TextFold: the paper at five zoom levels, morphing word by word.
 // Level 4 Full · 3 Brief (the author's key sentences) · 2 Key (written: takeaway and reason) · 1 Takeaway · 0 Topic.
 // (Until v0.9 the reader called 3 "Key" and 2 "Brief"; the code's comments still say so.) Every visible piece
 // (word, formula, dot, heading, figure) is an element with a data-id that
@@ -18,7 +18,7 @@
   const BAR = [4, 3, 2, 1, 0];
   const ROLES = ['claim', 'gap', 'method', 'setup', 'result', 'analysis', 'limitation', 'context'];
   const DUR = 560;
-  const BRAND = 'PaperFold', REPO = 'https://github.com/chenxiachan/paperfold';
+  const BRAND = 'TextFold', REPO = 'https://github.com/chenxiachan/textfold';
   const LOGO = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="2.4" rx="1.2" fill="#6B5CE7"/>' +
     '<rect x="2" y="8.8" width="11" height="2.4" rx="1.2" fill="#6B5CE7" fill-opacity=".4"/><rect x="2" y="14.6" width="5" height="2.4" rx="1.2" fill="#E08A3C"/></svg>';
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2348,7 +2348,7 @@
     .sort((x, y) => (placeOf(x.anchor) - placeOf(y.anchor)) || (((x.anchor.tokens || [0])[0]) - ((y.anchor.tokens || [0])[0])));
   function notesJson() {
     const m = D.meta;
-    return { format: 'paperfold/notes', version: 1, made_by: `${BRAND} · ${REPO}`, paper: { id: m.id, version: m.version, title: m.title, url: m.abs_url, ...(m.snapshot ? { snapshot: m.snapshot } : {}) }, notes: inOrder() };
+    return { format: 'textfold/notes', version: 1, made_by: `${BRAND} · ${REPO}`, paper: { id: m.id, version: m.version, title: m.title, url: m.abs_url, ...(m.snapshot ? { snapshot: m.snapshot } : {}) }, notes: inOrder() };
   }
   // Markdown for Obsidian: a note per paper; each highlight a quote with a block id (^n-…) other notes can link to,
   // each question a callout; every one links back to its place in the reader
@@ -2357,7 +2357,7 @@
     const out = ['---', `title: ${q(m.title)}`, `authors: ${JSON.stringify(m.authors || [])}`,
       m.abs_url ? `arxiv: ${q(m.id + (m.version || ''))}` : `source: ${q(sourceName(m))}`,
       ...(m.abs_url ? [`url: ${m.abs_url}`] : []), ...(m.snapshot ? [`snapshot: ${m.snapshot}`] : []), `license: ${m.license || ''}`, ...(D.app ? [`reader: ${location.origin}/p/${m.id}`] : []),
-      `exported: ${new Date().toISOString().slice(0, 10)}`, 'tags: [paper]', 'format: paperfold/notes@1', '---', '',
+      `exported: ${new Date().toISOString().slice(0, 10)}`, 'tags: [paper]', 'format: textfold/notes@1', '---', '',
       `# ${m.title}`, '', [(m.authors || []).map(flipName).join(', '), m.abs_url ? `[${sourceName(m)}](${m.abs_url})` : sourceName(m)].filter(Boolean).join(' · '), ''];
     let sec = null;
     const quote = (s) => s.split('\n').map((l) => `> ${l}`);
@@ -2377,7 +2377,7 @@
     return out.join('\n');
   }
   // PDF of the paper as it stands: the level being read (with the paragraphs opened in place), the highlights, and
-  // the notes and conversations under their paragraphs; a line naming the level on top, the PaperFold mark at the
+  // the notes and conversations under their paragraphs; a line naming the level on top, the TextFold mark at the
   // end. ⌘P prints the same. Every paragraph is drawn at this level first (far ones are otherwise drawn later).
   let unprint = null;
   function preparePaperPrint() {

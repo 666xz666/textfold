@@ -20,11 +20,12 @@ from . import ladder
 from .fetch import paper_id
 from .parse import parse
 
-ROOT = Path(__file__).resolve().parent.parent   # the code: adr/, web/
+ROOT = Path(__file__).resolve().parent.parent   # the code: textfold/, web/
 # the reader's papers and exports: the project folder when run from it, the app's data folder when packaged
-DATA = Path(os.environ.get("PAPERFOLD_DATA") or ROOT)
-HOME = Path.home() / ".paperfold"            # the reader's settings and keys, outside the project folder
-OLD_HOME = Path.home() / ".dynamic-reader"   # where they were kept before the name PaperFold (read, never removed)
+DATA = Path(os.environ.get("TEXTFOLD_DATA") or os.environ.get("PAPERFOLD_DATA") or ROOT)   # (its name before TextFold, still read)
+HOME = Path.home() / ".textfold"   # the reader's settings and keys, outside the project folder
+# where they were kept under earlier names, newest first: PaperFold, Dynamic Reader (read, never removed)
+OLD_HOMES = (Path.home() / ".paperfold", Path.home() / ".dynamic-reader")
 
 
 # a paper's id: an arXiv id; or, stored when it was first opened, a document from this computer (local.py:

@@ -1,4 +1,4 @@
-"""A static gallery of papers to read in PaperFold, for a free host (GitHub Pages, Cloudflare Pages).
+"""A static gallery of papers to read in TextFold, for a free host (GitHub Pages, Cloudflare Pages).
 
     python3 tools/gallery.py --make pi/deepseek/deepseek-v4-flash    generates what the list still lacks, then builds
     python3 tools/gallery.py                                         builds out/gallery/site: index.html, <id>/index.html
@@ -26,13 +26,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from adr import build, ladder, langs, store, translate  # noqa: E402
-from adr.tokens import plain  # noqa: E402
+from textfold import build, ladder, langs, store, translate  # noqa: E402
+from textfold.tokens import plain  # noqa: E402
 
 LIST = Path(__file__).with_suffix(".json")
 FIXES = ROOT / "out" / "gallery" / "fixes"   # <id>.json: proofreading's corrections; kept with the gallery, as they hold papers' text
 OPEN = ("/licenses/by/", "/licenses/by-sa/", "/licenses/by-nc/", "/licenses/by-nc-sa/", "/publicdomain/zero/")
-REPO = "https://github.com/chenxiachan/paperfold"
+REPO = "https://github.com/chenxiachan/textfold"
 ISSUES = "https://github.com/chenxiachan/paperfold-gallery/issues"
 AUTHOR = "https://chenxiachan.github.io/"
 
@@ -63,16 +63,16 @@ def missing(pid, want):
 
 
 def make(entries, want, model, at_once):
-    """The command line's generation (python -m adr), one process per paper, with the gallery's papers folder."""
+    """The command line's generation (python -m textfold), one process per paper, with the gallery's papers folder."""
     logs = store.DATA / "logs"
     logs.mkdir(parents=True, exist_ok=True)
-    env = {**os.environ, "PAPERFOLD_DATA": str(store.DATA), "PYTHONUNBUFFERED": "1"}
+    env = {**os.environ, "TEXTFOLD_DATA": str(store.DATA), "PYTHONUNBUFFERED": "1"}
 
     def one(pid):
         todo = missing(pid, want)
         if not todo:
             return pid, "ready"
-        cmd = [sys.executable, "-m", "adr", pid, "--model", model] + [x for l in todo if l != "en" for x in ("--lang", l)]
+        cmd = [sys.executable, "-m", "textfold", pid, "--model", model] + [x for l in todo if l != "en" for x in ("--lang", l)]
         with open(logs / f"{pid}.log", "a") as log:
             r = subprocess.run(cmd, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
         return pid, ("made " + " ".join(todo)) if r.returncode == 0 else f"failed ({logs / f'{pid}.log'})"
@@ -228,23 +228,23 @@ def main():
 UI = {
     "en": {"name": "EN", "lede": "Landmark papers from {n} fields{extra}, ready to fold and unfold. Each one opens as a one-screen map of its sections. Pinch, or press 1 to 5, to go from the map down to every word.",
            "extra": ", a Wikipedia article and a GitHub README",
-           "own": "Unfold any paper, article or README yourself with PaperFold", "consent": "shared with the author's consent",
+           "own": "Unfold any paper, article or README yourself with TextFold", "consent": "shared with the author's consent",
            "open": "Open the map", "orig": "Original title: ",
-           "foot": "Papers belong to their authors and keep their licenses, named under each title. PaperFold is not affiliated with the authors; the levels, links and translations were made by AI.",
+           "foot": "Papers belong to their authors and keep their licenses, named under each title. TextFold is not affiliated with the authors; the levels, links and translations were made by AI.",
            "takedown": "An author who would like a paper taken down: {issue}.", "issue": "open an issue",
            "made": "Made by {me} with {pf}."},
     "zh": {"name": "中文", "lede": "{n} 个领域的标志性论文{extra}，可以随手折叠、展开。每篇先以一屏的章节地图打开；双指缩放，或按 1 到 5，就能从地图一路展开到每一个词。",
            "extra": "，外加一篇维基百科条目和一份 GitHub README",
-           "own": "用 PaperFold 展开任何一篇论文、文章或 README", "consent": "经作者同意分享",
+           "own": "用 TextFold 展开任何一篇论文、文章或 README", "consent": "经作者同意分享",
            "open": "打开地图", "orig": "原标题：",
-           "foot": "论文属于原作者，沿用作者的许可协议，标在每篇标题下方。PaperFold 与作者没有隶属关系；各层级、链接和译文由 AI 生成。",
+           "foot": "论文属于原作者，沿用作者的许可协议，标在每篇标题下方。TextFold 与作者没有隶属关系；各层级、链接和译文由 AI 生成。",
            "takedown": "作者如希望撤下论文，请{issue}。", "issue": "提交 issue",
            "made": "由 {me} 用 {pf} 制作。"},
     "de": {"name": "DE", "lede": "Wegweisende Arbeiten aus {n} Fachgebieten{extra} zum Auf- und Zufalten. Jede öffnet als Karte ihrer Abschnitte auf einem Bildschirm. Mit zwei Fingern zoomen oder 1 bis 5 drücken, und es geht von der Karte bis zu jedem Wort.",
            "extra": ", dazu ein Wikipedia-Artikel und ein GitHub-README,",
-           "own": "Jede Arbeit, jeden Artikel und jedes README selbst mit PaperFold auffalten", "consent": "mit Zustimmung des Autors geteilt",
+           "own": "Jede Arbeit, jeden Artikel und jedes README selbst mit TextFold auffalten", "consent": "mit Zustimmung des Autors geteilt",
            "open": "Karte öffnen", "orig": "Originaltitel: ",
-           "foot": "Die Arbeiten gehören ihren Autorinnen und Autoren und behalten deren Lizenz, genannt unter jedem Titel. PaperFold ist mit ihnen nicht verbunden; Ebenen, Verweise und Übersetzungen hat KI erstellt.",
+           "foot": "Die Arbeiten gehören ihren Autorinnen und Autoren und behalten deren Lizenz, genannt unter jedem Titel. TextFold ist mit ihnen nicht verbunden; Ebenen, Verweise und Übersetzungen hat KI erstellt.",
            "takedown": "Autorinnen und Autoren, die eine Arbeit entfernen lassen möchten: {issue}.", "issue": "Issue eröffnen",
            "made": "Erstellt von {me} mit {pf}."},
 }
@@ -301,8 +301,8 @@ def index(cards, want):
 <html lang="en" data-lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PaperFold Gallery</title>
-<meta name="description" content="Landmark papers from {n} fields in PaperFold: fold any paper from every word to a one-screen map, in English, Chinese and German.">
+<title>TextFold Gallery</title>
+<meta name="description" content="Landmark papers from {n} fields in TextFold: fold any paper from every word to a one-screen map, in English, Chinese and German.">
 <style>
 :root {{ --bg: #FAF9F7; --card: #ffffff; --ink: #1f1d1a; --muted: #6b6558; --line: #e6e1d8; --accent: #6B5CE7; --soft: #efedfd; --warm: #E08A3C; }}
 @media (prefers-color-scheme: dark) {{ :root {{ --bg: #17161a; --card: #1f1e23; --ink: #ece9f1; --muted: #a29fae; --line: #34323a; --accent: #a99ffb; --soft: #2a2740; --warm: #e8a35f; color-scheme: dark; }} }}
@@ -336,7 +336,7 @@ footer a {{ color: var(--accent); }}
 {show}
 </style>
 <main>
-  <header><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="2.4" rx="1.2" fill="#6B5CE7"/><rect x="2" y="8.8" width="11" height="2.4" rx="1.2" fill="#6B5CE7" fill-opacity=".4"/><rect x="2" y="14.6" width="5" height="2.4" rx="1.2" fill="#E08A3C"/></svg><h1>PaperFold</h1><nav class="langs">{tabs}</nav></header>
+  <header><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="2.4" rx="1.2" fill="#6B5CE7"/><rect x="2" y="8.8" width="11" height="2.4" rx="1.2" fill="#6B5CE7" fill-opacity=".4"/><rect x="2" y="14.6" width="5" height="2.4" rx="1.2" fill="#E08A3C"/></svg><h1>TextFold</h1><nav class="langs">{tabs}</nav></header>
   <p class="lede">{each(lambda l: UI[l]["lede"].format(n=n, extra=extra(l)))}</p>
   <a class="own" href="{REPO}">{each(lambda l: UI[l]["own"])} →</a>
   <div class="grid">
@@ -345,7 +345,7 @@ footer a {{ color: var(--accent); }}
   <footer>
     <p>{each(lambda l: UI[l]["foot"])}</p>
     <p>{linked("takedown", issue=lambda l: f'<a href="{ISSUES}">{e(UI[l]["issue"])}</a>')}</p>
-    <p>{linked("made", me=lambda l: f'<a href="{AUTHOR}">Xia Chen</a>', pf=lambda l: f'<a href="{REPO}">PaperFold</a>')}</p>
+    <p>{linked("made", me=lambda l: f'<a href="{AUTHOR}">Xia Chen</a>', pf=lambda l: f'<a href="{REPO}">TextFold</a>')}</p>
   </footer>
 </main>
 <script>

@@ -1,6 +1,6 @@
 """Reader pages. The same reader in two modes:
   app     served by the local server, with the sidebar, the language menu that can generate, settings
-  static  one self-contained file (python -m adr export): CSS, JS, data and images all inside
+  static  one self-contained file (python -m textfold export): CSS, JS, data and images all inside
 
 A page asks no other server for anything. Its fonts (Inter, Source Serif 4) and KaTeX are kept in web/vendor: the app
 serves them, a gallery keeps them beside its pages (assets), and a single file carries them inside.

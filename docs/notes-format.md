@@ -1,17 +1,17 @@
-# Notes format (`paperfold/notes`, version 1)
+# Notes format (`textfold/notes`, version 1)
 
 A reader's highlights, notes and questions on one paper. One file per paper: `papers/<arXiv id>/notes.json` when the
 local server runs; in a static page, the same records in the browser's storage. Everything that leaves the reader
 (Markdown for Obsidian, and later ThoughtDAG nodes) is converted from this format, so it is the one contract between
-them. Files written before the name PaperFold say `"format": "dynamic-reader/notes"`; it is the same format, and a
-reader of it accepts both names. It follows the W3C Web Annotation model loosely: a note has a body and a target, and the target is anchored in
+them. Files written under earlier names say `"format": "paperfold/notes"` or `"dynamic-reader/notes"`; it is the same
+format, and a reader of it accepts all three names. It follows the W3C Web Annotation model loosely: a note has a body and a target, and the target is anchored in
 more than one way, so it can be found again when the text around it changes.
 
 ```json
 {
-  "format": "paperfold/notes",
+  "format": "textfold/notes",
   "version": 1,
-  "made_by": "PaperFold · https://github.com/chenxiachan/paperfold",
+  "made_by": "TextFold · https://github.com/chenxiachan/textfold",
   "paper": { "id": "2605.00089", "version": "v1", "title": "…", "url": "https://arxiv.org/abs/2605.00089v1" },
   "notes": [
     {
@@ -70,9 +70,9 @@ more than one way, so it can be found again when the text around it changes.
 
 - To Obsidian (done): one Markdown note per paper; a highlight is a quote with the block id `^<id>`; a conversation is a
   `[!question]` callout, the first question its title and each follow-up in bold; every note links back to the reader.
-  The note ends with a line saying it was made with PaperFold.
+  The note ends with a line saying it was made with TextFold.
 - To PDF (done): the browser prints the notes in reading order (each passage, the reader's note, the conversation
-  with its cites and the level it was asked at), with the PaperFold mark at the end.
+  with its cites and the level it was asked at), with the TextFold mark at the end.
 - To ThoughtDAG (planned): a highlight or note becomes a material node quoting the passage (paper id, unit, quote); a
   conversation becomes a chain of question nodes hanging from it, one per turn.
 

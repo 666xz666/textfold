@@ -1,10 +1,12 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" width="72" alt="PaperFold">
+<img src="docs/assets/logo.svg" width="72" alt="TextFold">
 
-# PaperFold
+# TextFold
 
 **Zoom any text for your better understanding**
+
+<sub>Formerly PaperFold</sub>
 
 <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-6B5CE7?style=flat-square">
 <img alt="12 languages" src="https://img.shields.io/badge/languages-12-6B5CE7?style=flat-square">
@@ -31,6 +33,7 @@ Your agent writes more than you have time to read. A [Claude Code mod](https://c
 
 ## What's new
 
+- **October 9, 2026: PaperFold is now TextFold.** The same reader, named for everything it folds: papers, READMEs, Wikipedia articles and your agent's replies. Links to the old repository lead here, `python3 -m adr` still runs, and your settings move over by themselves.
 - **October 8, 2026: any GitHub README.** Paste a repository's link and read its README at five levels, with its logo, badges and GIFs as on GitHub. A Markdown file keeps the HTML written in it, and the sidebar groups papers, Wikipedia articles, READMEs and documents.
 - **October 8, 2026: read beside the original.** **Original**, at the top of a paper, opens its PDF at the left (from arXiv, PubMed Central or bioRxiv) and shows each paragraph on its page as you read. A new paper opens as soon as it can be read, while its levels are written.
 - **October 7, 2026: your agent's replies fold too.** [TextFold](#in-claude-code) puts the five levels on every Claude Code reply. Press 5 for the answer in one sentence, 1 for every word.
@@ -38,7 +41,7 @@ Your agent writes more than you have time to read. A [Claude Code mod](https://c
 
 ## Read with less in your head
 
-A paper asks you to hold its whole argument in mind while you read it one paragraph at a time. PaperFold holds the argument for you. Fold the paper to see how its sections build on each other, unfold the part you care about, and the sentence you were reading never leaves the screen.
+A paper asks you to hold its whole argument in mind while you read it one paragraph at a time. TextFold holds the argument for you. Fold the paper to see how its sections build on each other, unfold the part you care about, and the sentence you were reading never leaves the screen.
 
 | | Level | Each paragraph becomes | In whose words |
 |:-:|---|---|---|
@@ -71,10 +74,10 @@ A paper asks you to hold its whole argument in mind while you read it one paragr
 ## Get started
 
 ```bash
-git clone https://github.com/chenxiachan/paperfold.git
-cd paperfold
+git clone https://github.com/chenxiachan/textfold.git
+cd textfold
 python3 -m pip install -r requirements.txt
-python3 -m adr serve
+python3 -m textfold serve
 ```
 
 Open `http://localhost:3017`, which the last command prints. The first time, [connect a model](#connect-a-model); then paste the link or DOI of a paper on arXiv, PubMed Central, bioRxiv or medRxiv, a Wikipedia article, or a GitHub repository (its README), or drag in a Markdown file, and pick a language.
@@ -83,11 +86,11 @@ You need Python 3.9 or newer (the one macOS ships with works). An arXiv paper ne
 
 ## Connect a model
 
-PaperFold uses a model you already have, and there is no account to create. It looks for one when it starts; if it finds none, the first page offers the ways in.
+TextFold uses a model you already have, and there is no account to create. It looks for one when it starts; if it finds none, the first page offers the ways in.
 
 | You have | What to do |
 |---|---|
-| Claude Code, Codex or Pi | Nothing. PaperFold finds it and uses it. |
+| Claude Code, Codex or Pi | Nothing. TextFold finds it and uses it. |
 | A ChatGPT plan | Click **Use my ChatGPT plan**. A small bridge starts on your computer and signs in with your account (needs Node.js). |
 | Nothing yet | Click **OpenRouter in one click**. Authorize once, and free models are ready. |
 | An API key | **Settings › Add provider**: Anthropic, OpenAI, DeepSeek, Qwen, Zhipu GLM, Kimi, MiniMax, Google, Ollama, or any OpenAI-compatible endpoint. |
@@ -108,10 +111,10 @@ PaperFold uses a model you already have, and there is no account to create. It l
 ## Share a paper
 
 ```bash
-python3 -m adr export 2201.11903
+python3 -m textfold export 2201.11903
 ```
 
-This writes one self-contained HTML file to `out/2201.11903/` that opens anywhere without a server. PaperFold's license covers its code: a paper, and the levels and translations made from it, stay under the license its authors chose, shown under every title. Most arXiv papers allow reading but not redistribution, so share a page only when that license allows it, as Creative Commons licenses do.
+This writes one self-contained HTML file to `out/2201.11903/` that opens anywhere without a server. TextFold's license covers its code: a paper, and the levels and translations made from it, stay under the license its authors chose, shown under every title. Most arXiv papers allow reading but not redistribution, so share a page only when that license allows it, as Creative Commons licenses do.
 
 ## In Claude Code
 
@@ -125,8 +128,8 @@ TextFold puts the five levels on every reply in Claude Code. Press 5 for the ans
 It needs Claude Code 2.1.287 or later, in the terminal or in the Code tab of the Desktop app.
 
 ```bash
-claude plugin marketplace add chenxiachan/paperfold
-claude plugin install textfold@paperfold
+claude plugin marketplace add chenxiachan/textfold
+claude plugin install textfold@textfold
 ```
 
 | Key | Level | What you get |
@@ -151,7 +154,7 @@ More in [plugins/textfold](plugins/textfold/README.md).
 
 <div align="center">
 
-**If PaperFold makes papers easier to read, ⭐ star it so others can find it.**
+**If TextFold makes papers easier to read, ⭐ star it so others can find it.**
 
 </div>
 
@@ -159,6 +162,6 @@ More in [plugins/textfold](plugins/textfold/README.md).
 
 <div align="center">
 
-[Apache 2.0](./LICENSE) © 2026 Xia Chen · [Development](docs/DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md) · [Feedback](https://github.com/chenxiachan/paperfold/issues)
+[Apache 2.0](./LICENSE) © 2026 Xia Chen · [Development](docs/DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md) · [Feedback](https://github.com/chenxiachan/textfold/issues)
 
 </div>
