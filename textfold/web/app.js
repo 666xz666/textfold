@@ -41,9 +41,10 @@
   function jobFor(pid) { return jobs.find((j) => j.pid === pid && live(j)); }
   function pct(j) { return j.total ? Math.round((100 * j.done) / j.total) : (j.stage === 'done' ? 100 : 6); }
   // where a job is: its stage and count, or that it is stopping
-  const stageOf = (j, T) => (j.stopping ? T.stopping : `${T.stages[j.stage] || j.stage}${j.total ? ` ${j.done}/${j.total}` : ''}`);
+  const stageOf = (j, T) => (j.stopping ? T.stopping : `${T.stages[j.stage] || (T.pstages || {})[j.stage] || j.stage}${j.total ? ` ${j.done}/${j.total}` : ''}`);
   const stopBtn = (j, T) => `<button type="button" class="sb-stop" data-stop="${j.id}" title="${esc(T.stop)}" aria-label="${esc(T.stop)}"${j.stopping ? ' disabled' : ''}><i></i></button>`;
-  const progress = (j, T) => `<span class="sb-prog"><i style="width:${pct(j)}%"></i></span><span class="sb-stage">${esc(stageOf(j, T))} · ${esc(I18N.NATIVE[j.lang])}</span>`;
+  const progress = (j, T) => `<span class="sb-prog"><i style="width:${pct(j)}%"></i></span><span class="sb-stage">${esc(stageOf(j, T))}${j.lang ? ` · ${esc(I18N.NATIVE[j.lang])}` : ''}</span>`;
+  const jobName = (j, T) => (j.kind === 'install' ? T.engine : j.title || j.pid);
   let lastSidebar = '';
   function renderSidebar() {
     const T = t();
@@ -61,13 +62,13 @@
         (j ? stopBtn(j, T) : `<button type="button" class="sb-del" data-del="${p.id}" title="${esc(T.del_paper)}" aria-label="${esc(T.del_paper)}">×</button>`) + '</div>';
     };
     // papers, Wikipedia articles, GitHub READMEs and documents of one's own, each under its name when there is more than one kind
-    const kindOf = (id) => (/^wiki-/.test(id) ? 'wiki' : /^gh-/.test(id) ? 'gh' : /^md-/.test(id) ? 'doc' : 'paper');
+    const kindOf = (id) => (/^wiki-/.test(id) ? 'wiki' : /^gh-/.test(id) ? 'gh' : /^(md|pdf)-/.test(id) ? 'doc' : 'paper');
     const groups = [['paper', T.papers], ['wiki', T.g_wiki], ['gh', 'GitHub'], ['doc', T.g_docs]]
       .map(([k, name]) => [name, papers.filter((p) => kindOf(p.id) === k)]).filter(([, ps]) => ps.length);
     const listed_ = groups.length > 1
       ? groups.map(([name, ps]) => `<div class="sb-group">${esc(name)}</div>${ps.map(item).join('')}`).join('')
       : papers.map(item).join('');
-    const pend = (j) => `<div class="sb-row"><div class="sb-item pending"><span class="sb-t">${esc(j.title || j.pid)}</span>` +
+    const pend = (j) => `<div class="sb-row"><div class="sb-item pending"><span class="sb-t">${esc(jobName(j, T))}</span>` +
       `<span class="sb-m"><span class="sb-id">${j.pid}</span></span>${progress(j, T)}</div>${stopBtn(j, T)}</div>`;
     const html = `
       <div class="sb-head"><a class="sb-brand" href="/">${MARK}<span>TextFold</span></a>
@@ -157,13 +158,46 @@
     if (jobs.some(live) || watchers.size) polling = setTimeout(poll, 1200);
   }
   function startPolling() { if (!polling) polling = setTimeout(poll, 400); }
-  async function submit(paper, lang, force, onUpdate) {
-    const job = await api('/api/generate', { paper, lang, force: !!force });
-    watchers.set(job.id, (j) => { onUpdate(j); if (j.status === 'done' || j.status === 'error' || j.status === 'stopped') watchers.delete(j.id); });
+  function watch(job, onUpdate) {
+    watchers.set(job.id, (j) => { onUpdate(j); if (!live(j)) watchers.delete(j.id); });
     jobs = [...jobs.filter((j) => j.id !== job.id), job];
     renderSidebar(); onUpdate(job); startPolling();
     return job;
   }
+  async function submit(paper, lang, force, onUpdate) {
+    return watch(await api('/api/generate', { paper, lang, force: !!force }), onUpdate);
+  }
+  // what a PDF says it is, read in the browser: an arXiv id from its margin stamp, a DOI from its metadata or its
+  // first page. Only the first page: the second is often the references, full of other papers' ids.
+  async function refsOf(file) {
+    const lib = await import('/static/vendor/pdfjs/pdf.min.mjs');
+    lib.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.min.mjs';
+    const loading = lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false });
+    try {
+      const doc = await loading.promise;
+      const meta = await doc.getMetadata().catch(() => ({}));
+      const info = meta.info || {}, xmp = meta.metadata;
+      const said = [info.Subject, info.Keywords, info.doi, xmp && xmp.get && xmp.get('prism:doi'), xmp && xmp.get && xmp.get('dc:identifier')]
+        .filter((x) => typeof x === 'string').join(' ');
+      const page = (await (await doc.getPage(1)).getTextContent()).items.map((i) => i.str).join(' ');
+      const refs = [];
+      const add = (r) => { if (r && !refs.includes(r)) refs.push(r); };
+      for (const m of `${said} ${page}`.matchAll(/arXiv:\s?(\d{4}\.\d{4,5})(?:v\d+)?|arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,5})/gi)) add(m[1] || m[2]);
+      for (const m of `${said} ${page}`.matchAll(/\b(10\.\d{4,9}\/[^\s"<>]+)/g)) add(m[1].replace(/[.,;:)\]]+$/, ''));
+      return refs.slice(0, 4);
+    } finally { loading.destroy(); }
+  }
+  // a PDF to the server, with what it says it is: the paper online, or a conversion, or a wait for the engine
+  async function uploadPdf(file, lang) {
+    let refs = [];
+    try { refs = await refsOf(file); } catch { /* a PDF pdf.js cannot open: the engine may still read it */ }
+    const r = await fetch('/api/pdfs', { method: 'POST', body: file, headers: { 'Content-Type': 'application/pdf',
+      'X-Name': encodeURIComponent(file.name), 'X-Lang': lang, 'X-Refs': encodeURIComponent(JSON.stringify(refs)) } });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || r.statusText);
+    return d;
+  }
+  const isPdf = (file) => /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
   // OpenRouter's consent page. In the browser: this tab goes there and comes back with the key. Inside the app: the
   // system browser (where the reader is signed in) goes there, and the app waits for the key, then offers the models.
   async function connectOpenRouter(back) {
@@ -178,7 +212,8 @@
   }
   const errText = (msg) => (msg === 'no-html' ? t().no_html : msg === 'bad-ref' ? t().bad_ref : msg === 'no-model' ? t().no_model
     : msg === 'not-markdown' || msg === 'empty' ? t().md_only : msg === 'no-fulltext' ? t().no_fulltext
-    : msg === 'no-readme' ? t().no_readme : msg === 'github-limit' ? t().github_limit : msg);
+    : msg === 'no-readme' ? t().no_readme : msg === 'github-limit' ? t().github_limit : msg === 'needs-engine' ? t().pdf_needs
+    : msg === 'busy' ? t().engine_busy : msg === 'not-pdf' ? t().not_pdf : msg === 'too-large' ? t().pdf_large : msg);
 
   // ── on a reader page: generate a language, or regenerate the current one ──
   if (PAPER) {
@@ -194,6 +229,16 @@
       if (!e.dataTransfer.files.length) return;
       e.preventDefault(); over = 0;
       const file = e.dataTransfer.files[0];
+      if (isPdf(file)) {
+        say(t().pdf_reading);
+        try {
+          const d = await uploadPdf(file, (window.__reader && window.__reader.lang) || store.get('dr-lang') || uiLang);
+          const q = new URLSearchParams({ t: file.name });
+          if (d.needs === 'engine') q.set('engine', d.upload); else { q.set('follow', d.job.id); if (d.via === 'online') q.set('ref', d.ref); }
+          location.href = `/?${q}`;
+        } catch (x) { say(errText(x.message), 4000); }
+        return;
+      }
       if (!/\.(md|markdown|mdown|txt)$/i.test(file.name)) { say(t().md_only, 3000); return; }
       try {
         const r = await api('/api/import', { name: file.name, text: await file.text() });
@@ -237,6 +282,23 @@
       }
       try { if (u) sessionStorage.setItem('pf-keep', JSON.stringify({ pid: PAPER.id, uid: u.dataset.u, top: u.getBoundingClientRect().top, level: R && R.level })); } catch { /* private window */ }
       location.href = `/p/${PAPER.id}?lang=${encodeURIComponent(lang)}`;
+    }
+    const src = PAPER.source || {};
+    if (src.kind === 'pdf' && src.tier !== 'accurate') {
+      const acc = h('button', 'cmpbtn accbtn');
+      acc.type = 'button';
+      acc.textContent = t().convert_acc;
+      acc.title = `${t().conv_fast_note} ${t().tier_accurate}`;
+      const bar = document.querySelector('.topbar .cmpbtn') || document.querySelector('.topbar .langpick');
+      if (bar) bar.before(acc);
+      acc.onclick = async () => {
+        const T = t();
+        if (!confirm(`${T.convert_acc}? ${T.tier_accurate}.`)) return;
+        acc.disabled = true;
+        const lang = (window.__reader && window.__reader.lang) || 'en', update = toastFor(lang);
+        try { watch(await api('/api/convert', { paper: PAPER.id, tier: 'accurate', lang }), update); }
+        catch (x) { update.fail(x); acc.disabled = false; }
+      };
     }
     window.DRApp = {
       onLang() { renderSidebar(); },
@@ -330,29 +392,69 @@
     const fail = (msg) => { err.textContent = msg; err.hidden = false; };
     // a paper (an arXiv link, or a document just opened) into the job card, then into the reader
     let latest = null;   // the paper the card shows: started last. One started before keeps going in the sidebar.
+    function onCard(label, mine, note) {
+      const cb = (j) => {
+        if (latest !== mine) return;
+        const T = t(), name = esc(label || jobName(j, T)), in_ = j.lang ? ` · ${esc(I18N.NATIVE[j.lang])}` : '';
+        if (j.status === 'moved' && j.next) { watchers.set(j.next, cb); startPolling(); return; }   // (an arXiv paper without HTML: its PDF converts)
+        if (j.status === 'error' && j.error === 'needs-engine') { engineCard(j.upload, label || j.title || j.pid); return; }
+        if (j.status === 'error') { card.innerHTML = `<div class="jc-t">${esc(T.failed)} · ${name}</div><div class="jc-e">${esc(errText(j.error))}</div>`; return; }
+        if (j.status === 'stopped') {
+          card.innerHTML = `<div class="jc-head"><div class="jc-t">${name}${in_}</div>${j.kind === 'generate' ? `<button type="button" class="jc-go">${esc(T.resume)}</button>` : ''}</div>
+            <div class="jc-s">${esc(T.stopped)}</div>`;
+          if (j.kind === 'generate') card.querySelector('.jc-go').onclick = () => start(j.pid, label || j.title, j.lang);
+          return;
+        }
+        card.innerHTML = `<div class="jc-head"><div class="jc-t">${name}${in_}</div>
+            <button type="button" class="jc-stop"${j.stopping ? ' disabled' : ''}>${esc(T.stop)}</button></div>
+          <div class="jc-s">${esc(stageOf(j, T))}</div>
+          <span class="sb-prog"><i style="width:${pct(j)}%"></i></span>${note ? `<div class="jc-n">${esc(note)}</div>` : ''}`;
+        card.querySelector('.jc-stop').onclick = () => stopJob(j.id);
+        // readable (parsed, or converted): the paper opens in its own words now, and its levels come in while it is read
+        if (j.pid && (j.status === 'done' || (j.readable && j.status === 'running'))) location.href = `/p/${j.pid}?lang=${encodeURIComponent(j.lang || sel.value)}`;
+      };
+      return cb;
+    }
     async function start(ref, label, langOf) {
       const lang = langOf || sel.value, mine = {};
       latest = mine;
       card.hidden = false;
       try {
-        await submit(ref, lang, false, (j) => {
-          if (latest !== mine) return;
-          const T = t(), name = esc(label || j.title || j.pid);
-          if (j.status === 'error') { card.innerHTML = `<div class="jc-t">${esc(T.failed)} · ${name}</div><div class="jc-e">${esc(errText(j.error))}</div>`; return; }
-          if (j.status === 'stopped') {
-            card.innerHTML = `<div class="jc-head"><div class="jc-t">${name} · ${esc(I18N.NATIVE[j.lang])}</div><button type="button" class="jc-go">${esc(T.resume)}</button></div>
-              <div class="jc-s">${esc(T.stopped)}</div>`;
-            card.querySelector('.jc-go').onclick = () => start(j.pid, label || j.title, j.lang);
-            return;
-          }
-          card.innerHTML = `<div class="jc-head"><div class="jc-t">${name} · ${esc(I18N.NATIVE[j.lang])}</div>
-              <button type="button" class="jc-stop"${j.stopping ? ' disabled' : ''}>${esc(T.stop)}</button></div>
-            <div class="jc-s">${esc(stageOf(j, T))}</div>
-            <span class="sb-prog"><i style="width:${pct(j)}%"></i></span>`;
-          card.querySelector('.jc-stop').onclick = () => stopJob(j.id);
-          // readable (parsed): the paper opens in its own words now, and its levels come in while it is read
-          if (j.status === 'done' || (j.readable && j.status === 'running')) location.href = `/p/${j.pid}?lang=${encodeURIComponent(j.lang)}`;
-        });
+        await submit(ref, lang, false, onCard(label, mine));
+      } catch (x) { card.hidden = true; fail(errText(x.message)); }
+    }
+    // a PDF that needs the engine: what it is and what it takes, and its install, in the card; once installed, the
+    // PDF waiting for it converts (the server starts that), and the card follows the conversion
+    function engineCard(upload, name) {
+      const T = t();
+      card.hidden = false;
+      card.innerHTML = `<div class="jc-t">${esc(T.pdf_needs)}</div><div class="jc-s">${esc(name)}</div><p class="jc-why">${esc(T.pdf_needs_why)}</p>
+        <div class="jc-acts"><button type="button" class="primary jc-install">${esc(T.engine_install)}</button><button type="button" class="jc-later">${esc(T.not_now)}</button></div>`;
+      card.querySelector('.jc-later').onclick = () => { card.hidden = true; };
+      card.querySelector('.jc-install').onclick = async () => {
+        const mine = {};
+        latest = mine;
+        try {
+          const show = onCard(t().engine, mine);
+          watch(await api('/api/engine/install', {}), (j) => {
+            if (j.status !== 'done') { show(j); return; }
+            const conv = jobs.find((x) => x.kind === 'convert' && x.pid === upload);
+            if (conv) watch(conv, onCard(name, mine)); else card.hidden = true;
+          });
+        } catch (x) { fail(errText(x.message)); }
+      };
+    }
+    async function openPdf(file) {
+      if (file.size > 100 * 1024 * 1024) { fail(t().pdf_large); return; }
+      const lang = sel.value, mine = {};
+      latest = mine;
+      card.hidden = false;
+      card.innerHTML = `<div class="jc-t">${esc(file.name)}</div><div class="jc-s">${esc(t().pdf_reading)}</div><span class="sb-prog"><i style="width:4%"></i></span>`;
+      try {
+        const d = await uploadPdf(file, lang);
+        if (latest !== mine) return;
+        if (d.needs === 'engine') { engineCard(d.upload, file.name); return; }
+        watch(d.job, onCard(d.via === 'online' ? null : file.name, mine, d.via === 'online' ? t().pdf_online.replace('{ref}', d.ref) : ''));
       } catch (x) { card.hidden = true; fail(errText(x.message)); }
     }
     form.onsubmit = async (e) => {
@@ -367,6 +469,7 @@
     async function openFile(file) {
       err.hidden = true;
       if (!file) return;
+      if (isPdf(file)) { openPdf(file); return; }   // converted here: no model needed to read it
       if (!/\.(md|markdown|mdown|txt)$/i.test(file.name)) { fail(t().md_only); return; }
       if (!modelName) { fail(t().no_model); return; }
       try {
@@ -393,6 +496,16 @@
     if (started.get('start')) {
       history.replaceState(null, '', '/');
       if (modelName) start(started.get('start'), started.get('t')); else fail(t().no_model);
+    }
+    // a PDF dropped on a paper's page, uploaded there: its job followed here, or the engine it waits for
+    if (started.get('engine')) { history.replaceState(null, '', '/'); engineCard(started.get('engine'), started.get('t') || ''); }
+    if (started.get('follow')) {
+      history.replaceState(null, '', '/');
+      const job = jobs.find((j) => j.id === started.get('follow')), mine = {};
+      latest = mine;
+      card.hidden = false;
+      const ref = started.get('ref');
+      if (job) watch(job, onCard(ref ? null : started.get('t'), mine, ref ? t().pdf_online.replace('{ref}', ref) : ''));
     }
     if (jobs.some(live)) startPolling();
   }
@@ -485,11 +598,44 @@
         <section><h3>${esc(t.st_model)}</h3>${modelSection()}</section>
         <section><h3>${esc(t.st_agents)}</h3>${agentSection()}</section>
         <section><h3>${esc(t.st_providers)}</h3>${providerSection()}</section>
+        <section class="st-engine"></section>
         <p class="st-note">${esc(t.key_note)}</p>
         <div class="st-btns"><span></span><button type="button" class="primary st-close">${esc(t.st_close)}</button></div></div>`;
       wire();
+      renderEngine();
     }
     const q = (sel) => dlg.querySelector(sel);
+    // the PDF engine's own part of the dialog, drawn again on its own while it installs
+    const gb = (b) => (b ? `${(b / 1e9).toFixed(1)} GB` : '');
+    function renderEngine() {
+      const box = q('.st-engine');
+      if (!box) return;
+      const t = T(), e = data.engine || {}, job = jobs.find((j) => j.kind === 'install' && live(j));
+      const state = job ? `<div class="st-agent ok"><i></i><b>${esc(t.engine)}</b><span>${esc(stageOf(job, t))}</span></div>`
+        : e.installed ? `<div class="st-agent ok"><i></i><b>MinerU ${esc(e.version)}</b><span>${esc(t.engine_on.replace('{size}', gb(e.bytes)))}</span><code title="${esc(e.path)}">${esc(e.path.split('/').slice(-3).join('/'))}</code></div>`
+        : `<p class="st-note">${esc(t.engine_off)}</p>`;
+      const tier = `<div class="st-row"><label class="st-tier">${esc(t.tier)}<select class="st-tiersel">${['fast', 'accurate'].map((k) =>
+        `<option value="${k}"${(data.pdfTier || 'fast') === k ? ' selected' : ''}>${esc(t['tier_' + k])}</option>`).join('')}</select></label></div>`;
+      const act = job ? '' : e.installed ? `<button type="button" class="linkbtn st-engine-rm">${esc(t.engine_remove)}</button>`
+        : `<button type="button" class="st-engine-in">${esc(t.engine_install)}</button>`;
+      box.innerHTML = `<h3>${esc(t.engine)}</h3>${state}${tier}<div class="st-row end">${act}</div>`;
+      box.querySelector('.st-tiersel').onchange = async (ev) => { data = await api('/api/settings', { pdf_tier: ev.target.value }); renderEngine(); };
+      const inst = box.querySelector('.st-engine-in');
+      if (inst) inst.onclick = async () => { inst.disabled = true; watch(await api('/api/engine/install', {}), () => {}); follow(); };
+      const rm = box.querySelector('.st-engine-rm');
+      if (rm) rm.onclick = async () => {
+        if (!confirm(t.engine_remove_q.replace('{size}', gb(e.bytes)))) return;
+        try { data.engine = await api('/api/engine/remove', {}); } catch (x) { alert(errText(x.message)); }
+        renderEngine();
+      };
+    }
+    function follow() {   // while it installs: its stage here, then what it found
+      const tick = setInterval(async () => {
+        if (!dlg.open) { clearInterval(tick); return; }
+        if (!jobs.some((j) => j.kind === 'install' && live(j))) { clearInterval(tick); data = await api('/api/models'); }
+        renderEngine();
+      }, 1500);
+    }
     const update = (d) => { data = d; modelName = d.models.length ? (d.selectedName || '') : ''; renderSidebar(); if (landing) renderLanding(); render(); };
 
     function wire() {
@@ -578,6 +724,7 @@
     render();
     dlg.showModal();
     if (opts && opts.minted) fetchModels();
+    if (jobs.some((j) => j.kind === 'install' && live(j))) follow();   // an install started on the landing
     // the startup scan may still be running: show what it finds as it lands
     const wait = async () => { if (!dlg.isConnected) return; if (data.scanning) { await new Promise((r) => setTimeout(r, 800)); update(await api('/api/models')); wait(); } };
     wait();

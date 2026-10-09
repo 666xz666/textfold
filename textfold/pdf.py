@@ -1,8 +1,9 @@
 """A paper's original typeset pages, for the reader's side-by-side view: arXiv's PDF of the version read, the
 publisher's PDF that PubMed Central keeps in its open data, a bioRxiv or medRxiv preprint's own, or (for a preprint read
 through Europe PMC) the preprint server's. Fetched once, when the reader first asks, and kept beside the paper as
-source.pdf. Wikipedia articles and Markdown files have none. None of these servers lets a page read the file itself
-(no CORS), and their article pages may not be framed, so the app fetches it."""
+source.pdf; a PDF read through the PDF engine (pdfdoc.py) keeps the file itself there. Wikipedia articles and Markdown
+files have none. None of these servers lets a page read the file itself (no CORS), and their article pages may not be
+framed, so the app fetches it."""
 import json
 import re
 import threading
@@ -39,7 +40,7 @@ def candidates(pid, meta):
 
 def has_source(pid):
     """Whether the paper is of a kind that can have one (the reader shows its button only then)."""
-    return bool(re.fullmatch(r"\d{4}\.\d{4,5}|pmc\d+|ppr\d+|(biorxiv|medrxiv)-[0-9.]+", pid))
+    return bool(re.fullmatch(r"\d{4}\.\d{4,5}|pmc\d+|ppr\d+|(biorxiv|medrxiv)-[0-9.]+|pdf-[0-9a-f]{16}", pid))
 
 
 def path(pid):

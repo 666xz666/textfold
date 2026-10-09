@@ -702,4 +702,6 @@ html.compare .chunk > .side, html.compare .chunk > .lside { position: static; }
   html.compare footer.zoom, html.app.compare footer.zoom { left: var(--rail, 0px); }
 }
 @media (prefers-reduced-motion: reduce) { .pp-mark.pick { animation: none; } }
+.accbtn { order: 3; }
+.accbtn:disabled { opacity: .5; cursor: default; }
 @media print { .pdfpane, .cmpbtn { display: none !important; } html.compare body, html.app.compare body { padding-left: 0; } }

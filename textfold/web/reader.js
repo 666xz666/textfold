@@ -2445,7 +2445,7 @@
   //    each paragraph found on it by its own words (the paper's language, whatever language it is read in). A click
   //    on a paragraph shows where it is on its page; reading on carries the pages along; a click on a page goes to its
   //    paragraph ──
-  const PDF_OK = !!D.app && /^(\d{4}\.\d{4,5}|pmc\d+|ppr\d+|(biorxiv|medrxiv)-[0-9.]+)$/.test(D.meta.id);
+  const PDF_OK = !!D.app && /^(\d{4}\.\d{4,5}|pmc\d+|ppr\d+|(biorxiv|medrxiv)-[0-9.]+|pdf-[0-9a-f]{16})$/.test(D.meta.id);   // (pdf.has_source)
   const CMP_KEY = 'pf-compare';
   const cmpBtn = h('button', 'cmpbtn');
   cmpBtn.type = 'button';

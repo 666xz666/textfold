@@ -27,7 +27,7 @@ ANTHROPIC_PRESET = {"id": "anthropic", "name": "Anthropic", "base": "https://api
 
 
 def load_settings():
-    s = {"model": None, "efforts": {}, "providers": [], "use_thoughtdag_env": False}
+    s = {"model": None, "efforts": {}, "providers": [], "use_thoughtdag_env": False, "pdf_tier": "fast"}
     old_home = next((h for h in OLD_HOMES if (h / "settings.json").exists()), None)
     if not SETTINGS.exists() and old_home:   # from before the name TextFold: copied, kept
         SETTINGS.parent.mkdir(parents=True, exist_ok=True)
@@ -63,6 +63,8 @@ def save_settings(s):
 
 
 def provider_list(s):
+    if os.environ.get("TEXTFOLD_NO_MODELS"):   # (agents.scan): no provider, no bridge
+        return []
     env = providers.env_providers(s.get("use_thoughtdag_env", True), providers.ollama_models())
     ui = []
     for p in providers.ui_providers(s):

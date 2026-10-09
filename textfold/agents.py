@@ -204,7 +204,8 @@ def scan(log=None):
         _login_path = None  # a new install may have changed the login PATH
         found, seen = [], {}
         for runtime, label, binary, extra, runnable in REGISTRY:
-            path = locate(binary, extra)
+            # TEXTFOLD_NO_MODELS=1: none looked for (a test server, a CI run: nothing calls a model by accident)
+            path = None if os.environ.get("TEXTFOLD_NO_MODELS") else locate(binary, extra)
             row = {"runtime": runtime, "label": label, "binary": binary, "path": path, "runnable": runnable,
                    "version": None, "models": [], "error": None}
             if path:
