@@ -16,7 +16,7 @@ One model call per chunk (a heading and the units under it).
 import re
 from concurrent.futures import ThreadPoolExecutor
 
-from . import llm
+from . import kinds, llm
 from .tokens import lcs_pairs, norm, plain, tokenize_text, words
 
 ROLES = ["context", "gap", "claim", "method", "setup", "result", "analysis", "limitation"]
@@ -83,7 +83,7 @@ def prompt_for(doc, chunk):
     head = f"{chunk['num']} {chunk['title']}".strip()
     tables = tables_of(doc, chunk)
     context = ("\n\nTables in this section, for context (they are not units; a takeaway may use what they show):\n\n" + "\n\n".join(tables)) if tables else ""
-    return f"""Paper: {doc['meta']['title']}
+    return kinds.adapt(f"""Paper: {doc['meta']['title']}
 
 Paper abstract, for context:
 {abstract}
@@ -110,7 +110,7 @@ For the section: takeaway, ONE sentence of at most {BUDGET['section']} words sta
 
 Style: no em or en dashes as punctuation, use commas or colons (hyphenated terms such as "zero-shot" are fine). Units show math as $...$; when a symbol is essential to a takeaway or reason, copy its $...$ exactly as it appears in the unit, otherwise avoid math. No citations; no figure or table numbers except in a caption's own lines.
 
-Return JSON: {{"section": {{"takeaway": "...", "topic": "..."}}, "units": [{{"id": "U0", "role": "...", "takeaway": "...", "topic": "...", "reason": "...", "evidence": [0]}}, ...]}} with exactly one entry per unit, in order."""
+Return JSON: {{"section": {{"takeaway": "...", "topic": "..."}}, "units": [{{"id": "U0", "role": "...", "takeaway": "...", "topic": "...", "reason": "...", "evidence": [0]}}, ...]}} with exactly one entry per unit, in order.""", doc["meta"])
 
 
 def clean(s):
@@ -257,7 +257,7 @@ def build(doc, cfg, cache_dir, jobs=4, log=print, progress=None, force=False, st
         if stop is not None and stop.is_set():   # stopped: the chunks not yet sent are skipped
             return c, None, llm.Stopped()
         try:
-            return c, llm.call(prompt_for(doc, c), SCHEMA, cfg, cache_dir, force), None
+            return c, llm.call(prompt_for(doc, c), SCHEMA, cfg, cache_dir, force, system=llm.system_for(doc["meta"])), None
         except Exception as e:  # one failed chunk falls back to local ladders, the rest still build
             return c, None, e
 

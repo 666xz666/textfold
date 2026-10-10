@@ -313,6 +313,7 @@ def take_pdf(jobs, data, headers):
 
 
 PAGES = {}  # pid -> (signature of its layers and template, rendered page)
+RELAYOUT = threading.Lock()
 
 
 def reader_page(pid):
@@ -402,6 +403,14 @@ def make_handler(jobs):
                     return self.json(jobs.list())
                 if u.path in ("/api/models", "/api/settings"):
                     return self.json(models_payload())
+                m = re.fullmatch(r"/api/pdfmap/([\w.-]+)", u.path)   # a converted PDF's paragraphs on its pages
+                if m and m.group(1).startswith("pdf-") and store.valid_id(m.group(1)) and (store.pdir(m.group(1)) / "meta.json").exists():
+                    with RELAYOUT:   # (converted before the layout was kept: found again once, in seconds)
+                        try:
+                            pdfdoc.relayout(m.group(1))
+                        except Exception:
+                            pass
+                    return self.json(pdfdoc.place(m.group(1)))
                 if u.path == "/api/engine":
                     return self.json({**engine.status(), "pending": sorted(jobs.pending)})
                 m = re.fullmatch(r"/api/notes/([\w.-]+)", u.path)

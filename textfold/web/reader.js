@@ -24,7 +24,10 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // languages: the interface speaks the language the paper is read in (i18n.js)
   const I18N = window.DR_I18N;
-  const T = Object.fromEntries(I18N.CODES.map((c) => [c, I18N.t(c)]));
+  // a research paper, or a text of another kind (a web page, a README, a PDF, a letter): the questions about it say which
+  const SRC = (D.meta.source || {}).kind;
+  const PAPER = ['europepmc', 'biorxiv', 'medrxiv'].includes(SRC) || (!SRC && /^\d{4}\.\d{4,5}$/.test(D.meta.id));
+  const T = Object.fromEntries(I18N.CODES.map((c) => [c, I18N.t(c, !PAPER)]));
   // Two languages. The paper is read in `lang`: its text, and the names of its own parts (figures, tables, theorems,
   // references, equations). The interface speaks the reader's own, `ui`: chosen in the app's settings, else the
   // browser's. A Chinese reader of an English paper keeps a Chinese interface.
@@ -2357,7 +2360,7 @@
     const out = ['---', `title: ${q(m.title)}`, `authors: ${JSON.stringify(m.authors || [])}`,
       m.abs_url ? `arxiv: ${q(m.id + (m.version || ''))}` : `source: ${q(sourceName(m))}`,
       ...(m.abs_url ? [`url: ${m.abs_url}`] : []), ...(m.snapshot ? [`snapshot: ${m.snapshot}`] : []), `license: ${m.license || ''}`, ...(D.app ? [`reader: ${location.origin}/p/${m.id}`] : []),
-      `exported: ${new Date().toISOString().slice(0, 10)}`, 'tags: [paper]', 'format: textfold/notes@1', '---', '',
+      `exported: ${new Date().toISOString().slice(0, 10)}`, `tags: [${PAPER ? 'paper' : 'text'}]`, 'format: textfold/notes@1', '---', '',
       `# ${m.title}`, '', [(m.authors || []).map(flipName).join(', '), m.abs_url ? `[${sourceName(m)}](${m.abs_url})` : sourceName(m)].filter(Boolean).join(' · '), ''];
     let sec = null;
     const quote = (s) => s.split('\n').map((l) => `> ${l}`);
@@ -2488,7 +2491,8 @@
     x.setAttribute('aria-label', T[ui].close);
     pane.setAttribute('aria-label', T[ui].compare_tip);
     const src = { pmc: 'PubMed Central', ppr: 'Preprint', biorxiv: 'bioRxiv', medrxiv: 'medRxiv' }[D.meta.id.match(/^[a-z]+/)?.[0]];
-    title.textContent = src ? `${src} · PDF` : `arXiv · PDF ${D.meta.version || ''}`.trim();
+    const own = D.meta.id.startsWith('pdf-');   // a PDF read through the engine: the file itself, not one fetched for it
+    title.textContent = own ? (D.meta.label || 'PDF') : src ? `${src} · PDF` : `arXiv · PDF ${D.meta.version || ''}`.trim();
     bar.append(title, count, x);
     pane.append(bar, scroller);
     document.body.append(pane);
@@ -2526,9 +2530,11 @@
       await layPages();
       msg.remove();
       await indexWords();
-      // a PDF whose words are not this paper's (another paper dropped by mistake): said, and another can be dropped
+      await layOut();
+      // a PDF whose words are not this paper's (another paper dropped by mistake): said, and another can be dropped.
+      // (A PDF read through the engine is the text's own file: never another's.)
       const ids = [...order.keys()];
-      if (ids.length && ids.filter((id) => locate(id)).length < ids.length * 0.3) cmp.scroller.prepend(h('div', 'pp-warn', esc(T[ui].pdf_mismatch)));
+      if (!D.meta.id.startsWith('pdf-') && ids.length && ids.filter((id) => locate(id)).length < ids.length * 0.3) cmp.scroller.prepend(h('div', 'pp-warn', esc(T[ui].pdf_mismatch)));
       cmp.follow = null;
       followNow();
     } catch (e) {
@@ -2661,9 +2667,27 @@
     Object.assign(cmp, { words, grams });
   }
 
+  // a PDF read through the engine: each paragraph's place on its page, as the engine found the block it came from.
+  // A scan has no words of its own to search, and even a PDF with words is found more exactly this way.
+  async function layOut() {
+    cmp.layout = null;
+    if (!D.meta.id.startsWith('pdf-')) return;
+    const r = await fetch(`/api/pdfmap/${encodeURIComponent(D.meta.id)}`).catch(() => null);
+    const map = r && r.ok ? await r.json() : {};
+    if (!cmp || !Object.keys(map).length) return;
+    cmp.layout = new Map();
+    for (const [uid, at] of Object.entries(map)) {
+      const p = cmp.pages[at.page - 1];
+      if (!p) continue;
+      const W = p.vp.width, H = p.vp.height;
+      const boxes = at.boxes.map(([x0, y0, x1, y1]) => ({ page: at.page, x: x0 * W, y: y0 * H, w: (x1 - x0) * W, h: (y1 - y0) * H }));
+      cmp.layout.set(uid, { page: at.page, boxes, area: boxes.reduce((a, b) => a + b.w * b.h, 0) });
+    }
+  }
   // where a paragraph is: its runs of three words found on the pages, the run of agreeing places they vote for, and
   // the words from its first match to its last (formula symbols on the page sit between them, so a place may drift)
   function locate(uid) {
+    if (cmp.layout) return cmp.layout.get(uid) || null;
     if (cmp.spans.has(uid)) return cmp.spans.get(uid);
     const u = U[uid], uw = u ? u.toks.filter((t) => t.t).map((t) => pdfNorm(t.t)).filter(Boolean) : [];
     const hitsOf = (i) => { const a = cmp.grams.get(`${uw[i]} ${uw[i + 1]} ${uw[i + 2]}`); return a && a.length <= 30 ? a : null; };
@@ -2760,6 +2784,18 @@
     const el = e.target.closest('.pp-page');
     if (!el || !cmp.grams) return;
     const n = +el.dataset.n, r = el.getBoundingClientRect(), px = (e.clientX - r.left) / cmp.scale, py = (e.clientY - r.top) / cmp.scale;
+    if (cmp.layout) {   // the smallest paragraph whose place holds the point
+      let hit = null;
+      for (const [uid, s] of cmp.layout) {
+        if (s.boxes.some((b) => b.page === n && px >= b.x - 4 && px <= b.x + b.w + 4 && py >= b.y - 4 && py <= b.y + b.h + 4) && (!hit || s.area < hit.s.area)) hit = { uid, s };
+      }
+      if (!hit) return;
+      cmp.follow = hit.uid;
+      showSpan(hit.s, 'stay');
+      const target = unitEl.get(hit.uid);
+      if (target) go(target.closest('figure.fig') || target, null);
+      return;
+    }
     let at = -1, best = Infinity;
     cmp.words.forEach((w, i) => {
       if (w.page !== n) return;

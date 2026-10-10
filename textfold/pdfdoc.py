@@ -214,12 +214,85 @@ def store_pdf(pid, folder, sc, name, tier, replace=False):
             (d / "source.html").unlink()   # so that store_doc writes the document again
     try:
         local.store_doc(pid, html, meta, "source.md", text, lambda f: local.Images(f, Path(folder)).resolve, sizes=True)
+        (d / "layout.json").write_text(json.dumps(layout_of(sc), ensure_ascii=False))
     finally:
         if keep.exists():
             for f in keep.iterdir():
                 shutil.copy2(f, d / f.name)
             shutil.rmtree(keep)
     return pid
+
+
+def layout_of(sc):
+    """Each block's page, its place on it (0 to 1 of the page's width and height) and its words: what the reader's
+    side-by-side view finds a paragraph by. A scan has no text of its own to find it in; the engine read it from the
+    picture. A caption carries its figure's place too."""
+    out = []
+    for n, page in enumerate(sc.get("pages", [])):
+        no = page.get("page_idx", n) + 1
+        for b in page.get("blocks", []):
+            kind = b.get("type")
+            if kind in DROP or not b.get("bbox"):
+                continue
+            box = [round(float(x), 4) for x in b["bbox"]]
+            if kind in ("image", "table"):
+                for c in b.get("captions") or []:
+                    if c.get("bbox") and _text(c.get("content")):
+                        out.append({"p": no, "b": [round(float(x), 4) for x in c["bbox"]], "t": _text(c.get("content")), "fig": box})
+                if kind == "image":
+                    continue
+            text = re.sub(r"<[^>]+>", " ", _text(b.get("content")))
+            if text:
+                out.append({"p": no, "b": box, "t": text[:4000]})
+    return out
+
+
+def place(pid):
+    """Each paragraph's place on the file's pages, {unit id: {"page": n, "boxes": [[x0, y0, x1, y1], ...]}}: matched
+    in reading order against the engine's blocks, by the words they share."""
+    from .tokens import plain
+    f = store.pdir(pid) / "layout.json"
+    if not f.exists():
+        return {}
+    blocks = json.loads(f.read_text())
+    words = lambda s: set(re.findall(r"\w+", s.lower()))  # noqa: E731
+    bw = [words(b["t"]) for b in blocks]
+    doc = store.parsed(pid)
+    out, at = {}, 0
+    for uid, u in doc["units"].items():   # (in reading order)
+        uw = words(plain(u["toks"], doc["atoms"]))
+        if not uw:
+            continue
+        best, score = None, 0.0
+        for k in range(max(0, at - 3), min(len(blocks), at + 60)):
+            s = len(uw & bw[k]) / len(uw) if bw[k] else 0
+            if s > score:
+                best, score = k, s
+        if best is None or score < 0.5:
+            continue
+        b = blocks[best]
+        out[uid] = {"page": b["p"], "boxes": [b["b"]] + ([b["fig"]] if b.get("fig") else [])}
+        at = best
+    return out
+
+
+def relayout(pid):
+    """A PDF converted before its layout was kept: the engine runs again (the fast tier: seconds) for the places alone;
+    the document stays as it is (the same file and tier give the same text). False when that cannot be done now."""
+    import tempfile
+    from . import engine
+    d = store.pdir(pid)
+    meta = json.loads((d / "meta.json").read_text())
+    if (d / "layout.json").exists():
+        return True
+    if (meta.get("source") or {}).get("tier") != "fast":   # the accurate tier takes minutes: not on a page's request
+        return False
+    if not engine.where() or not (d / "source.pdf").exists():
+        return False
+    with tempfile.TemporaryDirectory() as tmp:
+        out = engine.convert(d / "source.pdf", Path(tmp) / "out", "fast")
+        (d / "layout.json").write_text(json.dumps(layout_of(read_output(out)), ensure_ascii=False))
+    return True
 
 
 def read_output(folder):

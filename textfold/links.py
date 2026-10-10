@@ -4,7 +4,7 @@ Cross-references the author wrote ("Figure 2") come from the parser. These are
 the links the author left implicit; one model call over the whole paper, seen
 as its takeaways, finds them. Every link is kept as an edge from -> to.
 """
-from . import llm
+from . import kinds, llm
 from .tokens import plain
 
 RELS = ["supports", "builds_on", "qualifies", "explains"]
@@ -30,7 +30,7 @@ def build(doc, cfg, cache_dir, log=print, force=False):
         kind = f", {fig_label[uid]} caption" if uid in fig_label else ""
         lines.append(f"U{n} {where} [{lad['role']}{kind}] {plain(lad['brief'][:lad['tn']], doc['atoms'])}")
     target = max(20, len(order) // 2)
-    prompt = f"""Paper: {doc['meta']['title']}
+    prompt = kinds.adapt(f"""Paper: {doc['meta']['title']}
 
 Every unit of the paper (paragraph, list item, or figure or table caption) as a one-line takeaway, in reading order, with its section and role:
 
@@ -44,8 +44,8 @@ Find the argument links a reader would want to follow: where one unit is the evi
 
 Rules: link across distance, not neighbours (never two adjacent units of the same section); no vague topical similarity; each claim in the Abstract, Introduction, Discussion and Conclusion should receive the units that give its evidence, where the paper has them; appendix details should point to the main-text result they support; at most {MAX_FROM} links from any one unit; about {target} links in total.
 
-Return JSON {{"links": [{{"from": "U12", "to": "U3", "rel": "supports"}}, ...]}}."""
-    rec, cached = llm.call(prompt, SCHEMA, cfg, cache_dir, force)
+Return JSON {{"links": [{{"from": "U12", "to": "U3", "rel": "supports"}}, ...]}}.""", doc["meta"])
+    rec, cached = llm.call(prompt, SCHEMA, cfg, cache_dir, force, system=llm.system_for(doc["meta"]))
     pos = {uid: n for n, uid in enumerate(order)}
     have = {(e["f"], e["t"]) for e in doc["edges"]}
     per_from, added = {}, []

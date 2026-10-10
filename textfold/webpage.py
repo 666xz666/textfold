@@ -87,6 +87,9 @@ def _clean(md, title):
 
 def fetch(pid, progress=None):
     """Store a web page's article (once)."""
+    import warnings
+    # (macOS's own Python is built with LibreSSL; urllib3, which trafilatura brings, says so on import, harmlessly)
+    warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL")
     import trafilatura
     d = store.pdir(pid)
     if (d / "meta.json").exists() and (d / "source.html").exists():

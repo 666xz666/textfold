@@ -9,7 +9,7 @@ import re
 import threading
 import time
 
-from . import langs, llm, store
+from . import kinds, langs, llm, store
 from .tokens import plain
 
 FORMAT, VERSION = "textfold/notes", 1   # (files written under earlier names say "paperfold/notes" or "dynamic-reader/notes")
@@ -208,7 +208,7 @@ language of the question.
 Paragraphs you may cite:
 {citable}
 """
-    return text, {v: k for k, v in nums.items()}
+    return kinds.adapt(text, doc["meta"]), {v: k for k, v in nums.items()}
 
 
 MAP_CHARS = 60000   # the whole paper's map, at most (a long paper keeps every section, fewer paragraphs each)
@@ -275,7 +275,7 @@ def ask(pid, nid, question, spec, timeout=300, ui=None):
     done = [t for t in turns(note) if t.get("a")]   # answered turns (a pending or failed one is being asked again)
     lang = next((t.get("lang") for t in turns(note) if t.get("lang")), None) or note["anchor"].get("lang") or "en"
     text, nums = prompt(doc, note, question, lang, done[-6:], ui if ui in langs.LANGS else None)
-    rec, _ = llm.call(text, ASK_SCHEMA, spec, store.pdir(pid) / "llm-cache", timeout=timeout, system=SYSTEM_ASK)
+    rec, _ = llm.call(text, ASK_SCHEMA, spec, store.pdir(pid) / "llm-cache", timeout=timeout, system=kinds.adapt(SYSTEM_ASK, doc["meta"]))
     out = rec["out"]
     answer, cites = _cited(out["answer"], nums, doc["units"])
     held = []   # the citations kept aside while an id written out in full (not as a citation) becomes its section

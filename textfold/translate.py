@@ -12,7 +12,7 @@ parallel. The section's own lines come with the first part.
 import re
 from concurrent.futures import ThreadPoolExecutor
 
-from . import langs, llm
+from . import kinds, langs, llm
 from .ladder import KIND, align, clean, outline, section_ladder, topic_tokens, written
 from .tokens import plain
 
@@ -61,7 +61,7 @@ def prompt_for(doc, chunk, lang):
     sec = chunk.get("lad")
     head = f"{chunk['num']} {chunk['title']}".strip()
     title_rule = f"\n- paper_title: the paper's title in {L}." if chunk["id"] == "abstract" else ""
-    return f"""Translate one section of a research paper into {L} for a zoomable reader, and write its short zoom levels in {L}.
+    return kinds.adapt(f"""Translate one section of a research paper into {L} for a zoomable reader, and write its short zoom levels in {L}.
 
 Paper: {doc['meta']['title']}
 
@@ -85,7 +85,7 @@ Rules:
 - section: title (the section title in {L}, without its number), takeaway (at most {b['section']} {unit}), topic (at most {b['topic']} {unit}, verbatim from that takeaway).{title_rule}
 - {langs.punctuation_rule(lang)} In takeaway and reason, math only by copying a marker.
 
-Return JSON {{"section": {{"title": "...", "takeaway": "...", "topic": "..."}}, "units": [{{"id": "U0", "sentences": ["...", ...], "takeaway": "...", "reason": "...", "topic": "..."}}, ...]}} with exactly one entry per unit, in order."""
+Return JSON {{"section": {{"title": "...", "takeaway": "...", "topic": "..."}}, "units": [{{"id": "U0", "sentences": ["...", ...], "takeaway": "...", "reason": "...", "topic": "..."}}, ...]}} with exactly one entry per unit, in order.""", doc["meta"])
 
 
 PART_CHARS = 5000
@@ -165,7 +165,7 @@ def build(doc, lang, cfg, cache_dir, jobs=4, log=print, progress=None, force=Fal
         if stop is not None and stop.is_set():   # stopped: the parts not yet sent are skipped
             return task, None, llm.Stopped()
         try:
-            return task, llm.call(prompt_for(doc, {**c, "units": us}, lang), SCHEMA, cfg, cache_dir, force), None
+            return task, llm.call(prompt_for(doc, {**c, "units": us}, lang), SCHEMA, cfg, cache_dir, force, system=llm.system_for(doc["meta"])), None
         except Exception as e:
             return task, None, e
 
@@ -212,8 +212,9 @@ def build(doc, lang, cfg, cache_dir, jobs=4, log=print, progress=None, force=Fal
         prompt = (f"Paper: {meta['title']}\n\nTranslate these titles of the paper (section titles, possibly the paper title itself) "
                   f"into {L}, keeping established acronyms unchanged and any $...$ math unchanged. "
                   "Return JSON {\"titles\": [...]} in the same order.\n\n" + "\n".join(titles))
+        prompt = kinds.adapt(prompt, meta)
         try:
-            rec, cached = llm.call(prompt, schema, cfg, cache_dir, force)
+            rec, cached = llm.call(prompt, schema, cfg, cache_dir, force, system=llm.system_for(meta))
             cost += 0 if cached else (rec.get("cost") or 0)
             got = rec["out"].get("titles", [])
             for c, t in zip(bare, got):
