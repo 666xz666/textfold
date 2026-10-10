@@ -23,7 +23,9 @@ python3 -m textfold serve                    # http://localhost:3017  (ThoughtDA
 ```
 
 The same code is a Python package (`pyproject.toml`): `python3 -m pip wheel . --no-deps` builds it, with the reader's
-pages (`textfold/web/`) inside, and `pip install textfold` gives the `textfold` command. Run from a clone, papers are
+pages (`textfold/web/`) inside, and `pip install textfold` gives the `textfold` command. The docs write `python3 -m textfold` instead: macOS's own Python
+installs a user's packages with their commands in `~/Library/Python/3.9/bin`, which is not on the PATH, so `textfold`
+alone is not found there, and `python3 -m textfold` always is. Run from a clone, papers are
 kept in the clone; installed, in the system's folder for app data (`store.app_data()`, shared with the desktop app).
 
 The landing takes a link or ID (arXiv, PubMed Central, Europe PMC, bioRxiv, medRxiv, a DOI, Wikipedia), or a Markdown
@@ -233,7 +235,7 @@ stamp, a DOI from its metadata or its first page (only the first: the second is 
 takes the file with what was found (`X-Refs`): a paper that resolves is generated from its online version, the file
 kept as its `source.pdf` once it is fetched; an arXiv paper without HTML falls back to the file. Anything else goes to
 the PDF engine (`engine.py`): MinerU 4, pinned, in `<app data>/engine` (a PaperFold install in its old place is used
-there), installed from the landing, the settings or `textfold engine install`. Its command line only (`mineru-kit
+there), installed from the landing, the settings or `python3 -m textfold engine install`. Its command line only (`mineru-kit
 parse --format zip`), never the `mineru` document library. Fast is MinerU's flash tier (seconds, no model; formulas as
 pictures); accurate is advanced (a vision model, several seconds a page), with `--disable-image-analysis`.
 `pdfdoc.py` turns `structured_content.json` into the document: running heads and page numbers out, the title from the
@@ -302,7 +304,7 @@ textfold/models.py   one catalog of agent and API models; settings; resolving a 
 textfold/llm.py      the call (cached) for every kind of model; llm_openai.py: OpenAI-compatible endpoints
 textfold/build.py    reader pages: app mode (served) and static mode (one file)
 textfold/notes.py    the reader's notes (docs/notes-format.md) and questions answered by the model
-textfold/fold.py     the TextFold format (docs/format.md) and a document at one level as Markdown (textfold get)
+textfold/fold.py     the TextFold format (docs/format.md) and a document at one level as Markdown (python3 -m textfold get)
 textfold/web/   reader.js (render + FLIP morph), app.js (sidebar, landing, settings, jobs), i18n.js, CSS, templates
 tools/zoombench.py  zoom smoothness as the screen sees it (GPU, 2x, Chrome's frame trace), on out/compare/<id>/ pages
 tools/readme_assets.py  the README's pictures, made from a real paper in the reader
