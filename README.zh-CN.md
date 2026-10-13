@@ -182,6 +182,8 @@ claude plugin install textfold@textfold
 
 <div align="center">
 
+<sub>TextFold 建立在这些开源项目之上：[trafilatura](https://github.com/adbar/trafilatura) 从网页中找出正文，[MinerU](https://github.com/opendatalab/MinerU) 转换 PDF，[PDF.js](https://github.com/mozilla/pdf.js) 显示 PDF，[KaTeX](https://katex.org) 排版公式。感谢它们的作者。</sub>
+
 [Apache 2.0](./LICENSE) © 2026 Xia Chen · [开发文档](docs/DEVELOPMENT.md) · [参与贡献](CONTRIBUTING.md) · [反馈](https://github.com/chenxiachan/textfold/issues)
 
 </div>

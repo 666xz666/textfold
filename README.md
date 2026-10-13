@@ -182,6 +182,8 @@ More in [plugins/textfold](plugins/textfold/README.md).
 
 <div align="center">
 
+<sub>Built on [trafilatura](https://github.com/adbar/trafilatura), which finds the article on a web page, and [MinerU](https://github.com/opendatalab/MinerU), which converts PDFs; PDFs are shown with [PDF.js](https://github.com/mozilla/pdf.js) and formulas with [KaTeX](https://katex.org). Thanks to their authors.</sub>
+
 [Apache 2.0](./LICENSE) © 2026 Xia Chen · [Development](docs/DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md) · [Feedback](https://github.com/chenxiachan/textfold/issues)
 
 </div>
