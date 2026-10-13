@@ -120,13 +120,15 @@ TextFold uses a model you already have, and there is no account to create. It lo
 | **Ask the paper**, bottom right | ask about the whole paper |
 | `L` | next language |
 
-## Share a paper
+## Save a page
+
+**Save**, at the top of the reader, keeps a page as one HTML file that opens anywhere without a server: its levels, the notes you choose and, if you like, its original PDF to read beside it. It can also keep only your notes, as a page, a PDF, Markdown for Obsidian or JSON. From the command line, the page without your notes:
 
 ```bash
 python3 -m textfold export 2201.11903
 ```
 
-This writes one self-contained HTML file to `out/2201.11903/` that opens anywhere without a server. TextFold's license covers its code: a paper, and the levels and translations made from it, stay under the license its authors chose, shown under every title. Most arXiv papers allow reading but not redistribution, so share a page only when that license allows it, as Creative Commons licenses do.
+TextFold is a tool, and its license covers its code. When you share a file, follow the terms of the original text, shown under its title.
 
 ## For agents and scripts
 
