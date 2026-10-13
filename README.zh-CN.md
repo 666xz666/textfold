@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" width="72" alt="TextFold">
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/logo.svg" width="72" alt="TextFold">
 
 # TextFold
 
@@ -10,13 +10,13 @@
 
 <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-6B5CE7?style=flat-square">
 <img alt="在你的电脑上运行" src="https://img.shields.io/badge/runs-on_your_computer-E08A3C?style=flat-square">
-<a href="LICENSE"><img alt="Apache 2.0 许可证" src="https://img.shields.io/badge/license-Apache_2.0-6B5CE7?style=flat-square"></a>
+<a href="https://github.com/chenxiachan/textfold/blob/main/LICENSE"><img alt="Apache 2.0 许可证" src="https://img.shields.io/badge/license-Apache_2.0-6B5CE7?style=flat-square"></a>
 
-[English](README.md) · **简体中文**
+[English](https://github.com/chenxiachan/textfold/blob/main/README.md) · **简体中文**
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/sources-dark.webp">
-  <img src="docs/assets/sources.webp" width="880" alt="TextFold 能读的：arXiv、PubMed Central、bioRxiv、medRxiv、维基百科、GitHub README、任意网页、PDF、Word、PowerPoint、Excel、EPUB、HTML、图片、Markdown、纯文本、CSV，以及 agent 的回答，从全文一路折到几个词">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/sources-dark.webp">
+  <img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/sources.webp" width="880" alt="TextFold 能读的：arXiv、PubMed Central、bioRxiv、medRxiv、维基百科、GitHub README、任意网页、PDF、Word、PowerPoint、Excel、EPUB、HTML、图片、Markdown、纯文本、CSV，以及 agent 的回答，从全文一路折到几个词">
 </picture>
 
 **粘贴链接：** 任意网页 · arXiv · PubMed Central · bioRxiv · medRxiv · 维基百科 · GitHub<br>
@@ -26,7 +26,7 @@
 
 <br>
 
-<img src="docs/assets/zoom-zh.gif" width="880" alt="一篇论文从全文折叠成章节地图，再展开回来">
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/zoom-zh.gif" width="880" alt="一篇论文从全文折叠成章节地图，再展开回来">
 
 </div>
 
@@ -46,7 +46,7 @@
 
 Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) 用同样的方式折叠每条回答，一个键一个层级。[了解更多 ↓](#在-claude-code-里)
 
-<img src="docs/assets/textfold.gif" width="880" alt="Claude Code 里的一条回答从全文折到每段两句，再折到一句，然后展开回来，每次按一个键">
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/textfold.gif" width="880" alt="Claude Code 里的一条回答从全文折到每段两句，再折到一句，然后展开回来，每次按一个键">
 
 ## 一种折叠，三个地方
 
@@ -67,8 +67,8 @@ Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/assets/notes.png" alt="全文里的高光和页边笔记"></td>
-<td width="50%"><img src="docs/assets/keep.png" alt="高光过的句子在要点层被保留"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/notes.png" alt="全文里的高光和页边笔记"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/keep.png" alt="高光过的句子在要点层被保留"></td>
 </tr>
 <tr>
 <td align="center"><sub>在全文里高光、在页边写笔记……</sub></td>
@@ -146,7 +146,7 @@ python3 -m textfold get 2201.11903 --level key --section 3      # 某一节：�
 python3 -m textfold get report.pdf --json                       # 整份文档，TextFold 格式
 ```
 
-还没折叠过的文档会先用你连接的模型折叠。模型写的每一行都标明是模型写的，并且指回它依据的作者原句：[docs/format.md](docs/format.md) 说明了这个格式，任何读写折叠文本的程序都可以用。
+还没折叠过的文档会先用你连接的模型折叠。模型写的每一行都标明是模型写的，并且指回它依据的作者原句：[docs/format.md](https://github.com/chenxiachan/textfold/blob/main/docs/format.md) 说明了这个格式，任何读写折叠文本的程序都可以用。
 
 ## 保存一页
 
@@ -188,7 +188,7 @@ claude plugin install textfold@textfold
 
 **为什么折叠可信。** TextFold 请 Claude 把要点放在前面：每条回答先给答案，每段先写关键句。折叠保留的就是 Claude 放在最前面的内容。没有第二个模型，也不做摘要，所以折叠不花钱、不用等。
 
-详见 [plugins/textfold](plugins/textfold/README.md)。
+详见 [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/textfold/README.md)。
 
 </details>
 
@@ -225,6 +225,6 @@ claude plugin install textfold@textfold
 
 <sub>TextFold 建立在这些开源项目之上：[trafilatura](https://github.com/adbar/trafilatura) 从网页中找出正文，[MinerU](https://github.com/opendatalab/MinerU) 转换 PDF，[mammoth](https://github.com/mwilliamson/python-mammoth) 读取 Word 文件，[PDF.js](https://github.com/mozilla/pdf.js) 显示 PDF，[KaTeX](https://katex.org) 排版公式。感谢它们的作者。</sub>
 
-[Apache 2.0](./LICENSE) © 2026 Xia Chen · [开发文档](docs/DEVELOPMENT.md) · [格式](docs/format.md) · [参与贡献](CONTRIBUTING.md) · [安全](SECURITY.md) · [反馈](https://github.com/chenxiachan/textfold/issues)
+[Apache 2.0](https://github.com/chenxiachan/textfold/blob/main/LICENSE) © 2026 Xia Chen · [开发文档](https://github.com/chenxiachan/textfold/blob/main/docs/DEVELOPMENT.md) · [格式](https://github.com/chenxiachan/textfold/blob/main/docs/format.md) · [参与贡献](https://github.com/chenxiachan/textfold/blob/main/CONTRIBUTING.md) · [安全](https://github.com/chenxiachan/textfold/blob/main/SECURITY.md) · [反馈](https://github.com/chenxiachan/textfold/issues)
 
 </div>

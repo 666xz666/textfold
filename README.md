@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" width="72" alt="TextFold">
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/logo.svg" width="72" alt="TextFold">
 
 # TextFold
 
@@ -10,13 +10,13 @@
 
 <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-6B5CE7?style=flat-square">
 <img alt="Runs on your computer" src="https://img.shields.io/badge/runs-on_your_computer-E08A3C?style=flat-square">
-<a href="LICENSE"><img alt="Apache License 2.0" src="https://img.shields.io/badge/license-Apache_2.0-6B5CE7?style=flat-square"></a>
+<a href="https://github.com/chenxiachan/textfold/blob/main/LICENSE"><img alt="Apache License 2.0" src="https://img.shields.io/badge/license-Apache_2.0-6B5CE7?style=flat-square"></a>
 
-**English** · [简体中文](README.zh-CN.md)
+**English** · [简体中文](https://github.com/chenxiachan/textfold/blob/main/README.zh-CN.md)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/sources-dark.webp">
-  <img src="docs/assets/sources.webp" width="880" alt="What TextFold reads: arXiv, PubMed Central, bioRxiv, medRxiv, Wikipedia, GitHub READMEs, any web page, PDF, Word, PowerPoint, Excel, EPUB, HTML, pictures, Markdown, text, CSV and an agent's replies, folded from the full text down to a few words">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/sources-dark.webp">
+  <img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/sources.webp" width="880" alt="What TextFold reads: arXiv, PubMed Central, bioRxiv, medRxiv, Wikipedia, GitHub READMEs, any web page, PDF, Word, PowerPoint, Excel, EPUB, HTML, pictures, Markdown, text, CSV and an agent's replies, folded from the full text down to a few words">
 </picture>
 
 **Paste a link:** any web page · arXiv · PubMed Central · bioRxiv · medRxiv · Wikipedia · GitHub<br>
@@ -26,7 +26,7 @@
 
 <br>
 
-<img src="docs/assets/zoom.gif" width="880" alt="A paper folding from its full text into a map of its sections, and back">
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/zoom.gif" width="880" alt="A paper folding from its full text into a map of its sections, and back">
 
 </div>
 
@@ -46,7 +46,7 @@ Choose the level of detail you need, and lower your cognitive load.
 
 Your agent writes more than you have time to read. A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) folds every reply the same way, one key per level. [More ↓](#in-claude-code)
 
-<img src="docs/assets/textfold.gif" width="880" alt="A reply in Claude Code folding from the full text to two sentences a paragraph, then one, and back, one key at a time">
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/textfold.gif" width="880" alt="A reply in Claude Code folding from the full text to two sentences a paragraph, then one, and back, one key at a time">
 
 ## One fold, three places
 
@@ -67,8 +67,8 @@ Your agent writes more than you have time to read. A [Claude Code mod](https://c
 
 <table>
 <tr>
-<td width="50%"><img src="docs/assets/notes.png" alt="Highlights in the full text and a note in the margin"></td>
-<td width="50%"><img src="docs/assets/keep.png" alt="The highlighted passages kept at the Takeaway level"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/notes.png" alt="Highlights in the full text and a note in the margin"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/keep.png" alt="The highlighted passages kept at the Takeaway level"></td>
 </tr>
 <tr>
 <td align="center"><sub>Highlight and write in the margin…</sub></td>
@@ -146,7 +146,7 @@ python3 -m textfold get 2201.11903 --level key --section 3      # one section: i
 python3 -m textfold get report.pdf --json                       # the whole document, in the TextFold format
 ```
 
-A document not folded yet is folded first, with the model you connected. Every line a model wrote is marked as such and anchored to the author's sentences it rests on: [docs/format.md](docs/format.md) describes the format, for any program that reads or writes folded text.
+A document not folded yet is folded first, with the model you connected. Every line a model wrote is marked as such and anchored to the author's sentences it rests on: [docs/format.md](https://github.com/chenxiachan/textfold/blob/main/docs/format.md) describes the format, for any program that reads or writes folded text.
 
 ## Save a page
 
@@ -188,7 +188,7 @@ Type the digit while the prompt is empty, or pick a level in the row above the p
 
 **Why you can trust a fold.** TextFold asks Claude to lead with the point: the answer first in every reply, the key sentence first in every paragraph. A fold keeps what Claude put first. There is no second model and no summary, so a fold costs nothing and takes no time.
 
-More in [plugins/textfold](plugins/textfold/README.md).
+More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/textfold/README.md).
 
 </details>
 
@@ -225,6 +225,6 @@ More in [plugins/textfold](plugins/textfold/README.md).
 
 <sub>Built on [trafilatura](https://github.com/adbar/trafilatura), which finds the article on a web page, [MinerU](https://github.com/opendatalab/MinerU), which converts PDFs, and [mammoth](https://github.com/mwilliamson/python-mammoth), which reads Word files; PDFs are shown with [PDF.js](https://github.com/mozilla/pdf.js) and formulas with [KaTeX](https://katex.org). Thanks to their authors.</sub>
 
-[Apache 2.0](./LICENSE) © 2026 Xia Chen · [Development](docs/DEVELOPMENT.md) · [Format](docs/format.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Feedback](https://github.com/chenxiachan/textfold/issues)
+[Apache 2.0](https://github.com/chenxiachan/textfold/blob/main/LICENSE) © 2026 Xia Chen · [Development](https://github.com/chenxiachan/textfold/blob/main/docs/DEVELOPMENT.md) · [Format](https://github.com/chenxiachan/textfold/blob/main/docs/format.md) · [Contributing](https://github.com/chenxiachan/textfold/blob/main/CONTRIBUTING.md) · [Security](https://github.com/chenxiachan/textfold/blob/main/SECURITY.md) · [Feedback](https://github.com/chenxiachan/textfold/issues)
 
 </div>
