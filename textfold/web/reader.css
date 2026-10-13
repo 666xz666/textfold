@@ -57,8 +57,17 @@ svg .m1 { fill: var(--accent); } svg .m2 { fill: var(--accent); opacity: .4; } s
 .brand a { font-weight: 450; color: var(--muted); font-size: 13.5px; margin-left: 6px; white-space: nowrap; }
 .brand a.brand-home { display: flex; align-items: center; gap: 9px; font: inherit; color: var(--ink); margin: 0; text-decoration: none; }
 .tagline { color: var(--muted); font-size: 13.5px; white-space: nowrap; }
-.topbar { gap: 14px; }
+.topbar { gap: 6px 14px; flex-wrap: wrap; container: topbar / inline-size; }
 .brand { flex: 1; }
+/* the bar is as wide as the reader's column, half the window beside the PDF: the source's name ends in an ellipsis (and
+   is left out beside the PDF, whose own bar names it, as is the tagline), and the legend, with no room beside the buttons, takes a
+   row of its own */
+.brand { min-width: auto; }
+.brand-home, .brand > span { flex: none; }
+#arxiv-link { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; white-space: normal; overflow-wrap: anywhere; }
+html.compare #arxiv-link, html.compare .tagline { display: none; }
+.tagline { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@container topbar (max-width: 1000px) { .legend { order: 4; flex-basis: 100%; justify-content: flex-start; } }
 .langbtn { font: 600 12.5px var(--sans); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px;
   padding: 5px 11px; cursor: pointer; order: 3; }
 .langbtn:hover { filter: brightness(.97); }
