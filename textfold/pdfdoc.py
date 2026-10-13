@@ -2,8 +2,8 @@
 of blocks, each with its type, its place on the page and its content) turned into the Markdown and HTML the other
 sources go through. Running heads, page numbers and margin stamps are left out; the title and authors come from the
 file's own metadata when it has them; headings get their depth from their numbering (MinerU gives every heading the
-same level); a figure's panels and its caption become one figure; a formula is LaTeX (the accurate tier) or the
-picture of it (the fast tier); the references become a list of works.
+same level); a figure's panels and its caption become one figure, cut whole from its page when the engine cut it up;
+a formula is LaTeX (the accurate tier) or the picture of it (the fast tier); the references become a list of works.
 
 Its id: pdf-<the first 16 hex digits of the file's SHA-256>, so the same file is the same document."""
 import hashlib
@@ -17,6 +17,9 @@ from . import local, markdown, store
 
 DROP = {"header", "footer", "page_number", "aside_text"}
 CAPTION = re.compile(r"^\s*(?:fig(?:ure)?\.?|table|tab\.|scheme|chart|abb(?:ildung)?\.?|tabelle|图|表)\s*[A-Z]?\d+", re.I)
+FIGURE = re.compile(r"^\s*(?:fig(?:ure)?\.?|scheme|chart|abb(?:ildung)?\.?|图)\s*[A-Z]?\d+", re.I)   # not a table's
+PAD = 0.008   # around a figure cut from its page, of the page's width and height: the labels at its edges
+NEAR = 0.02   # of the page: pieces of a figure this close together are one figure
 PANEL = re.compile(r"^\s*\(?[a-z]\)?\s*$|^\s*\(?[a-z]\)\s", re.I)   # "(a)", "f)": a panel's label, not a heading
 DATE = re.compile(r"^(?:\w+ \d{1,2}, \d{4}|\d{1,2} \w+ \d{4}|\d{4}-\d{2}-\d{2})$")
 REFS = re.compile(r"^\s*(?:\d+\.?\s*)?(?:references|bibliography|literature|works cited|literatur|参考文献)\s*$", re.I)
@@ -63,6 +66,97 @@ def _caption_of(block):
     return " ".join(_text(c.get("content")) for c in block.get("captions") or [] if _text(c.get("content")))
 
 
+def _captions(b):
+    return [_text(c.get("content")) for c in b.get("captions") or [] if _text(c.get("content"))]
+
+
+def _figure_table(b):
+    """A figure the engine read as a table (its words in cells, its pictures cut into pieces): a figure's caption, or
+    none and pictures in its cells. Its picture (the engine's own, of the whole region) stands for it."""
+    if b.get("type") != "table" or not b.get("image_source"):
+        return False
+    cap = next((c for c in _captions(b) if CAPTION.match(c)), "")
+    return bool(FIGURE.match(cap)) if cap else "<img" in (b.get("content") or "")
+
+
+def _panel_boxes(b):
+    """Where a picture's panel labels are ("(a)", "t=1, substep 1"): its captions before the figure's own."""
+    caps = [c for c in b.get("captions") or [] if _text(c.get("content"))]
+    i = next((n for n, c in enumerate(caps) if CAPTION.match(_text(c.get("content")))), len(caps))
+    return [c["bbox"] for c in caps[:i] if c.get("bbox")]
+
+
+def _gap(a, b):
+    """How far apart two boxes are (0 when they touch or overlap)."""
+    return max(a[0] - b[2], b[0] - a[2], a[1] - b[3], b[1] - a[3], 0)
+
+
+def _union(boxes):
+    return [min(x[0] for x in boxes), min(x[1] for x in boxes), max(x[2] for x in boxes), max(x[3] for x in boxes)]
+
+
+def _center_in(b, box):
+    x, y = (b["bbox"][0] + b["bbox"][2]) / 2, (b["bbox"][1] + b["bbox"][3]) / 2
+    return box[0] <= x <= box[2] and box[1] <= y <= box[3]
+
+
+def _picture(b):
+    return bool(b.get("bbox")) and ((b.get("type") == "image" and bool(b.get("image_source"))) or _figure_table(b))
+
+
+def _zones(blocks, page_of):
+    """The figures the engine read in pieces, found by where the pieces are on the page: pictures this close together,
+    with the short texts among and around them (a figure's labels, which the fast tier reads as lines of text). By the
+    id of each piece, its figure: {"pictures": the ids of its pictures, "labels": where its labels are}. One with text
+    of the page's own inside it, two figures' captions, or other blocks between its pieces in reading order, is left
+    out: its pieces stay as the engine read them."""
+    out, pages = {}, {}
+    for n, b in enumerate(blocks):
+        pages.setdefault(page_of[id(b)], []).append((n, b))
+    for items in pages.values():
+        groups = [{"pics": [(n, b)], "labels": [], "box": _union([b["bbox"]] + _panel_boxes(b))} for n, b in items if _picture(b)]
+        if not groups:
+            continue
+        texts = [(n, b, _text(b.get("content"))) for n, b in items if b.get("type") in ("text", "paragraph_title") and b.get("bbox")]
+        taken, changed = set(), True
+        while changed:
+            changed = False
+            pair = next(((g, h) for g in groups for h in groups if g is not h and _gap(g["box"], h["box"]) <= NEAR), None)
+            if pair:
+                g, h = pair
+                g["pics"] += h["pics"]
+                g["labels"] += h["labels"]
+                g["box"] = _union([g["box"], h["box"]])
+                groups.remove(h)
+                changed = True
+                continue
+            for n, b, content in texts:
+                words = len(content.split())
+                if n in taken or not content or words > 25 or CAPTION.match(content):
+                    continue
+                short = words <= 6 and not (NUMBERED.match(content) or REFS.match(content) or ABSTRACT.match(content))
+                g = next((g for g in groups if _center_in(b, g["box"]) or (short and _gap(b["bbox"], g["box"]) <= NEAR)), None)
+                if g:
+                    g["labels"].append((n, b))
+                    g["box"] = _union([g["box"], b["bbox"]])
+                    taken.add(n)
+                    changed = True
+        for g in groups:
+            if len(g["pics"]) == 1 and not g["labels"]:
+                continue
+            pieces = {n for n, _ in g["pics"] + g["labels"]}
+            if sum(1 for _, b in g["pics"] if any(CAPTION.match(c) for c in _captions(b))) > 1:
+                continue   # two figures
+            if any(n not in pieces for n in range(min(pieces), max(pieces) + 1)):
+                continue   # something else read between its pieces
+            if any(n not in pieces and b.get("bbox") and _center_in(b, g["box"]) for n, b in items):
+                continue   # the page's own text inside it
+            zone = {"pictures": frozenset(id(b) for _, b in g["pics"]), "labels": [b["bbox"] for _, b in g["labels"]]}
+            for _, b in g["pics"] + g["labels"]:
+                out[id(b)] = zone
+    return out
+
+
 def plausible(title):
     """Words, not a file's code name: most of its tokens are made of letters ("11-nelson65 mc-nwf1 nm" is not)."""
     toks = title.split()
@@ -70,10 +164,15 @@ def plausible(title):
     return 8 <= len(title) <= 300 and len(toks) >= 2 and len(wordy) >= 0.6 * len(toks)
 
 
-def to_markdown(sc, name=""):
-    """(title, authors, Markdown with HTML for figures and tables) from MinerU's structured content."""
+def to_markdown(sc, name="", crops=None, want=None):
+    """(title, authors, Markdown with HTML for figures and tables) from MinerU's structured content. A figure the
+    engine cut up (the accurate tier cuts one into its panels, and their labels into captions) is one picture cut from
+    its page: want, a list, gets each such figure's {"page", "box", "blocks"}; crops is the picture made of each,
+    {(page, box): src}. Without its picture, the figure is its pieces as the engine cut them."""
     doc = sc.get("metadata", {}).get("document", {}) or {}
     blocks = [b for p in sc.get("pages", []) for b in p.get("blocks", []) if b.get("type") not in DROP]
+    page_of = {id(b): p.get("page_idx", n) + 1 for n, p in enumerate(sc.get("pages", [])) for b in p.get("blocks", [])}
+    zones = _zones(blocks, page_of)
     # the title the page shows, when the engine found a whole one; else the file's own when it is words (it is often a
     # code: "11-nelson65 mc-nwf1"); else the file's name
     first = next((b for b in blocks if b.get("type") == "doc_title"), None)
@@ -85,23 +184,46 @@ def to_markdown(sc, name=""):
     # what comes between the title and the first heading (the authors, their places, a date) is the paper's front matter
     has_heading = any(b.get("type") == "paragraph_title" for b in blocks)
     out, notes, figure, deferred, in_refs, front = [], [], [], [], False, True
+    figure_notes = []   # a figure read as a table: its footnotes, after it
     seen_title, refs_at = False, None
 
     def place(x):
         """Figures and tables placed after the references (a journal's last pages) go before them."""
         (deferred if in_refs else out).append(x)
 
+    def region(members):
+        """Where a figure in pieces is on its page (its pieces and their labels), or None: one picture, or pages apart."""
+        pages, ids = {page_of[id(m)] for m in members}, {id(m) for m in members}
+        labels = [box for m in members for box in _panel_boxes(m)]
+        for zone in {id(zones[i]): zones[i] for i in ids if i in zones}.values():
+            if zone["pictures"] <= ids:
+                labels += zone["labels"]
+        if len(pages) != 1 or (len(members) == 1 and not labels):
+            return None
+        boxes = [m["bbox"] for m in members] + labels
+        return pages.pop(), [round(max(0.0, min(x[0] for x in boxes) - PAD), 4), round(max(0.0, min(x[1] for x in boxes) - PAD), 4),
+                             round(min(1.0, max(x[2] for x in boxes) + PAD), 4), round(min(1.0, max(x[3] for x in boxes) + PAD), 4)]
+
     def flush_figure(caption=""):
         if not figure:
             return
-        imgs = "".join(f'<img src="{src}" alt="">' for src in figure)
+        members, src = list(figure), None
+        figure.clear()
+        at = region(members)
+        if at:
+            if want is not None:
+                want.append({"page": at[0], "box": at[1], "blocks": [id(m) for m in members]})
+            src = (crops or {}).get((at[0], tuple(at[1])))
+        imgs = "".join(f'<img src="{s}" alt="">' for s in ([src] if src else [m["image_source"] for m in members]))
         cap = f"<figcaption>{caption}</figcaption>" if caption else ""
         place(f"<figure>{imgs}{cap}</figure>")
-        figure.clear()
+        if figure_notes:
+            place(" ".join(figure_notes))
+            figure_notes.clear()
 
     def figure_caption(b):
         """A figure's own caption ("Figure 2: ..."), not a panel's ("(a)", "t=1, substep 1")."""
-        caps = [_text(c.get("content")) for c in b.get("captions") or [] if _text(c.get("content"))]
+        caps = _captions(b)
         i = next((n for n, c in enumerate(caps) if CAPTION.match(c)), None)
         return " ".join(caps[i:]) if i is not None else ""
 
@@ -109,6 +231,11 @@ def to_markdown(sc, name=""):
         kind, content = b.get("type"), _text(b.get("content"))
         if kind in ("text", "paragraph_title") and BOILER.match(content):
             continue
+        if kind in ("text", "paragraph_title") and id(b) in zones:
+            continue   # a figure's label read as a line of text ("Reasoning Task", "100"): the figure shows it
+        if _figure_table(b):
+            kind = "image"
+            figure_notes.extend(_text(c.get("content")) for c in b.get("footnotes") or [] if _text(c.get("content")))
         if kind != "image" and figure:   # panels with no caption of their own: a caption after them, or none
             cap = content if kind == "text" and CAPTION.match(content) else ""
             flush_figure(cap)
@@ -138,7 +265,7 @@ def to_markdown(sc, name=""):
             continue   # authors, affiliations, dates above the first heading (an abstract, an introduction stay)
         if kind == "image":
             if b.get("image_source"):
-                figure.append(b["image_source"])
+                figure.append(b)
             cap = figure_caption(b)
             if cap:
                 flush_figure(cap)
@@ -173,6 +300,8 @@ def to_markdown(sc, name=""):
         if content:
             out.append(content)
     flush_figure()
+    if figure_notes:
+        place(" ".join(figure_notes))
     if deferred:
         at = refs_at if refs_at is not None else len(out)
         out[at:at] = deferred
@@ -189,11 +318,32 @@ def to_markdown(sc, name=""):
     return title or "Untitled PDF", authors, "\n".join(text) + "\n"
 
 
+def cut_figures(sc, folder, pdf, name=""):
+    """Each figure the engine cut up, cut whole from its page into the engine's output folder (images/):
+    {(page, box): src}, for to_markdown. Nothing when it cannot be done: the figure is then its pieces."""
+    from . import engine
+    want = []
+    to_markdown(sc, name, want=want)
+    if not want or not Path(pdf).is_file():
+        return {}
+    (Path(folder) / "images").mkdir(parents=True, exist_ok=True)
+    jobs = [(w["page"], w["box"], Path(folder) / "images" / f"figure-{w['page']}-{n + 1}.jpg") for n, w in enumerate(want)]
+    try:
+        done = engine.crop(pdf, jobs)
+    except Exception:
+        return {}
+    return {(p, tuple(box)): f"images/{out.name}" for p, box, out in jobs if str(out) in done}
+
+
 def store_pdf(pid, folder, sc, name, tier, replace=False):
     """A converted PDF stored as a document (papers/<pid>/), its pictures read from the engine's output folder. The
-    file itself is kept as source.pdf, so the reader can show it beside the text. Converted again (replace), the
-    reader's notes and the file stay; the levels go, since they belong to the text they were made from."""
-    title, authors, text = to_markdown(sc, name)
+    file itself is kept as source.pdf, so the reader can show it beside the text; the engine's structured content as
+    structured_content.json, so that its figures and places can be made again without the engine. Converted again
+    (replace), the reader's notes and the file stay; the levels go, since they belong to the text they were made from."""
+    from . import engine
+    d = store.pdir(pid)
+    pdf = Path(folder) / engine.PDF
+    title, authors, text = to_markdown(sc, name, cut_figures(sc, folder, pdf if pdf.is_file() else d / "source.pdf", name))
     html, _ = markdown.to_html(text)
     doc = sc.get("metadata", {}).get("document", {}) or {}
     doi = next((re.sub(r"^doi:\s*", "", i, flags=re.I) for i in doc.get("identifiers") or [] if re.match(r"^(doi:)?10\.\d{4,9}/", i, re.I)), "")
@@ -202,7 +352,6 @@ def store_pdf(pid, folder, sc, name, tier, replace=False):
             "snapshot": time.strftime("%Y-%m-%d"), "abs_url": url or (f"https://doi.org/{doi}" if doi else ""), "html_url": "",
             "doi": doi, "license": "", "source": {"kind": "pdf", "name": name, "tier": tier, "engine": "mineru"},
             "label": f"PDF · {name}"}
-    d = store.pdir(pid)
     keep = d.with_name(d.name + ".keep")   # the reader's notes and the file, on disk while the document is rewritten
     if replace and d.exists():
         shutil.rmtree(keep, ignore_errors=True)
@@ -215,6 +364,7 @@ def store_pdf(pid, folder, sc, name, tier, replace=False):
     try:
         local.store_doc(pid, html, meta, "source.md", text, lambda f: local.Images(f, Path(folder)).resolve, sizes=True)
         (d / "layout.json").write_text(json.dumps(layout_of(sc), ensure_ascii=False))
+        (d / "structured_content.json").write_text(json.dumps(sc, ensure_ascii=False))
     finally:
         if keep.exists():
             for f in keep.iterdir():
@@ -226,7 +376,10 @@ def store_pdf(pid, folder, sc, name, tier, replace=False):
 def layout_of(sc):
     """Each block's page, its place on it (0 to 1 of the page's width and height) and its words: what the reader's
     side-by-side view finds a paragraph by. A scan has no text of its own to find it in; the engine read it from the
-    picture. A caption carries its figure's place too."""
+    picture. A caption carries its figure's place too (the whole figure's, when the engine cut it into pieces)."""
+    want = []
+    to_markdown(sc, want=want)
+    whole = {i: w["box"] for w in want for i in w["blocks"]}
     out = []
     for n, page in enumerate(sc.get("pages", [])):
         no = page.get("page_idx", n) + 1
@@ -236,9 +389,10 @@ def layout_of(sc):
                 continue
             box = [round(float(x), 4) for x in b["bbox"]]
             if kind in ("image", "table"):
+                fig = whole.get(id(b), box)
                 for c in b.get("captions") or []:
                     if c.get("bbox") and _text(c.get("content")):
-                        out.append({"p": no, "b": [round(float(x), 4) for x in c["bbox"]], "t": _text(c.get("content")), "fig": box})
+                        out.append({"p": no, "b": [round(float(x), 4) for x in c["bbox"]], "t": _text(c.get("content")), "fig": fig})
                 if kind == "image":
                     continue
             text = re.sub(r"<[^>]+>", " ", _text(b.get("content")))
@@ -263,11 +417,11 @@ def place(pid):
         uw = words(plain(u["toks"], doc["atoms"]))
         if not uw:
             continue
-        best, score = None, 0.0
+        best, score, size = None, 0.0, 0
         for k in range(max(0, at - 3), min(len(blocks), at + 60)):
             s = len(uw & bw[k]) / len(uw) if bw[k] else 0
-            if s > score:
-                best, score = k, s
+            if s > score or (s == score and best is not None and len(bw[k]) < size):   # a tie: the nearer in size
+                best, score, size = k, s, len(bw[k])
         if best is None or score < 0.5:
             continue
         b = blocks[best]

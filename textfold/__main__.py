@@ -8,6 +8,7 @@
   python3 -m textfold engine status | install | remove              the PDF engine (MinerU, about 3.4 GB)
 """
 import argparse
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -36,6 +37,7 @@ def get(a):
             engine.convert(f, out, tier, progress=lambda s, d, t: _say(f"  converting {d}/{t}") if t else None, log=lambda line: None)
             pdfdoc.store_pdf(pid, out, pdfdoc.read_output(out), f.name, tier)
             (store.pdir(pid) / "source.pdf").write_bytes(data)
+            shutil.rmtree(out, ignore_errors=True)   # the engine's output (and its copy of the file), stored
     elif f.is_file():
         pid = local.import_file(f)
     else:

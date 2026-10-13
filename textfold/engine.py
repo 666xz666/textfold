@@ -6,6 +6,7 @@ TextFold runs its command line, mineru-kit, never the `mineru` document library 
 files and asks to send usage data). Two tiers: fast (MinerU's flash: seconds, no model; formulas come out as pictures,
 some headings as text) and accurate (advanced: a vision model, several seconds a page; formulas as LaTeX, tables
 right). Image analysis stays off: on, it turns charts into data tables and diagrams into mermaid code."""
+import json
 import os
 import re
 import shutil
@@ -172,7 +173,8 @@ BAR = re.compile(r"^Two Step Extraction:\s+\d+%\|.*?\|\s*(?P<done>\d+)/(?P<total
 
 
 def convert(pdf, out, tier="fast", progress=lambda *a: None, log=lambda *a: None, stop=None):
-    """A PDF converted into out/ (MinerU's zip, unpacked: structured_content.json, images/). Progress by page, from
+    """A PDF converted into out/ (MinerU's zip, unpacked: structured_content.json, images/; and the PDF itself, as
+    input.pdf). Progress by page, from
     the model's own bars (the accurate tier's last pass, "Two Step Extraction", is the long one)."""
     e = where()
     if e is None:
@@ -200,4 +202,50 @@ def convert(pdf, out, tier="fast", progress=lambda *a: None, log=lambda *a: None
     z.unlink()
     if not (out / "structured_content.json").exists():
         raise RuntimeError("the engine wrote no document")
+    shutil.copyfile(pdf, out / PDF)   # the file beside its output: a figure is cut from its page (crop)
     return out
+
+
+PDF = "input.pdf"
+
+# each region of a page as a picture (the engine's own pypdfium2, a library of MinerU's): pages counted from 1, the
+# region in fractions of the page's width and height (as MinerU gives them), the longest edge at most 2000 px
+CROP = r"""
+import json, sys
+import pypdfium2 as pdfium
+job = json.load(sys.stdin)
+doc = pdfium.PdfDocument(job["pdf"])
+for page_no, (x0, y0, x1, y1), out in job["crops"]:
+    try:
+        page = doc[page_no - 1]
+        if page.get_rotation():
+            continue
+        w, h = page.get_size()
+        scale = min(3.0, 2000 / max((x1 - x0) * w, (y1 - y0) * h, 1))
+        img = page.render(scale=scale, crop=(x0 * w, (1 - y1) * h, (1 - x1) * w, y0 * h)).to_pil()
+        img.convert("RGB").save(out, quality=92)
+        print(json.dumps(out), flush=True)
+    except Exception as e:
+        print("skipped", out, e, file=sys.stderr)
+"""
+
+
+def crop(pdf, crops):
+    """Regions of a PDF's pages as pictures: crops is [(page, [x0, y0, x1, y1], out file)]; the out files written
+    (a region that cannot be cut is left out, and with no engine, all of them)."""
+    e = where()
+    if e is None or not crops:
+        return set()
+    job = json.dumps({"pdf": str(pdf), "crops": [[p, list(b), str(o)] for p, b, o in crops]})
+    try:
+        r = subprocess.run([str(_bin(e, "python")), "-c", CROP], input=job, capture_output=True, text=True,
+                           env=_env(e), timeout=120 + 5 * len(crops))
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    done = set()
+    for line in r.stdout.splitlines():
+        try:
+            done.add(json.loads(line))
+        except ValueError:
+            pass
+    return {o for o in done if Path(o).is_file()}
