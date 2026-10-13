@@ -145,7 +145,8 @@ to the passage (opening its paragraph in place where the zoom hides it) and open
 second click. Below the list, **Save…** opens the save dialog, which the **Save** button beside the notes opens too:
 every export is there. The whole text: one HTML file (`POST /api/export`: `build.page` with the notes of the kinds
 chosen, in the language being read or all of them; the file opens in that language and keeps its notes apart from any
-other page's in the viewer's browser, `D.saved`), or a PDF at the level being read (the column as it stands, paragraphs
+other page's in the viewer's browser, `D.saved`; with the original PDF if chosen, and PDF.js, so that the file opens
+the side-by-side view by itself: `D.pdf`, `D.pdfjs`, and a converted PDF's page map, `D.pdfmap`), or a PDF at the level being read (the column as it stands, paragraphs
 opened in place included, every paragraph drawn at that level first, the notes of the kinds chosen under their
 paragraphs, the level named on top and the TextFold mark at the end; ⌘P prints the same). Only the marks: one small
 HTML page made in the browser (the passages quoted, or each mark in its whole paragraph if chosen; the notes, the
@@ -153,7 +154,8 @@ questions and answers with their citations as labels, formulas as MathML, a link
 Markdown for Obsidian (block ids, callouts, links back) or the notes data (JSON, with `made_by`). The dialog says, for
 every file, that TextFold is a tool and that a file shared follows the terms of the original text; it judges no
 license. Where a file goes, the reader chooses: the desktop app's own save dialog (`save-file`, in `desktop/main.js`),
-Chrome's file picker, else the browser's downloads; a PDF through the system's print dialog. A page that is a file
+Chrome's file picker, else the browser's downloads; a PDF through the system's print dialog. While the file is made (seconds,
+for a whole text with its PDF), the mark folds and unfolds in place of the dialog's buttons. A page that is a file
 (saved, or published) has its mark lead to the repository and ends with it.
 
 The chat (the button in the corner, in the app) asks about the whole paper. Each conversation is a note with

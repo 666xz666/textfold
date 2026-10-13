@@ -2452,7 +2452,7 @@
   const svdlg = h('dialog', 'svdlg');
   document.body.append(svdlg);
   const SV_KEY = 'textfold.save';
-  const sv = { what: 'whole', kinds: ['hl', 'note', 'ask'], fmt: 'html', langs: 'current', para: false,
+  const sv = { what: 'whole', kinds: ['hl', 'note', 'ask'], fmt: 'html', langs: 'current', para: false, pdf: true,
     ...(() => { try { return JSON.parse(store.get(SV_KEY) || 'null'); } catch { return null; } })() };
   const fileName = () => `${D.meta.id} ${D.meta.title}`.replace(/[\\/:*?"<>|]+/g, ' ').slice(0, 90).trim();
   function openSave() {
@@ -2475,7 +2475,9 @@
     const langs = sv.what === 'whole' && sv.fmt === 'html' && AVAIL.length > 1;
     const picked = sv.kinds.filter((k) => counts[k]).length;
     const para = sv.what === 'marks' && sv.fmt !== 'json'   // each mark in its paragraph: easier to read than the words alone
-      ? `<label class="sv-box sv-para"><input type="checkbox" name="para"${sv.para ? ' checked' : ''}><span>${esc(t.sv_para)}</span></label>` : '';
+      ? `<label class="sv-box sv-para"><input type="checkbox" name="para"${sv.para ? ' checked' : ''}><span>${esc(t.sv_para)}</span></label>`
+      : sv.what === 'whole' && sv.fmt === 'html' && D.app && PDF_OK   // the original beside it, in the file too
+        ? `<label class="sv-box sv-para"><input type="checkbox" name="pdf"${sv.pdf ? ' checked' : ''}><span>${esc(t.sv_pdfin)}</span></label>` : '';
     svdlg.innerHTML = `<form method="dialog" class="sv-form">
       <div class="sv-head"><h2>${esc(t.sv_title)}</h2><button type="button" class="sv-x" aria-label="${esc(t.close)}">×</button></div>
       <div class="sv-row"><div class="sv-l">${esc(t.sv_what)}</div><div class="sv-opts">${radio('what', 'whole', t.sv_whole, t.sv_whole_d)}${radio('what', 'marks', t.sv_marks, t.sv_marks_d, !total)}</div></div>
@@ -2495,6 +2497,7 @@
     if (f.elements.langs) sv.langs = f.elements.langs.value;
     sv.kinds = [...new Set([...[...f.querySelectorAll('input[name="kind"]:checked')].map((x) => x.value), ...off])];
     if (f.elements.para) sv.para = f.elements.para.checked;
+    if (f.elements.pdf) sv.pdf = f.elements.pdf.checked;
     store.set(SV_KEY, JSON.stringify(sv));
     renderSave();
     const again = svdlg.querySelector(`input[name="${at.name}"][value="${at.value}"]`);
@@ -2525,8 +2528,14 @@
     download(name, await make(), type);
     return name;
   }
+  // while a file is made (seconds, for a whole text with its PDF): the mark folding and unfolding, in place of the buttons
+  function working() {
+    const acts = svdlg.querySelector('.sv-acts');
+    if (acts) acts.innerHTML = `<div class="sv-busy" role="status"><svg viewBox="0 0 20 20" aria-hidden="true"><rect class="b1" x="2" y="3" width="16" height="2.4" rx="1.2"/>` +
+      `<rect class="b2" x="2" y="8.8" width="11" height="2.4" rx="1.2"/><rect class="b3" x="2" y="14.6" width="5" height="2.4" rx="1.2"/></svg><span>${esc(T[ui].sv_working)}</span></div>`;
+  }
   function doSave() {   // (no wait before the file picker: it opens only on the click itself)
-    const t = T[ui], kinds = new Set(sv.kinds), name = fileName(), para = sv.para, go = svdlg.querySelector('.sv-go');
+    const t = T[ui], kinds = new Set(sv.kinds), name = fileName(), para = sv.para;
     if (sv.fmt === 'pdf') {   // the system's print dialog, where it is saved as PDF wherever the reader chooses
       svdlg.close();
       if (sv.what === 'whole') paperPdf(kinds); else notesPdf(kinds, para);
@@ -2535,10 +2544,9 @@
     const whole = sv.what === 'whole';
     const [file, type, make] = whole
       ? [`${name}.html`, 'text/html', async () => {   // made by the server: the levels, the languages, the notes chosen
-        go.disabled = true;
-        go.textContent = t.sv_working;
+        working();
         const r = await fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paper: D.meta.id, lang, langs: sv.langs === 'all' ? 'all' : 'current', kinds: [...kinds] }) });
+          body: JSON.stringify({ paper: D.meta.id, lang, langs: sv.langs === 'all' ? 'all' : 'current', kinds: [...kinds], pdf: !!sv.pdf && PDF_OK }) });
         if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
         return r.text();
       }]
@@ -2648,7 +2656,8 @@ math { font-size: 1.05em; }
   //    each paragraph found on it by its own words (the paper's language, whatever language it is read in). A click
   //    on a paragraph shows where it is on its page; reading on carries the pages along; a click on a page goes to its
   //    paragraph ──
-  const PDF_OK = !!D.app && /^(\d{4}\.\d{4,5}|pmc\d+|ppr\d+|(biorxiv|medrxiv)-[0-9.]+|pdf-[0-9a-f]{16})$/.test(D.meta.id);   // (pdf.has_source)
+  const PDF_OK = (!!D.app && /^(\d{4}\.\d{4,5}|pmc\d+|ppr\d+|(biorxiv|medrxiv)-[0-9.]+|pdf-[0-9a-f]{16})$/.test(D.meta.id))   // (pdf.has_source)
+    || !!(D.pdf && D.pdfjs);   // a saved page that carries its PDF, and PDF.js to show it
   const CMP_KEY = 'pf-compare';
   const cmpBtn = h('button', 'cmpbtn');
   cmpBtn.type = 'button';
@@ -2719,11 +2728,20 @@ math { font-size: 1.05em; }
     msg.textContent = T[ui].pdf_loading;
     cmp.scroller.replaceChildren(msg);
     try {
-      const lib = await import('/static/vendor/pdfjs/pdf.min.mjs');
-      lib.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.min.mjs';
-      const r = await fetch(`/api/pdf/${encodeURIComponent(D.meta.id)}`);
-      if (!r.ok) throw Object.assign(new Error('no pdf'), { open: (await r.json().catch(() => ({}))).open });
-      const loading = lib.getDocument({ data: new Uint8Array(await r.arrayBuffer()), isEvalSupported: false });
+      let lib, data;
+      if (D.pdf && D.pdfjs) {   // a saved page: PDF.js and the file from inside it
+        const js = (text) => URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
+        lib = await import(js(D.pdfjs.lib));
+        lib.GlobalWorkerOptions.workerSrc = js(D.pdfjs.worker);
+        data = Uint8Array.from(atob(D.pdf), (c) => c.charCodeAt(0));
+      } else {
+        lib = await import('/static/vendor/pdfjs/pdf.min.mjs');
+        lib.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.min.mjs';
+        const r = await fetch(`/api/pdf/${encodeURIComponent(D.meta.id)}`);
+        if (!r.ok) throw Object.assign(new Error('no pdf'), { open: (await r.json().catch(() => ({}))).open });
+        data = new Uint8Array(await r.arrayBuffer());
+      }
+      const loading = lib.getDocument({ data, isEvalSupported: false });
       const doc = await loading.promise;
       if (!cmp || cmp.pane !== pane) { loading.destroy(); return; }
       Object.assign(cmp, { lib, doc, loading, pages: [], spans: new Map() });
@@ -2872,8 +2890,8 @@ math { font-size: 1.05em; }
   async function layOut() {
     cmp.layout = null;
     if (!D.meta.id.startsWith('pdf-')) return;
-    const r = await fetch(`/api/pdfmap/${encodeURIComponent(D.meta.id)}`).catch(() => null);
-    const map = r && r.ok ? await r.json() : {};
+    const r = D.pdfmap ? null : await fetch(`/api/pdfmap/${encodeURIComponent(D.meta.id)}`).catch(() => null);
+    const map = D.pdfmap || (r && r.ok ? await r.json() : {});
     if (!cmp || !Object.keys(map).length) return;
     cmp.layout = new Map();
     for (const [uid, at] of Object.entries(map)) {

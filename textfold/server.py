@@ -21,8 +21,9 @@
   GET  /api/pdf/<id>          the paper's original PDF (arXiv, PubMed Central, bioRxiv), fetched once and kept (pdf.py)
   POST /api/pdf/<id>          the PDF itself (the reader's copy, when the server would not give it): kept the same way
   POST /api/notes/<id>        {op: "put", note} or {op: "delete", id}
-  POST /api/export            {paper, lang, langs: "current" | "all", kinds: ["hl", "note", "ask"]}: the paper as one
-                              HTML file, to keep: its levels, and the reader's notes of the kinds chosen
+  POST /api/export            {paper, lang, langs: "current" | "all", kinds: ["hl", "note", "ask"], pdf}: the paper as one
+                              HTML file: its levels, the reader's notes of the kinds chosen, and (pdf) its original PDF
+                              with PDF.js, for the side-by-side view
   POST /api/ask               {paper, id, question}: the model answers a note's question; the answer is stored in it
   POST /api/papers/delete     {paper}: move a paper to papers/.trash (not while it is being generated)
   GET  /api/bridge             the ChatGPT bridge (127.0.0.1:10531): running and its models, or what starting it needs
@@ -32,6 +33,7 @@
 Loopback only, and POSTs from other origins are refused. Settings and keys live in
 ~/.textfold/settings.json (mode 600), never in the project folder, which may be synced or shared.
 """
+import base64
 import json
 import queue
 import re
@@ -541,7 +543,21 @@ def make_handler(jobs):
                     kinds = {k for k in body.get("kinds") or [] if k in ("hl", "note", "ask")}
                     doc = store.assemble(pid, only=[lang] if body.get("langs") == "current" else None)
                     chosen = [n for n in notes.read(pid)["notes"] if notes.kind(n) in kinds]
-                    html = build.page(doc, app=False, saved={"notes": chosen, "saved": uuid.uuid4().hex[:12], "lang": lang})
+                    saved = {"notes": chosen, "saved": uuid.uuid4().hex[:12], "lang": lang}
+                    if body.get("pdf") and pdf.has_source(pid):   # the original beside it: the file, and PDF.js to show it
+                        f = pdf.path(pid)
+                        if f:
+                            saved["pdf"] = base64.b64encode(f.read_bytes()).decode()
+                            saved["pdfjs"] = {"lib": (build.VENDOR / "pdfjs" / "pdf.min.mjs").read_text(),
+                                              "worker": (build.VENDOR / "pdfjs" / "pdf.worker.min.mjs").read_text()}
+                            if pid.startswith("pdf-"):   # a converted PDF: its paragraphs' places on the pages
+                                with RELAYOUT:
+                                    try:
+                                        pdfdoc.relayout(pid)
+                                    except Exception:
+                                        pass
+                                saved["pdfmap"] = pdfdoc.place(pid)
+                    html = build.page(doc, app=False, saved=saved)
                     return self.send(200, html, "text/html; charset=utf-8")
                 m = re.fullmatch(r"/api/notes/([\w.-]+)", u.path)
                 if m and store.valid_id(m.group(1)) and (store.pdir(m.group(1)) / "meta.json").exists():

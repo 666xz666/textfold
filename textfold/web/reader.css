@@ -583,6 +583,14 @@ html.morphing .chatbtn { pointer-events: none; }
 .sv-acts button { font: 600 13.5px var(--sans); border-radius: 999px; padding: 7px 16px; cursor: pointer; border: 1px solid var(--line); background: none; color: var(--ink-2); }
 .sv-acts .sv-go { background: var(--accent); border-color: var(--accent); color: #fff; }
 .sv-acts .sv-go:disabled { opacity: .5; cursor: default; }
+.sv-busy { display: flex; align-items: center; gap: 10px; min-height: 34px; font: 500 13.5px var(--sans); color: var(--muted); }
+.sv-busy svg { width: 24px; height: 24px; flex: none; }
+.sv-busy rect { transform-box: fill-box; transform-origin: left center; animation: sv-fold 1.5s var(--ease) infinite; }
+.sv-busy .b1 { fill: var(--accent); }
+.sv-busy .b2 { fill: var(--accent); fill-opacity: .4; animation-delay: .18s; }
+.sv-busy .b3 { fill: var(--warm); animation-delay: .36s; }
+@keyframes sv-fold { 0%, 100% { transform: scaleX(1); } 45% { transform: scaleX(.28); } }
+@media (prefers-reduced-motion: reduce) { .sv-busy rect { animation: none; } }
 @media (max-width: 520px) { .sv-row { grid-template-columns: 1fr; gap: 6px; } .sv-fmts { grid-template-columns: 1fr 1fr; } }
 /* a page saved or published ends with the mark, which leads to where TextFold is */
 .madewith { max-width: var(--col); margin: 56px auto 120px; padding: 18px 0 0; border-top: 1px solid var(--line-2); }
