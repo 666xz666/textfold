@@ -9,7 +9,6 @@
 <sub>原名 PaperFold</sub>
 
 <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-6B5CE7?style=flat-square">
-<img alt="12 种语言" src="https://img.shields.io/badge/languages-12-6B5CE7?style=flat-square">
 <img alt="在你的电脑上运行" src="https://img.shields.io/badge/runs-on_your_computer-E08A3C?style=flat-square">
 <a href="LICENSE"><img alt="Apache 2.0 许可证" src="https://img.shields.io/badge/license-Apache_2.0-6B5CE7?style=flat-square"></a>
 
