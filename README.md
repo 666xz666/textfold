@@ -32,6 +32,8 @@ Your agent writes more than you have time to read. A [Claude Code mod](https://c
 
 ## What's new
 
+- **October 13, 2026: Word, PowerPoint, Excel, e-books and more.** Drop a Word, PowerPoint or Excel file, a CSV, an EPUB or a saved web page, and it opens at once, formulas included, with nothing more to install. With the PDF engine installed, these files go through it and are read more completely, and so do pictures and older Office files.
+- **October 13, 2026: whole figures, and a guide.** A figure the PDF engine cut into pieces now comes out whole, cut from its page. A short guide opens on your first visit, and again from **How it works**.
 - **October 9, 2026: PaperFold is now TextFold.** The same reader, named for everything it folds: papers, READMEs, Wikipedia articles and your agent's replies. Links to the old repository lead here, `python3 -m adr` still runs, and your settings move over by themselves.
 - **October 9, 2026: any web page, and PDFs.** Paste any web page's link and read its article at five levels, without the text the page hides from its readers. Drop a PDF: when it names a paper that can be read online, that version opens with your PDF beside it; any other PDF is converted on your computer by the PDF engine, which the landing offers to install.
 - **October 9, 2026: for agents.** `python3 -m textfold get <link> --level topic` prints a document's map, and `--section` unfolds the part that matters. Each line a model wrote is marked as such and anchored to the sentences it rests on, in the [TextFold format](docs/format.md).
