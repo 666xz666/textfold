@@ -211,8 +211,8 @@
   // ── math the model wrote that matches no formula of the unit: KaTeX, from where the page keeps it (D.katex: the
   //    app's or a gallery's folder, or "inside" the page), never from another server; without it, the source stays ──
   let katexReady = null, katexLib = window.katex || null;
-  function tex(el, src) {
-    if (katexLib) { try { katexLib.render(src, el, { throwOnError: false }); } catch { /* keep the source */ } return; }   // loaded: at once, so it is measured drawn
+  function loadKatex() {
+    if (katexLib) return Promise.resolve(katexLib);
     katexReady ??= new Promise((res) => {
       if (!D.katex || D.katex === 'inside') { res(null); return; }
       const css = document.createElement('link'); css.rel = 'stylesheet';
@@ -220,7 +220,11 @@
       const js = document.createElement('script'); js.src = `${D.katex}katex.min.js`;
       js.onload = () => { katexLib = window.katex; res(window.katex); }; js.onerror = () => res(null); document.head.appendChild(js);
     });
-    katexReady.then((k) => { if (k) try { k.render(src, el, { throwOnError: false }); } catch { /* keep the source */ } });
+    return katexReady;
+  }
+  function tex(el, src) {
+    if (katexLib) { try { katexLib.render(src, el, { throwOnError: false }); } catch { /* keep the source */ } return; }   // loaded: at once, so it is measured drawn
+    loadKatex().then((k) => { if (k) try { k.render(src, el, { throwOnError: false }); } catch { /* keep the source */ } });
   }
 
   // ── skeleton ─────────────────────────────────────────────────────────
@@ -271,12 +275,17 @@
   }
 
   const paperHead = h('header', 'paper-head');
-  if (D.app) {   // the mark and the name in the bar lead home
+  {   // the mark and the name in the bar lead home in the app; on a page saved or published, to where TextFold is
     const brand = document.querySelector('.topbar .brand'), home = h('a', 'brand-home');
-    home.href = '/';
+    home.href = D.app ? '/' : REPO;
+    if (!D.app) { home.target = '_blank'; home.rel = 'noopener'; }
     home.append(...[...brand.children].filter((x) => x.tagName !== 'A'));
     brand.prepend(home);
   }
+  const madeWith = D.app ? null : h('div', 'madewith');   // and such a page ends with the mark
+  if (madeWith) docEl.after(madeWith);
+  const madeLabel = () => { if (madeWith) madeWith.innerHTML = `<a href="${REPO}" target="_blank" rel="noopener">${LOGO}<span>${esc(T[ui].sv_madewith)}</span></a>`; };
+  madeLabel();
   // where a paper comes from, in a few words: arXiv:2201.11903v6, or a document's file name
   const sourceName = (m) => m.label || `arXiv:${m.id}${m.version || ''}`;
   function build() {
@@ -1699,7 +1708,7 @@
   let notes = [];
   const notesOf = new Map();   // uid -> its notes
   let keepMine = store.get('dr-keep-mine') === '1';   // "keep my highlights" (a viewer's preference: kept in this browser)
-  const NOTES_KEY = `dr-notes:${D.meta.id}`;
+  const NOTES_KEY = `dr-notes:${D.meta.id}${D.saved ? ':' + D.saved : ''}`;
   const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then((r) => r.json().then((d) => (r.ok ? d : Promise.reject(new Error(d.error || r.status)))));
   const noteId = () => 'n-' + Math.random().toString(36).slice(2, 10);
@@ -1763,7 +1772,8 @@
   }
   async function loadNotes() {
     try {
-      notes = D.app ? ((await (await fetch(`/api/notes/${D.meta.id}`)).json()).notes || []) : JSON.parse(store.get(NOTES_KEY) || '[]');
+      notes = D.app ? ((await (await fetch(`/api/notes/${D.meta.id}`)).json()).notes || [])
+        : JSON.parse(store.get(NOTES_KEY) || 'null') || D.notes || [];   // (a saved page: the notes it was saved with, until they change here)
     } catch { notes = []; }
     indexNotes();
     // nothing to draw: leave the keyframes alone (prepared already, maybe; redrawing would throw them away)
@@ -2226,7 +2236,9 @@
   const keepbtn = h('button', 'keepbtn');
   keepbtn.type = 'button';
   keepbtn.hidden = true;
-  npick.append(keepbtn, nbtn, nmenu);
+  const savebtn = h('button', 'savebtn');   // the page as a file, or the notes alone: one place for every export
+  savebtn.type = 'button';
+  npick.append(keepbtn, nbtn, savebtn, nmenu);
   keepbtn.addEventListener('click', () => {
     keepMine = !keepMine;
     store.set('dr-keep-mine', keepMine ? '1' : '0');
@@ -2237,6 +2249,8 @@
     const t = T[ui], n = notes.filter((x) => shown(x.anchor)).length;
     nbtn.hidden = false;   // always there: the exports (the paper as PDF too) are in its menu
     nbtn.textContent = n ? `${t.n_notes} ${n}` : t.n_notes;
+    savebtn.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v7.5M5 7l3 3 3-3M3 12.5h10"/></svg><span>${esc(t.sv_save)}</span>`;
+    savebtn.title = t.sv_title;
     nbtn.classList.toggle('none', !n);
     keepbtn.hidden = !notes.some((x) => unitEl.has(x.anchor && x.anchor.unit) && (x.anchor.tokens || x.anchor.sents));
     keepbtn.innerHTML = `<i></i>${esc(t.n_keep)}`;
@@ -2273,10 +2287,7 @@
     const list = nmenu.querySelector('.nl-list'), top = list ? list.scrollTop : 0;
     nmenu.innerHTML = `<div class="nl-tabs">${tab('all', t.n_all)}${tab('hl', t.n_highlight)}${tab('note', t.n_note)}${tab('ask', t.n_ask)}</div>` +
       `<div class="nl-list">${items || `<div class="nm-note">${esc(t.n_none)}</div>`}</div>` +
-      `<div class="nl-x"><button type="button" class="lm-item" data-x="paper"><span>${esc(t.n_export_pdf_paper.replace('{level}', t.levels[level]))}</span></button>` +
-      `<button type="button" class="lm-item" data-x="pdf"><span>${esc(t.n_export_pdf)}</span></button>` +
-      `<button type="button" class="lm-item" data-x="md"><span>${esc(t.n_export_md)}</span></button>` +
-      `<button type="button" class="lm-item" data-x="json"><span>${esc(t.n_export_json)}</span></button></div>` +
+      `<div class="nl-x"><button type="button" class="lm-item" data-x="save"><span>${esc(t.sv_save)}…</span></button></div>` +
       (D.app ? '' : `<div class="nm-note">${esc(t.n_local)}</div>`);
     texify(nmenu);
     nmenu.querySelector('.nl-list').scrollTop = top;
@@ -2303,14 +2314,7 @@
     }
     if (n) { nmenu.hidden = true; flyToNote(n); return; }
     if (nmSure) { nmSure = null; renderNotesMenu(); }
-    const b = e.target.closest('[data-x]');
-    if (!b) return;
-    nmenu.hidden = true;
-    const name = `${D.meta.id} ${D.meta.title}`.replace(/[\\/:*?"<>|]+/g, ' ').slice(0, 90).trim();
-    if (b.dataset.x === 'md') download(`${name}.md`, notesMarkdown(), 'text/markdown');
-    else if (b.dataset.x === 'pdf') notesPdf();
-    else if (b.dataset.x === 'paper') paperPdf();
-    else download(`${name}.notes.json`, JSON.stringify(notesJson(), null, 1), 'application/json');
+    if (e.target.closest('[data-x="save"]')) openSave();
   });
   addEventListener('click', (e) => { if (!nmenu.hidden && !e.target.closest('.notesmenu')) nmenu.hidden = true; });
   // after any zoom under way (and a moment more)
@@ -2347,15 +2351,15 @@
   }
   // in reading order: by paragraph, then by where the passage starts
   const placeOf = (a) => (whole(a) ? -1e9 : a.unit ? order.get(a.unit) : (HEAD_IDX.get(secs.get(a.section).hd) ?? 0) - 0.5);   // the paper, then a section before its paragraphs
-  const inOrder = () => notes.filter((n) => shown(n.anchor))
+  const inOrder = (kinds) => notes.filter((n) => shown(n.anchor) && (!kinds || kinds.has(kindOf(n))))
     .sort((x, y) => (placeOf(x.anchor) - placeOf(y.anchor)) || (((x.anchor.tokens || [0])[0]) - ((y.anchor.tokens || [0])[0])));
-  function notesJson() {
+  function notesJson(kinds) {
     const m = D.meta;
-    return { format: 'textfold/notes', version: 1, made_by: `${BRAND} · ${REPO}`, paper: { id: m.id, version: m.version, title: m.title, url: m.abs_url, ...(m.snapshot ? { snapshot: m.snapshot } : {}) }, notes: inOrder() };
+    return { format: 'textfold/notes', version: 1, made_by: `${BRAND} · ${REPO}`, paper: { id: m.id, version: m.version, title: m.title, url: m.abs_url, ...(m.snapshot ? { snapshot: m.snapshot } : {}) }, notes: inOrder(kinds) };
   }
   // Markdown for Obsidian: a note per paper; each highlight a quote with a block id (^n-…) other notes can link to,
   // each question a callout; every one links back to its place in the reader
-  function notesMarkdown() {
+  function notesMarkdown(kinds) {
     const m = D.meta, t = T[ui], q = (s) => JSON.stringify(String(s || ''));
     const out = ['---', `title: ${q(m.title)}`, `authors: ${JSON.stringify(m.authors || [])}`,
       m.abs_url ? `arxiv: ${q(m.id + (m.version || ''))}` : `source: ${q(sourceName(m))}`,
@@ -2364,7 +2368,7 @@
       `# ${m.title}`, '', [(m.authors || []).map(flipName).join(', '), m.abs_url ? `[${sourceName(m)}](${m.abs_url})` : sourceName(m)].filter(Boolean).join(' · '), ''];
     let sec = null;
     const quote = (s) => s.split('\n').map((l) => `> ${l}`);
-    for (const n of inOrder()) {
+    for (const n of inOrder(kinds)) {
       const g = groupOf(n.anchor);
       if (g && g !== sec) { sec = g; out.push(`## ${g}`, ''); }
       const said = n.kind === 'ask' ? turnsOf(n).filter((x) => x.a) : [];
@@ -2396,9 +2400,16 @@
     root.classList.add('printing-paper');
     return () => { head.remove(); mark.remove(); document.title = title; root.classList.remove('printing-paper'); };
   }
-  function paperPdf() {
+  function paperPdf(kinds) {
     if (busy) return;
     if (popNote) closeNote();
+    const all = notes, keep = kinds ? notes.filter((n) => kinds.has(kindOf(n))) : notes;
+    if (keep.length !== all.length) {   // only the kinds of note chosen, while it prints
+      const keys = [...new Set(all.map((n) => keyOf(n.anchor)))];
+      notes = keep; indexNotes(); notesChanged(keys);
+      const back = () => { notes = all; indexNotes(); notesChanged(keys); removeEventListener('afterprint', back); };
+      addEventListener('afterprint', back);
+    }
     unprint = preparePaperPrint();
     setTimeout(() => print(), 60);
   }
@@ -2409,10 +2420,10 @@
   addEventListener('afterprint', () => { if (unprint) { unprint(); unprint = null; } });
   // PDF: the notes as a page the browser prints (and saves as PDF), in reading order, with the mark of where they
   // were made at the end. Drawn into this page (its fonts and math are here) and shown alone while printing.
-  function notesPdf() {
+  function notesPdf(kinds) {
     const m = D.meta, t = T[ui];
     let sec = null, body = '';
-    for (const n of inOrder()) {
+    for (const n of inOrder(kinds)) {
       const a = n.anchor, g = groupOf(a), said = n.kind === 'ask' ? turnsOf(n).filter((x) => x.a) : [];
       if (g && g !== sec) { sec = g; body += `<h2>${esc(g)}</h2>`; }
       body += `<div class="pf-n ${kindOf(n)}">${a.quote.exact ? `<blockquote>${texLite(a.quote.exact)}</blockquote>` : ''}` +
@@ -2435,8 +2446,153 @@
     setTimeout(() => print(), 60);
   }
 
+  // ── save: the whole text as one file (its levels, and the notes chosen), to keep; or the notes alone, with the
+  //    passages they quote and a link to the source, to share. Every export is here, the notes menu leads here ──
+  const svdlg = h('dialog', 'svdlg');
+  document.body.append(svdlg);
+  const SV_KEY = 'textfold.save';
+  const sv = (() => { try { return JSON.parse(store.get(SV_KEY) || 'null'); } catch { return null; } })() || { what: 'whole', kinds: ['hl', 'note', 'ask'], fmt: 'html', langs: 'current' };
+  const fileName = () => `${D.meta.id} ${D.meta.title}`.replace(/[\\/:*?"<>|]+/g, ' ').slice(0, 90).trim();
+  function openSave() {
+    nmenu.hidden = true;
+    renderSave();
+    svdlg.showModal();
+  }
+  function renderSave(err) {
+    const t = T[ui], counts = { hl: 0, note: 0, ask: 0 };
+    for (const n of notes) if (shown(n.anchor)) counts[kindOf(n)]++;
+    const total = counts.hl + counts.note + counts.ask;
+    if (!total && sv.what === 'marks') sv.what = 'whole';
+    const fmts = sv.what === 'whole' ? [...(D.app ? ['html'] : []), 'pdf'] : ['html', 'pdf', 'md', 'json'];   // (a page that is a file already prints)
+    if (!fmts.includes(sv.fmt)) sv.fmt = fmts[0];
+    const fmtName = { html: t.sv_html, pdf: sv.what === 'whole' ? t.sv_pdf_level.replace('{level}', t.levels[level]) : t.sv_pdf, md: t.sv_md, json: t.sv_json };
+    const radio = (name, value, label, sub, off) => `<label class="sv-opt${off ? ' off' : ''}"><input type="radio" name="${name}" value="${value}"` +
+      `${sv[name] === value ? ' checked' : ''}${off ? ' disabled' : ''}><span><b>${esc(label)}</b>${sub ? `<em>${esc(sub)}</em>` : ''}</span></label>`;
+    const box = (k, label) => `<label class="sv-box${counts[k] ? '' : ' off'}"><input type="checkbox" name="kind" value="${k}"` +
+      `${sv.kinds.includes(k) && counts[k] ? ' checked' : ''}${counts[k] ? '' : ' disabled'}><span>${esc(label)}</span><i>${counts[k]}</i></label>`;
+    const langs = sv.what === 'whole' && sv.fmt === 'html' && AVAIL.length > 1;
+    // a text whose license allows reading only (arXiv's own, a web page's): the file is the reader's to keep
+    const open = /creativecommons\.org|spdx\.org/.test(D.meta.license || ''), own = ['markdown', 'pdf', 'file'].includes((D.meta.source || {}).kind);
+    const picked = sv.kinds.filter((k) => counts[k]).length;
+    svdlg.innerHTML = `<form method="dialog" class="sv-form">
+      <div class="sv-head"><h2>${esc(t.sv_title)}</h2><button type="button" class="sv-x" aria-label="${esc(t.close)}">×</button></div>
+      <div class="sv-row"><div class="sv-l">${esc(t.sv_what)}</div><div class="sv-opts">${radio('what', 'whole', t.sv_whole, t.sv_whole_d)}${radio('what', 'marks', t.sv_marks, t.sv_marks_d, !total)}</div></div>
+      <div class="sv-row"><div class="sv-l">${esc(t.sv_incl)}</div><div class="sv-boxes">${box('hl', t.sv_hl)}${box('note', t.sv_notes)}${box('ask', t.sv_asks)}</div></div>
+      <div class="sv-row"><div class="sv-l">${esc(t.sv_fmt)}</div><div class="sv-opts sv-fmts">${fmts.map((f) => radio('fmt', f, fmtName[f])).join('')}</div></div>
+      ${langs ? `<div class="sv-row"><div class="sv-l">${esc(t.sv_langs)}</div><div class="sv-opts sv-fmts">${radio('langs', 'current', t.sv_lang_cur.replace('{lang}', I18N.NATIVE[lang]))}${radio('langs', 'all', t.sv_lang_all.replace('{n}', AVAIL.length))}</div></div>` : ''}
+      ${sv.what === 'whole' && !open && !own ? `<p class="sv-lic">${esc(t.sv_lic)}</p>` : ''}
+      ${err ? `<p class="sv-err">${esc(err)}</p>` : ''}
+      <div class="sv-acts"><button type="button" class="sv-cancel">${esc(t.cancel)}</button><button type="submit" class="sv-go"${sv.what === 'marks' && !picked ? ' disabled' : ''}>${esc(t.sv_go)}</button></div>
+    </form>`;
+  }
+  svdlg.addEventListener('change', (e) => {
+    const f = svdlg.querySelector('form'), at = e.target;
+    const off = sv.kinds.filter((k) => { const x = f.querySelector(`input[name="kind"][value="${k}"]`); return x && x.disabled; });   // kept for a text that has them
+    sv.what = f.elements.what.value;
+    sv.fmt = f.elements.fmt.value;
+    if (f.elements.langs) sv.langs = f.elements.langs.value;
+    sv.kinds = [...new Set([...[...f.querySelectorAll('input[name="kind"]:checked')].map((x) => x.value), ...off])];
+    store.set(SV_KEY, JSON.stringify(sv));
+    renderSave();
+    const again = svdlg.querySelector(`input[name="${at.name}"][value="${at.value}"]`);
+    if (again) again.focus();
+  });
+  svdlg.addEventListener('click', (e) => { if (e.target === svdlg || e.target.closest('.sv-x, .sv-cancel')) svdlg.close(); });
+  svdlg.addEventListener('submit', (e) => { e.preventDefault(); doSave(); });
+  savebtn.addEventListener('click', (e) => { e.stopPropagation(); openSave(); });
+  async function doSave() {
+    const t = T[ui], kinds = new Set(sv.kinds), name = fileName(), go = svdlg.querySelector('.sv-go');
+    if (sv.what === 'whole' && sv.fmt === 'html') {   // made by the server: the levels, the languages, the notes chosen
+      go.disabled = true;
+      go.textContent = t.sv_working;
+      try {
+        const r = await fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paper: D.meta.id, lang, langs: sv.langs === 'all' ? 'all' : 'current', kinds: [...kinds] }) });
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
+        download(`${name}.html`, await r.text(), 'text/html');
+        svdlg.close();
+      } catch (x) { renderSave(t.sv_failed.replace('{e}', x.message)); }
+      return;
+    }
+    svdlg.close();
+    if (sv.what === 'whole') paperPdf(kinds);
+    else if (sv.fmt === 'html') download(`${name}.notes.html`, await marksHtml(kinds), 'text/html');
+    else if (sv.fmt === 'pdf') notesPdf(kinds);
+    else if (sv.fmt === 'md') download(`${name}.md`, notesMarkdown(kinds), 'text/markdown');
+    else download(`${name}.notes.json`, JSON.stringify(notesJson(kinds), null, 1), 'application/json');
+  }
+  // the notes alone as one page anyone can open: the passages they quote (short, as a quotation is), the notes, the
+  // questions and answers (their citations as labels: the paragraphs are not in it), the source's link, the mark.
+  // Formulas as MathML, which a browser draws with no fonts to carry
+  async function marksHtml(kinds) {
+    const k = await loadKatex(), m = D.meta, t = T[ui];
+    const unesc = (x) => x.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    const math = (html) => html.replace(/<span class="texsrc">([^<]*)<\/span>/g, (all, src) => {
+      if (!k) return esc(`$${unesc(src)}$`);
+      try { return k.renderToString(unesc(src), { output: 'mathml', throwOnError: false }); } catch { return esc(`$${unesc(src)}$`); }
+    });
+    let sec = null, body = '';
+    for (const n of inOrder(kinds)) {
+      const a = n.anchor, g = groupOf(a), said = n.kind === 'ask' ? turnsOf(n).filter((x) => x.a) : [];
+      if (g && g !== sec) { sec = g; body += `<h2>${esc(g)}</h2>`; }
+      body += `<article class="n ${kindOf(n)}">${a.quote.exact ? `<blockquote>${texLite(a.quote.exact)}</blockquote>` : ''}` +
+        (n.text && n.text.trim() ? `<div class="t">${esc(n.text.trim()).replace(/\n/g, '<br>')}</div>` : '') +
+        said.map((x) => `<div class="qa"><p class="q">${esc(x.q)}</p><div class="a">${mdLite(answerText(x.a))}</div></div>`).join('') +
+        (said.length ? `<p class="at">${esc(whole(a) ? t.n_whole : askedAt(a))}${said[said.length - 1].model ? ` · ${esc(said[said.length - 1].model)}` : ''}</p>` : '') + '</article>';
+    }
+    const src = m.abs_url ? `<a href="${esc(m.abs_url)}">${esc(sourceName(m))}</a>` : esc(sourceName(m));
+    const lic = m.license ? ` · <a href="${esc(m.license)}">${esc(licenseName(m.license, t))}</a>` : '';
+    return `<!doctype html>
+<html lang="${esc(I18N.htmlLang(ui))}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(m.title)} · ${esc(t.n_notes)}</title>
+<style>${MARKS_CSS}</style>
+</head>
+<body>
+<div class="wrap">
+<a class="brand" href="${REPO}">${LOGO}<span>${BRAND}</span></a>
+<header><h1>${esc(m.title)}</h1>${(m.authors || []).length ? `<p class="by">${esc(m.authors.map(flipName).join(', '))}</p>` : ''}
+<p class="src">${src}${lic} · ${esc(t.n_notes)} · ${new Date().toISOString().slice(0, 10)}</p></header>
+<main>${math(body)}</main>
+<footer><a href="${REPO}">${LOGO}<span>${esc(t.sv_madewith)}</span></a></footer>
+</div>
+</body>
+</html>
+`;
+  }
+  const MARKS_CSS = `
+:root { --bg: #FAF9F7; --card: #fff; --ink: #1A1A1A; --ink-2: #4A4540; --muted: #6B6560; --line: #E9E5DF; --accent: #6B5CE7; --hl: #FFE07A; --hl-ink: #D9A400; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #1C1B19; --card: #252421; --ink: #ECE8E1; --ink-2: #C9C3B9; --muted: #9A938A; --line: #3A3732; --accent: #A99CF5; --hl: #6B5A1E; --hl-ink: #E3B73A; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 -apple-system, 'Inter', 'PingFang SC', 'Segoe UI', sans-serif; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 28px 16px 48px; }
+a { color: var(--accent); }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: var(--ink); text-decoration: none; }
+.brand svg, footer svg { width: 20px; height: 20px; flex: none; }
+header { margin: 28px 0 24px; }
+h1 { font-size: 28px; line-height: 1.25; margin: 0 0 8px; letter-spacing: -.01em; }
+.by, .src { margin: 2px 0; color: var(--muted); font-size: 14px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 32px 0 10px; }
+.n { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 10px 0; }
+blockquote { margin: 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--hl-ink); font-family: 'Source Serif 4', Georgia, 'Songti SC', serif; font-size: 17px; color: var(--ink); }
+.n.hl blockquote { background: color-mix(in srgb, var(--hl) 35%, transparent); border-radius: 0 6px 6px 0; }
+.t { margin-top: 10px; white-space: normal; }
+.qa { margin-top: 10px; }
+.q { font-weight: 650; margin: 0 0 4px; }
+.a { color: var(--ink-2); }
+.a p { margin: 6px 0; }
+.a ul { margin: 6px 0; padding-left: 20px; }
+.at { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; }
+footer a { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; }
+math { font-size: 1.05em; }
+`;
+
   // the paragraph's marks and cards follow the language
   function notesForLang() {
+    madeLabel();
     for (const key of notesOf.keys()) renderNoteCards(key);
     updateNotesBtn();
     chatLabel();
@@ -3077,7 +3233,7 @@
   }
   // ?lang= (the app), #lang= (a static file), then the last choice, then the browser's languages
   const asked = new URLSearchParams(location.search).get('lang') || (/[#&]lang=([\w-]+)/.exec(location.hash) || [])[1];
-  lang = [asked, store.get('dr-lang'), I18N.guess(), 'en', AVAIL[0]].find((l) => l && AVAIL.includes(l));
+  lang = [asked, D.lang, store.get('dr-lang'), I18N.guess(), 'en', AVAIL[0]].find((l) => l && AVAIL.includes(l));
   const start = /[#&]level=([^&]+)/.exec(location.hash);
   if (start) {
     const want = decodeURIComponent(start[1]).toLowerCase();

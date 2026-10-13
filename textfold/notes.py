@@ -24,6 +24,11 @@ def now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+def kind(n):
+    """A note's kind, as the reader counts them: a question ("ask"), a note with words ("note"), a highlight ("hl")."""
+    return "ask" if n.get("kind") == "ask" else "note" if (n.get("text") or "").strip() else "hl"
+
+
 def read(pid):
     f = _file(pid)
     if f.exists():

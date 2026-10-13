@@ -84,15 +84,18 @@ def inline_images(doc, app=False):
                 b["html"] = b["html"].replace(f'src="{src}"', f'src="{uri}"')
 
 
-def payload(doc, app, katex=None):
+def payload(doc, app, katex=None, saved=None):
     data = {k: doc[k] for k in ("meta", "atoms", "units", "chunks", "blocks", "bib", "edges", "alias")}
     data["app"] = app
     data["katex"] = katex   # where the reader finds KaTeX: a folder, "inside" the page, or nowhere (math stays as written)
+    if saved:   # saved from the reader: its notes (kept apart from any other page's in the viewer's browser), its language
+        data.update(saved)
     return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
 
-def page(doc, app=False, assets=None):
-    """assets: for a static page published beside a folder holding web/vendor's fonts/ and katex/ (a gallery)."""
+def page(doc, app=False, assets=None, saved=None):
+    """assets: for a static page published beside a folder holding web/vendor's fonts/ and katex/ (a gallery). saved:
+    a page the reader saved for themself ({"notes", "saved", "lang"}: the notes chosen, an id of the file, its language)."""
     inline_images(doc, app)
     t = (WEB / "template.html").read_text()
     if app:
@@ -104,11 +107,11 @@ def page(doc, app=False, assets=None):
         head = fonts_head(assets) + f"<style>{(WEB / 'reader.css').read_text()}</style>"
         scripts = f"<script>{(WEB / 'i18n.js').read_text()}</script><script>{(WEB / 'reader.js').read_text()}</script>"
         side, cls, katex = "", "static", (assets + "katex/") if assets else None
-        if not assets and _has_tex(doc):
+        if not assets and (_has_tex(doc) or (saved and saved.get("notes"))):   # (an answer's formulas need it too)
             head += _katex_inside()
             katex = "inside"
     return (t.replace("{{TITLE}}", escape(doc["meta"]["title"])).replace("{{HEAD}}", head).replace("{{CLASS}}", cls)
-             .replace("{{SIDEBAR}}", side).replace("{{SCRIPTS}}", scripts).replace("{{DATA}}", payload(doc, app, katex)))
+             .replace("{{SIDEBAR}}", side).replace("{{SCRIPTS}}", scripts).replace("{{DATA}}", payload(doc, app, katex, saved)))
 
 
 def export(pid):

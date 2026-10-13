@@ -21,6 +21,8 @@
   GET  /api/pdf/<id>          the paper's original PDF (arXiv, PubMed Central, bioRxiv), fetched once and kept (pdf.py)
   POST /api/pdf/<id>          the PDF itself (the reader's copy, when the server would not give it): kept the same way
   POST /api/notes/<id>        {op: "put", note} or {op: "delete", id}
+  POST /api/export            {paper, lang, langs: "current" | "all", kinds: ["hl", "note", "ask"]}: the paper as one
+                              HTML file, to keep: its levels, and the reader's notes of the kinds chosen
   POST /api/ask               {paper, id, question}: the model answers a note's question; the answer is stored in it
   POST /api/papers/delete     {paper}: move a paper to papers/.trash (not while it is being generated)
   GET  /api/bridge             the ChatGPT bridge (127.0.0.1:10531): running and its models, or what starting it needs
@@ -532,6 +534,15 @@ def make_handler(jobs):
                     except ValueError:
                         return self.json({"error": "not-markdown"}, 400)
                     return self.json({"paper": pid, "title": json.loads((store.pdir(pid) / "meta.json").read_text())["title"]})
+                if u.path == "/api/export":   # the paper as one file, saved by the reader for themself
+                    pid, lang = str(body.get("paper") or ""), str(body.get("lang") or "en")
+                    if not store.valid_id(pid) or not (store.pdir(pid) / "meta.json").exists():
+                        return self.json({"error": "no such paper"}, 404)
+                    kinds = {k for k in body.get("kinds") or [] if k in ("hl", "note", "ask")}
+                    doc = store.assemble(pid, only=[lang] if body.get("langs") == "current" else None)
+                    chosen = [n for n in notes.read(pid)["notes"] if notes.kind(n) in kinds]
+                    html = build.page(doc, app=False, saved={"notes": chosen, "saved": uuid.uuid4().hex[:12], "lang": lang})
+                    return self.send(200, html, "text/html; charset=utf-8")
                 m = re.fullmatch(r"/api/notes/([\w.-]+)", u.path)
                 if m and store.valid_id(m.group(1)) and (store.pdir(m.group(1)) / "meta.json").exists():
                     try:

@@ -172,8 +172,9 @@ def parsed(pid):
     return parse((d / "source.html").read_text(), json.loads((d / "meta.json").read_text()))
 
 
-def assemble(pid):
-    """The paper as the reader needs it, from the layers alone (no model call)."""
+def assemble(pid, only=None):
+    """The paper as the reader needs it, from the layers alone (no model call). only: the translations to carry (a page
+    saved in one language), else all of them."""
     doc = parsed(pid)
     en = read(pid, "en")
     meta = doc["meta"]
@@ -186,6 +187,8 @@ def assemble(pid):
         for u in doc["units"].values():
             u["lad"] = ladder.local(u, doc["atoms"])
     for lang in languages(pid):
+        if only is not None and lang not in only:
+            continue
         tr = read(pid, f"tr-{lang}")
         apply_tr(doc, lang, tr)
         meta["langs"].append(lang)
