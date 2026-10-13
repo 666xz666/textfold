@@ -78,11 +78,13 @@
         <button type="button" class="rail-btn rail-open" title="${esc(T.expand)}">${LIST}</button>
         <a class="rail-btn" href="/" title="${esc(T.new_paper)}">＋</a>
         <button type="button" class="rail-btn rail-settings" title="${esc(T.settings)}">⚙</button>
+        ${window.TFTutorial && PAPER ? `<button type="button" class="rail-btn rail-help" title="${esc(T.tut_open)}">?</button>` : ''}
       </div>
       <a class="sb-new" href="/">＋ ${esc(T.new_paper)}</a>
       ${groups.length > 1 ? '' : `<div class="sb-label">${esc(groups.length ? groups[0][0] : T.papers)}</div>`}
       <nav class="sb-list">${pending.map(pend).join('')}${listed_ || (pending.length ? '' : `<div class="sb-empty">${esc(T.empty)}</div>`)}</nav>
-      <div class="sb-foot"><button type="button" class="sb-settings">⚙ ${esc(T.settings)}</button><div class="sb-model">${esc(modelLabel())}</div></div>`;
+      <div class="sb-foot"><button type="button" class="sb-settings">⚙ ${esc(T.settings)}</button>${window.TFTutorial && PAPER ? `<button type="button" class="sb-help">? ${esc(T.tut_open)}</button>` : ''}<div class="sb-model">${esc(modelLabel())}</div></div>
+      <div class="sb-resize" role="separator" aria-orientation="vertical" tabindex="0" title="${esc(T.sb_resize)}" aria-label="${esc(T.sb_resize)}"></div>`;
     // polled every second while something generates: drawn again only when it changed, and where it was scrolled to
     const busy = jobs.some(live);
     if (html === lastSidebar) { side.querySelector('.rail-open').classList.toggle('busy', busy); return; }
@@ -93,6 +95,7 @@
     side.querySelector('.sb-toggle').onclick = () => setCollapsed(true);
     side.querySelector('.rail-open').onclick = () => setCollapsed(false);
     side.querySelectorAll('.sb-settings, .rail-settings').forEach((b) => { b.onclick = openSettings; });
+    side.querySelectorAll('.sb-help, .rail-help').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); window.TFTutorial.open(uiLang); }; });
     side.querySelectorAll('.sb-del').forEach((b) => { b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); deletePaper(b.dataset.del); }; });
     side.querySelectorAll('.sb-stop').forEach((b) => { b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); stopJob(b.dataset.stop); }; });
     side.querySelectorAll('[data-resume]').forEach((a) => { a.onclick = (e) => { e.preventDefault(); resume(a.dataset.resume); }; });
@@ -137,6 +140,41 @@
     document.addEventListener('click', (e) => { if (!side.classList.contains('collapsed') && !side.contains(e.target)) setCollapsed(true); });
   } else if (store.get('dr-sidebar') === '1' || innerWidth < 720) setCollapsed(true);
   else document.documentElement.classList.add('sb-open');
+
+  // its width, dragged at its edge (or with the arrow keys there) and kept for next time; a double-click goes back to the default
+  const SBW = 'textfold.sbw';
+  let sbw = +store.get(SBW) || 0;
+  function setWidth(w) {
+    sbw = Math.round(Math.min(Math.max(280, Math.min(640, innerWidth - 360)), Math.max(220, w)));
+    document.documentElement.style.setProperty('--sb', `${sbw}px`);
+  }
+  if (sbw) setWidth(sbw);
+  addEventListener('resize', () => { if (+store.get(SBW)) setWidth(+store.get(SBW)); });
+  side.addEventListener('pointerdown', (e) => {
+    const grip = e.target.closest('.sb-resize');
+    if (!grip || e.button !== 0) return;
+    e.preventDefault();
+    grip.setPointerCapture(e.pointerId);
+    document.documentElement.classList.add('sb-resizing');
+    const move = (ev) => setWidth(ev.clientX);
+    const up = () => {
+      grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+      document.documentElement.classList.remove('sb-resizing');
+      store.set(SBW, String(sbw));
+    };
+    grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+  });
+  side.addEventListener('dblclick', (e) => {
+    if (!e.target.closest('.sb-resize')) return;
+    sbw = 0; store.set(SBW, '');
+    document.documentElement.style.removeProperty('--sb');
+  });
+  side.addEventListener('keydown', (e) => {
+    if (!e.target.closest('.sb-resize') || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    setWidth((sbw || side.getBoundingClientRect().width) + (e.key === 'ArrowLeft' ? -16 : 16));
+    store.set(SBW, String(sbw));
+  });
 
   // ── jobs ─────────────────────────────────────────────────────────────
   const watchers = new Map();   // job id -> callback(job)
@@ -341,7 +379,10 @@
     ui.setAttribute('aria-label', T.ui_lang);
     document.getElementById('go-t').textContent = T.generate;
     document.getElementById('sources').textContent = T.sources;
+    document.getElementById('sources').title = T.sources_tip;
     document.getElementById('dropzone-t').textContent = T.drop_zone;
+    document.getElementById('ui-help-t').textContent = T.tut_open;
+    document.getElementById('ui-help').title = T.tut_open;
     document.getElementById('open-settings').textContent = T.settings;
     document.getElementById('model-label').textContent = modelLabel();
     renderConnect();
@@ -389,6 +430,8 @@
       if (!store.get('dr-lang-picked')) sel.value = ui.value;
     };
     document.getElementById('open-settings').onclick = openSettings;
+    const help = document.getElementById('ui-help');
+    if (window.TFTutorial) help.onclick = () => window.TFTutorial.open(uiLang); else help.hidden = true;
     const form = document.getElementById('newform'), err = document.getElementById('err'), card = document.getElementById('jobcard');
     const fail = (msg) => { err.textContent = msg; err.hidden = false; };
     // a paper (an arXiv link, or a document just opened) into the job card, then into the reader
@@ -492,6 +535,9 @@
       openFile(e.dataTransfer.files[0]);
     });
     renderLanding();
+    // a first visit: how TextFold works, once (not when arriving mid-way: a file to generate, or back from OpenRouter)
+    if (window.TFTutorial && !window.TFTutorial.seen() && !/[?&]start=/.test(location.search) && !location.hash.startsWith('#or-'))
+      setTimeout(() => { if (!document.querySelector('dialog[open]')) window.TFTutorial.open(uiLang); }, 350);
     // a file dropped on a paper's page comes here, stored already: generate it (?start=<id>&t=<title>)
     const started = new URLSearchParams(location.search);
     if (started.get('start')) {
