@@ -577,6 +577,7 @@ html.morphing .chatbtn { pointer-events: none; }
 .sv-box input { accent-color: var(--accent); margin: 0; }
 .sv-box i { font-style: normal; font-size: 12px; color: var(--muted); }
 .sv-lic { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+.sv-para { flex-basis: 100%; }
 .sv-err { margin: 6px 0 0; font-size: 12.5px; color: var(--r-limitation); }
 .sv-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .sv-acts button { font: 600 13.5px var(--sans); border-radius: 999px; padding: 7px 16px; cursor: pointer; border: 1px solid var(--line); background: none; color: var(--ink-2); }
@@ -655,6 +656,8 @@ html.morphing .chatbtn { pointer-events: none; }
   .pf-n.note { border-left-color: #d9a522; }
   .pf-n.ask { border-left-color: #6b5ce7; }
   .pf-n blockquote { margin: 0; background: color-mix(in srgb, #f6e08a 45%, transparent); display: inline; -webkit-box-decoration-break: clone; box-decoration-break: clone; padding: 0 1pt; }
+  .pf-n blockquote.para { display: block; background: none; padding: 0; color: #3a3631; }
+  .pf-n blockquote.para mark { background: color-mix(in srgb, #f6e08a 70%, transparent); color: inherit; padding: 0 1pt; }
   .pf-t { font-family: var(--sans); font-size: 9.8pt; margin-top: 4pt; color: #2a2722; }
   .pf-q { font: 600 9.8pt var(--sans); margin-top: 6pt; }
   .pf-a { font-family: var(--sans); font-size: 9.6pt; color: #2a2722; }

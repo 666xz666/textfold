@@ -60,7 +60,7 @@ A paper asks you to hold its whole argument in mind while you read it one paragr
 - **Zoom under your fingers.** Pinch, ⌘-scroll or drag the level bar. Stop halfway, turn back, or open one paragraph alone.
 - **Always know who is speaking.** The authors' words are set in a serif and AI's in a sans serif. Each paragraph is colored by its role in the argument.
 - **Ask, and see the evidence.** Ask about a passage or about the whole paper. Every answer cites the paragraphs it rests on, one click away.
-- **Notes that zoom with the paper.** Highlight and write in the margin, and what you marked stays as you zoom out. **Save**, at the top, keeps the page with them as one HTML file, or only your notes, to share; also as PDF, Markdown for Obsidian or JSON.
+- **Notes that zoom with the paper.** Highlight and write in the margin, and what you marked stays as you zoom out. **Save**, at the top, keeps the page with them as one HTML file, or only your notes, wherever you choose; also as PDF, Markdown for Obsidian or JSON.
 - **Your language.** Twelve languages, translated sentence by sentence, with every formula as typeset.
 
 <table>
