@@ -16,6 +16,8 @@
   POST /api/providers/save    {key?, preset, name, base, api_key?, models}  ·  POST /api/providers/remove {key}
   POST /api/settings          {use_thoughtdag_env}  ·  POST /api/settings/test {model?}: one tiny call
   GET  /api/notes/<id>        the reader's notes on a paper (docs/notes-format.md)
+  POST /api/files             a file dropped on the landing, its bytes (X-Name, X-Lang): a PDF (X-Refs: the papers it
+                              names), or a Word, PowerPoint, Excel, EPUB, HTML file or picture: through the PDF engine
   GET  /api/pdf/<id>          the paper's original PDF (arXiv, PubMed Central, bioRxiv), fetched once and kept (pdf.py)
   POST /api/pdf/<id>          the PDF itself (the reader's copy, when the server would not give it): kept the same way
   POST /api/notes/<id>        {op: "put", note} or {op: "delete", id}
@@ -43,7 +45,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-from . import agents, bridges, build, engine, fetch, langs, llm, local, models, notes, pdf, pdfdoc, pipeline, providers, store
+from . import agents, bridges, build, engine, fetch, langs, llm, local, models, notes, office, pdf, pdfdoc, pipeline, providers, store
 
 STATIC = {"app.js": "text/javascript", "app.css": "text/css", "reader.js": "text/javascript",
           "reader.css": "text/css", "i18n.js": "text/javascript", "tutorial.js": "text/javascript"}
@@ -86,14 +88,14 @@ class Jobs:
     def __init__(self):
         self.items, self.q, self.eq = {}, queue.Queue(), queue.Queue()
         self.stops = {}   # job id -> threading.Event, set when the reader stops it (kept out of the job: it is sent as JSON)
-        self.pending = {}  # PDFs that wait for the engine to be installed: pid -> (file, name, lang)
-        for side in (store.DATA / "uploads").glob("pdf-*.json"):   # (kept beside each, so a restart forgets none)
-            f = side.with_suffix(".pdf")
+        self.pending = {}  # files that wait for the engine to be installed: pid -> (file, name, lang)
+        for side in (store.DATA / "uploads").glob("*.json"):   # (kept beside each, so a restart forgets none)
             try:
+                w = json.loads(side.read_text())
+                f = side.parent / Path(w.get("file") or side.stem + ".pdf").name
                 if f.exists() and not (store.pdir(f.stem) / "meta.json").exists():
-                    w = json.loads(side.read_text())
                     self.pending[f.stem] = (str(f), w["name"], w["lang"])
-            except (OSError, ValueError, KeyError):
+            except (OSError, ValueError, KeyError, AttributeError):
                 pass
         threading.Thread(target=self.work, daemon=True).start()
         threading.Thread(target=self.work_engine, daemon=True).start()
@@ -114,15 +116,15 @@ class Jobs:
         return self._same(kind="generate", pid=pid, lang=lang) or self._new(self.q, pid=pid, lang=lang, force=bool(force), attach=attach)
 
     def convert(self, pid, file, name, lang, tier=None, replace=False):
-        """A PDF through the engine (then generated): file is the PDF on disk; replace converts a stored one again."""
-        tier = tier or models.load_settings().get("pdf_tier") or "fast"
+        """A file through the engine (then generated): file is on disk; replace converts a stored one again."""
+        tier = engine.tier_for(file, tier or models.load_settings().get("pdf_tier") or "fast")
         return self._same(kind="convert", pid=pid) or self._new(self.eq, kind="convert", pid=pid, lang=lang, file=str(file), name=name,
                                                                 title=name, tier=tier, replace=bool(replace))
 
     def wait_for_engine(self, pid, file, name, lang):
-        """A PDF kept until the engine is installed (then converted), with a note of its name and language beside it."""
+        """A file kept until the engine is installed (then converted), with a note of its name and language beside it."""
         self.pending[pid] = (str(file), name, lang)
-        Path(file).with_suffix(".json").write_text(json.dumps({"name": name, "lang": lang}, ensure_ascii=False))
+        Path(file).with_suffix(".json").write_text(json.dumps({"name": name, "lang": lang, "file": Path(file).name}, ensure_ascii=False))
 
     def install_engine(self):
         return self._same(kind="install") or self._new(self.eq, kind="install", title="PDF engine")
@@ -256,9 +258,15 @@ class Jobs:
                         self.convert(pid, file, name, lang)
                 else:
                     out = store.DATA / "uploads" / f"{job['pid']}-{job['tier']}"
-                    engine.convert(job["file"], out, job["tier"], progress, log, stop)
+                    try:
+                        engine.convert(job["file"], out, job["tier"], progress, log, stop)
+                    except Exception:   # a file the engine could not read: TextFold's own reader, if it has one
+                        if stop.is_set() or not office.reads(engine.kind_of(job["file"])):
+                            raise
+                        log("the engine could not read this file: TextFold reads it itself")
+                        office.convert(job["file"], out)
                     pdfdoc.store_pdf(job["pid"], out, pdfdoc.read_output(out), job["name"], job["tier"], replace=job["replace"])
-                    src = store.pdir(job["pid"]) / "source.pdf"
+                    src = store.pdir(job["pid"]) / pdfdoc.kept_name(job["pid"], job["file"])   # the file itself, kept
                     if not src.exists():
                         src.write_bytes(Path(job["file"]).read_bytes())
                     shutil.rmtree(out, ignore_errors=True)
@@ -270,11 +278,52 @@ class Jobs:
                     job["next"] = self.submit(job["pid"], job["lang"] or "en", False)["id"]   # its levels, in the other queue
                 job.update(status="done", finished=time.time())
             except Exception as e:
+                if job["kind"] == "convert":   # what the engine wrote before it failed
+                    shutil.rmtree(store.DATA / "uploads" / f"{job['pid']}-{job['tier']}", ignore_errors=True)
                 self._end(job, e, stop)
 
     def list(self):
         now = time.time()
         return [j for j in self.items.values() if j["status"] in ("queued", "running") or now - (j["finished"] or now) < 600]
+
+
+def _named(headers):
+    """A dropped file's name and the language to read it in, from the request's headers."""
+    lang = headers.get("X-Lang") or "en"
+    return Path(unquote(headers.get("X-Name") or "document.pdf")).name[:200] or "document.pdf", lang if lang in langs.LANGS else "en"
+
+
+def take_file(jobs, data, headers):
+    """A file from the landing, as (reply, status): a PDF (take_pdf), or another the engine reads (a Word, PowerPoint
+    or Excel file, an e-book, a saved web page, a picture: engine.FILES). With the engine installed, it reads them all
+    (most completely); without it, TextFold reads the ones it can itself, at once (office.py), and keeps the others
+    (a picture, an old PowerPoint) until the engine is installed."""
+    name, lang = _named(headers)
+    ext = engine.kind_of(name)
+    if data[:5] == b"%PDF-" or ext == "pdf":
+        return take_pdf(jobs, data, headers)
+    if not ext:
+        return {"error": "not-supported"}, 400
+    pid = pdfdoc.pid_of(data, ext)
+    f = store.DATA / "uploads" / f"{pid}.{ext}"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    if (store.pdir(pid) / "meta.json").exists():   # this file, converted before
+        return {"job": jobs.submit(pid, lang, False), "via": "file"}, 200
+    if not f.exists():
+        f.write_bytes(data)
+    if engine.where():
+        return {"job": jobs.convert(pid, f, name, lang), "via": "file"}, 200
+    if office.reads(ext):
+        try:
+            office.save(pid, f, name)
+        except ValueError:
+            return {"error": "bad-file"}, 400
+        finally:
+            f.unlink(missing_ok=True)
+        # read: it opens now, as a converted PDF does, while its levels are written (no model is needed to read it)
+        return {"job": jobs.submit(pid, lang, False), "paper": pid, "via": "file"}, 200
+    jobs.wait_for_engine(pid, f, name, lang)
+    return {"needs": "engine", "upload": pid, "name": name, "engine": engine.status()}, 200
 
 
 def take_pdf(jobs, data, headers):
@@ -283,10 +332,7 @@ def take_pdf(jobs, data, headers):
     file through the PDF engine; without one, it waits for the reader to install it."""
     if data[:5] != b"%PDF-":
         return {"error": "not-pdf"}, 400
-    name = Path(unquote(headers.get("X-Name") or "document.pdf")).name[:200] or "document.pdf"
-    lang = headers.get("X-Lang") or "en"
-    if lang not in langs.LANGS:
-        lang = "en"
+    name, lang = _named(headers)
     try:
         refs = [r for r in json.loads(unquote(headers.get("X-Refs") or "[]")) if isinstance(r, str)][:6]
     except ValueError:
@@ -442,10 +488,10 @@ def make_handler(jobs):
                     if size > pdf.LIMIT:
                         return self.json({"error": "too-large"}, 413)
                     return self.json({"ok": True}) if pdf.keep(m.group(1), self.rfile.read(size)) else self.json({"error": "not-pdf"}, 400)
-                if u.path == "/api/pdfs":   # a PDF dropped on the landing: its bytes; X-Refs, what the page found in it
+                if u.path in ("/api/files", "/api/pdfs"):   # a file dropped on the landing: its bytes (a PDF's X-Refs: what the page found in it)
                     if size > pdf.LIMIT:
                         return self.json({"error": "too-large"}, 413)
-                    return self.json(*take_pdf(jobs, self.rfile.read(size), self.headers))
+                    return self.json(*take_file(jobs, self.rfile.read(size), self.headers))
                 if size > 12_000_000:   # a Markdown file is far smaller; this is a request gone wrong
                     return self.json({"error": "too-large"}, 413)
                 body = json.loads(self.rfile.read(size) or b"{}")
@@ -465,10 +511,10 @@ def make_handler(jobs):
                     if any(j["kind"] in ("install", "convert") and j["status"] in ("queued", "running") for j in jobs.items.values()):
                         return self.json({"error": "busy"}, 409)
                     return self.json(engine.uninstall())
-                if u.path == "/api/convert":   # a stored PDF converted again, at another tier (its levels follow)
+                if u.path == "/api/convert":   # a stored PDF (or picture) converted again, at another tier (its levels follow)
                     pid, tier = str(body.get("paper") or ""), str(body.get("tier") or "accurate")
-                    src = store.pdir(pid) / "source.pdf"
-                    if not (pid.startswith("pdf-") and store.valid_id(pid) and src.exists()) or tier not in engine.TIERS:
+                    src = pdfdoc.source_of(pid) if pid.startswith(("pdf-", "doc-")) and store.valid_id(pid) else None
+                    if not src or tier not in engine.TIERS or engine.tier_for(src, tier) != tier:
                         return self.json({"error": "no such PDF"}, 404)
                     if not engine.where():
                         return self.json({"error": "needs-engine"}, 409)

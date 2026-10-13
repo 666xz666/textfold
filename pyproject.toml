@@ -26,6 +26,8 @@ dependencies = [
     "mdit-py-plugins",
     "latex2mathml",
     "trafilatura>=2.0",
+    "mammoth",
+    "openpyxl",
 ]
 
 [project.optional-dependencies]

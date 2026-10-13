@@ -111,6 +111,10 @@ html.app footer.zoom { left: var(--rail); }
   border: 1.5px dashed var(--line); border-radius: 14px; background: none; font: 500 14px var(--sans); color: var(--muted); cursor: pointer;
   transition: border-color .15s, background-color .15s, color .15s; }
 .dropzone svg { width: 20px; height: 20px; flex: none; }
+/* what to do, and under it the kinds of file it takes (the zone's title lists every extension) */
+.dz-text { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; text-align: left; }
+.dz-text small { font: 450 12.5px/1.45 var(--sans); color: var(--muted); opacity: .85; }
+.dropzone:hover .dz-text small, .dropzone.dragging .dz-text small { color: inherit; }
 .dropzone:hover, .dropzone:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
 .dropzone.dragging { border-color: var(--accent); border-style: solid; background: var(--accent-soft); color: var(--accent); }
 #newform input { flex: 1 1 200px; min-width: 0; font: 450 17px var(--sans); color: var(--ink); background: none; border: 0; padding: 12px 4px; outline: none; }

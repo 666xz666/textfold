@@ -4,8 +4,11 @@ sources go through. Running heads, page numbers and margin stamps are left out; 
 file's own metadata when it has them; headings get their depth from their numbering (MinerU gives every heading the
 same level); a figure's panels and its caption become one figure, cut whole from its page when the engine cut it up;
 a formula is LaTeX (the accurate tier) or the picture of it (the fast tier); the references become a list of works.
+The engine's other files (a Word, PowerPoint or Excel file, an e-book, a saved web page, a picture) come out in the same
+shape, without places on pages (but a picture's): their headings keep the depth the file gives them.
 
-Its id: pdf-<the first 16 hex digits of the file's SHA-256>, so the same file is the same document."""
+Its id: pdf-<the first 16 hex digits of the file's SHA-256>, so the same file is the same document; another file's,
+doc-<the same>."""
 import hashlib
 import json
 import re
@@ -32,8 +35,20 @@ BOILER = re.compile(r"^\W*\d?\s*(?:check for updates|open access|research articl
 FRONT = re.compile(r"^(?:<sup>|\d+\s*[A-Z][a-z]+ (?:of|for)\b|(?:received|accepted|published|revised|correspondence|e-?mail|keywords?)\b)|@", re.I)
 
 
-def pid_of(data):
-    return "pdf-" + hashlib.sha256(data).hexdigest()[:16]
+def pid_of(data, ext="pdf"):
+    return ("pdf-" if ext == "pdf" else "doc-") + hashlib.sha256(data).hexdigest()[:16]
+
+
+def source_of(pid):
+    """The file a converted document was read from, kept beside it (a PDF as source.pdf, another as original.docx,
+    original.epub, ...: source.html is the document's own), or None."""
+    d = store.pdir(pid)
+    return d / "source.pdf" if (d / "source.pdf").exists() else next(iter(sorted(d.glob("original.*"))), None)
+
+
+def kept_name(pid, file):
+    """The name a converted document's file is kept under, beside it."""
+    return "source.pdf" if pid.startswith("pdf-") else "original" + Path(file).suffix.lower()
 
 
 def depth(title):
@@ -52,6 +67,20 @@ def _md_escape_heading(s):
     return re.sub(r"\s+", " ", s).strip().lstrip("#").strip()
 
 
+def _unwrap(s):
+    """Words set in bold or italics as a whole ("**Abstract**", "*Figure 1. ...*"), without the marks."""
+    m = re.fullmatch(r"(\*{1,3}|_{1,3})(.+?)\1", (s or "").strip(), re.S)
+    return m.group(2).strip() if m and m.group(1) not in m.group(2) else (s or "").strip()
+
+
+# a link within the file (a footnote's mark, a slide's): its words
+LOCAL_LINK = re.compile(r'<a\s+href="#[^"]*"[^>]*>(.*?)</a>|(?<!!)\[([^\]]*)\]\((?!https?:|mailto:)[^)\s]*\)', re.S)
+
+
+def _local_links(s):
+    return LOCAL_LINK.sub(lambda m: m.group(1) if m.group(1) is not None else m.group(2), s)
+
+
 def _table_html(content):
     """A table as HTML: MinerU gives it as HTML or as a Markdown table."""
     c = _text(content)
@@ -63,11 +92,11 @@ def _table_html(content):
 
 
 def _caption_of(block):
-    return " ".join(_text(c.get("content")) for c in block.get("captions") or [] if _text(c.get("content")))
+    return " ".join(_captions(block))
 
 
 def _captions(b):
-    return [_text(c.get("content")) for c in b.get("captions") or [] if _text(c.get("content"))]
+    return [_unwrap(c.get("content")) for c in b.get("captions") or [] if _text(c.get("content"))]
 
 
 def _figure_table(b):
@@ -170,17 +199,29 @@ def to_markdown(sc, name="", crops=None, want=None):
     its page: want, a list, gets each such figure's {"page", "box", "blocks"}; crops is the picture made of each,
     {(page, box): src}. Without its picture, the figure is its pieces as the engine cut them."""
     doc = sc.get("metadata", {}).get("document", {}) or {}
+    # a PDF or a picture (a page); else a file whose structure is in it (Word, EPUB, ...): its headings' depths are
+    # its own, its text is all the author's (no running heads, stamps or front matter to tell from it)
+    paged = (sc.get("metadata", {}).get("file_suffix") or "pdf") == "pdf"
     blocks = [b for p in sc.get("pages", []) for b in p.get("blocks", []) if b.get("type") not in DROP]
     page_of = {id(b): p.get("page_idx", n) + 1 for n, p in enumerate(sc.get("pages", [])) for b in p.get("blocks", [])}
     zones = _zones(blocks, page_of)
     # the title the page shows, when the engine found a whole one; else the file's own when it is words (it is often a
     # code: "11-nelson65 mc-nwf1"); else the file's name
     first = next((b for b in blocks if b.get("type") == "doc_title"), None)
-    shown = re.sub(r"\s+", " ", _text(first.get("content"))) if first is not None else ""
+    shown = re.sub(r"\s+", " ", _unwrap(first.get("content"))) if first is not None else ""
     meta_title = re.sub(r"\s+", " ", _text(doc.get("title")))
     title = (shown if plausible(shown) and len(shown.split()) >= 3 else meta_title if plausible(meta_title)
              else shown if plausible(shown) else re.sub(r"[_-]+", " ", Path(name).stem).strip())
+    # a file without a title of its own whose first line is a heading like no other (its title, set as a heading)
+    heads = [b for b in blocks if b.get("type") == "paragraph_title"]
+    lead = blocks[0] if not paged and first is None and not plausible(meta_title) and blocks and blocks[0] in heads else None
+    if lead is not None and plausible(_unwrap(lead.get("content"))) and [h.get("level") for h in heads].count(lead.get("level")) == 1:
+        title = re.sub(r"\s+", " ", _unwrap(lead.get("content")))
+    else:
+        lead = None
+    top = min((int(h.get("level") or 2) for h in heads if h is not lead), default=2)   # a file's shallowest heading
     authors = [a.strip() for x in doc.get("authors") or [] for a in re.split(r"\s*[;\n]\s*", x) if a.strip()]
+    byline = {re.sub(r"\s+", " ", a) for a in authors}   # a file's own: its authors' names, under its title
     # what comes between the title and the first heading (the authors, their places, a date) is the paper's front matter
     has_heading = any(b.get("type") == "paragraph_title" for b in blocks)
     out, notes, figure, deferred, in_refs, front = [], [], [], [], False, True
@@ -198,7 +239,7 @@ def to_markdown(sc, name="", crops=None, want=None):
         for zone in {id(zones[i]): zones[i] for i in ids if i in zones}.values():
             if zone["pictures"] <= ids:
                 labels += zone["labels"]
-        if len(pages) != 1 or (len(members) == 1 and not labels):
+        if len(pages) != 1 or (len(members) == 1 and not labels) or not all(m.get("bbox") for m in members):
             return None
         boxes = [m["bbox"] for m in members] + labels
         return pages.pop(), [round(max(0.0, min(x[0] for x in boxes) - PAD), 4), round(max(0.0, min(x[1] for x in boxes) - PAD), 4),
@@ -229,7 +270,22 @@ def to_markdown(sc, name="", crops=None, want=None):
 
     for b in blocks:
         kind, content = b.get("type"), _text(b.get("content"))
-        if kind in ("text", "paragraph_title") and BOILER.match(content):
+        if kind in ("doc_title", "paragraph_title"):
+            content = _unwrap(content)
+        if b is lead:
+            continue
+        if not paged:
+            content = re.sub(r"\s*\u21a9\ufe0e?", "", _local_links(content))   # (a footnote's way back to its mark: ↩)
+            if kind == "text" and (ABSTRACT.match(_unwrap(content)) or REFS.match(_unwrap(content))):
+                kind, content = "paragraph_title", _unwrap(content)   # "Abstract", "**References**": a heading
+            if kind == "paragraph_title" and not seen_title and re.sub(r"\s+", " ", content) == title:
+                seen_title = True   # the title again, as the first heading (an e-book's title page)
+                continue
+            if front and kind == "text" and (re.sub(r"\s+", " ", content) in byline or DATE.match(content)):
+                continue   # the file's authors and date, under its title: its metadata has them
+            if kind in ("text", "list"):
+                front = False
+        if paged and kind in ("text", "paragraph_title") and BOILER.match(content):
             continue
         if kind in ("text", "paragraph_title") and id(b) in zones:
             continue   # a figure's label read as a line of text ("Reasoning Task", "100"): the figure shows it
@@ -241,7 +297,7 @@ def to_markdown(sc, name="", crops=None, want=None):
             flush_figure(cap)
             if cap:
                 continue
-        if kind == "text" and not in_refs and NUMBERED.match(content) and len(content.split()) <= 10:
+        if paged and kind == "text" and not in_refs and NUMBERED.match(content) and len(content.split()) <= 10:
             kind = "paragraph_title"
         if kind == "doc_title":
             if not seen_title and re.sub(r"\s+", " ", content) == title:
@@ -259,14 +315,15 @@ def to_markdown(sc, name="", crops=None, want=None):
             in_refs = bool(REFS.match(content))
             if in_refs and refs_at is None:
                 refs_at = len(out)
-            out.append("#" * (1 + depth(content)) + " " + _md_escape_heading(content))
+            deep = depth(content) if paged else min(3, max(1, int(b.get("level") or top) - top + 1))
+            out.append("#" * (1 + deep) + " " + _md_escape_heading(content))
             continue
-        if front and has_heading and kind in ("text", "list") and (len(content.split()) < 25 or FRONT.search(content)):
+        if paged and front and has_heading and kind in ("text", "list") and (len(content.split()) < 25 or FRONT.search(content)):
             continue   # authors, affiliations, dates above the first heading (an abstract, an introduction stay)
         if kind == "image":
             if b.get("image_source"):
                 figure.append(b)
-            cap = figure_caption(b)
+            cap = figure_caption(b) if paged else _caption_of(b)   # (a file's captions are its pictures' own)
             if cap:
                 flush_figure(cap)
             continue
@@ -337,11 +394,13 @@ def cut_figures(sc, folder, pdf, name=""):
 
 def store_pdf(pid, folder, sc, name, tier, replace=False):
     """A converted PDF stored as a document (papers/<pid>/), its pictures read from the engine's output folder. The
-    file itself is kept as source.pdf, so the reader can show it beside the text; the engine's structured content as
+    file itself is kept as source.pdf, so the reader can show it beside the text (another file, as original.<its
+    extension>); the engine's structured content as
     structured_content.json, so that its figures and places can be made again without the engine. Converted again
     (replace), the reader's notes and the file stay; the levels go, since they belong to the text they were made from."""
     from . import engine
     d = store.pdir(pid)
+    ext = "pdf" if pid.startswith("pdf-") else engine.kind_of(name) or "file"
     pdf = Path(folder) / engine.PDF
     title, authors, text = to_markdown(sc, name, cut_figures(sc, folder, pdf if pdf.is_file() else d / "source.pdf", name))
     html, _ = markdown.to_html(text)
@@ -352,13 +411,17 @@ def store_pdf(pid, folder, sc, name, tier, replace=False):
             "snapshot": time.strftime("%Y-%m-%d"), "abs_url": url or (f"https://doi.org/{doi}" if doi else ""), "html_url": "",
             "doi": doi, "license": "", "source": {"kind": "pdf", "name": name, "tier": tier, "engine": "mineru"},
             "label": f"PDF · {name}"}
+    if ext != "pdf":   # read in one way only, but a picture (fast or accurate, as a page is)
+        meta["source"] = {"kind": "file", "format": ext, "name": name, "tier": engine.tier_for(f"x.{ext}", tier) if ext in engine.PICTURES else "",
+                          "engine": (sc.get("metadata", {}).get("producer") or {}).get("name") or "mineru"}   # (or TextFold's own reader)
+        meta["label"] = f"{engine.FILES.get(ext, ext.upper())} · {name}"
     keep = d.with_name(d.name + ".keep")   # the reader's notes and the file, on disk while the document is rewritten
     if replace and d.exists():
         shutil.rmtree(keep, ignore_errors=True)
         keep.mkdir(parents=True)
-        for f in ("source.pdf", "notes.json"):
-            if (d / f).exists():
-                shutil.copy2(d / f, keep / f)
+        for f in [source_of(pid), d / "notes.json"]:
+            if f and f.exists():
+                shutil.copy2(f, keep / f.name)
         if (d / "source.html").exists():
             (d / "source.html").unlink()   # so that store_doc writes the document again
     try:

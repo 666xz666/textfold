@@ -88,9 +88,9 @@ python3 -m pip install -r requirements.txt
 python3 -m textfold serve
 ```
 
-第一次使用先[连接一个模型](#连接模型)，然后粘贴任何网页的链接、arXiv、PubMed Central、bioRxiv、medRxiv 上论文的链接或 DOI、维基百科条目，或者 GitHub 仓库（读它的 README），也可以拖入一个 PDF 或 Markdown 文件，再选择语言。
+第一次使用先[连接一个模型](#连接模型)，然后粘贴任何网页的链接、arXiv、PubMed Central、bioRxiv、medRxiv 上论文的链接或 DOI、维基百科条目，或者 GitHub 仓库（读它的 README），也可以拖入一个文件（PDF、Word、PowerPoint、Excel、EPUB、保存的网页、图片、Markdown 或纯文本），再选择语言。
 
-需要 Python 3.9 或更新的版本（macOS 自带的就可以）。arXiv 论文要有 arXiv 生成的 HTML 版本，2023 年底以来的论文大多都有；bioRxiv 和 medRxiv 的预印本、任何语言的维基百科条目，都直接从网站读取；其他论文要在 [Europe PMC](https://europepmc.org) 有开放全文（PubMed Central 的开放获取文章，以及 Research Square 等平台的预印本）；Markdown 文件没有这个要求。PDF 如果是网上能读到的论文，就打开网上的版本；其他 PDF 需要 PDF 引擎（MinerU，约 3.4 GB），首页会提示安装，也可以运行 `python3 -m textfold engine install`。
+需要 Python 3.9 或更新的版本（macOS 自带的就可以）。arXiv 论文要有 arXiv 生成的 HTML 版本，2023 年底以来的论文大多都有；bioRxiv 和 medRxiv 的预印本、任何语言的维基百科条目，都直接从网站读取；其他论文要在 [Europe PMC](https://europepmc.org) 有开放全文（PubMed Central 的开放获取文章，以及 Research Square 等平台的预印本）；Markdown 文件没有这个要求。PDF 如果是网上能读到的论文，就打开网上的版本；其他 PDF 和图片需要 PDF 引擎（MinerU，约 3.4 GB），首页会提示安装，也可以运行 `python3 -m textfold engine install`。Word、PowerPoint、Excel 和 EPUB 文件不装引擎也能打开；装了引擎，读得更完整。
 
 ## 连接模型
 
@@ -182,7 +182,7 @@ claude plugin install textfold@textfold
 
 <div align="center">
 
-<sub>TextFold 建立在这些开源项目之上：[trafilatura](https://github.com/adbar/trafilatura) 从网页中找出正文，[MinerU](https://github.com/opendatalab/MinerU) 转换 PDF，[PDF.js](https://github.com/mozilla/pdf.js) 显示 PDF，[KaTeX](https://katex.org) 排版公式。感谢它们的作者。</sub>
+<sub>TextFold 建立在这些开源项目之上：[trafilatura](https://github.com/adbar/trafilatura) 从网页中找出正文，[MinerU](https://github.com/opendatalab/MinerU) 转换 PDF，[mammoth](https://github.com/mwilliamson/python-mammoth) 读取 Word 文件，[PDF.js](https://github.com/mozilla/pdf.js) 显示 PDF，[KaTeX](https://katex.org) 排版公式。感谢它们的作者。</sub>
 
 [Apache 2.0](./LICENSE) © 2026 Xia Chen · [开发文档](docs/DEVELOPMENT.md) · [参与贡献](CONTRIBUTING.md) · [反馈](https://github.com/chenxiachan/textfold/issues)
 

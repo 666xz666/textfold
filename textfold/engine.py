@@ -1,6 +1,7 @@
 """The PDF engine: MinerU, pinned, in a Python of its own under the system's folder for app data (engine/ beside the
 papers of an installed TextFold and the desktop app's), installed when the reader asks for it and removed the same way.
 Nothing of it goes into TextFold's own Python: it is about 3.4 GB (torch, and 2 GB of models) and needs Python 3.10+.
+Besides PDFs it reads Word, PowerPoint, Excel, OpenDocument, EPUB and HTML files and pictures (FILES).
 
 TextFold runs its command line, mineru-kit, never the `mineru` document library (which keeps an index of the reader's
 files and asks to send usage data). Two tiers: fast (MinerU's flash: seconds, no model; formulas come out as pictures,
@@ -22,6 +23,26 @@ from . import store
 VERSION = "4.0.10"
 TIERS = {"fast": "flash", "accurate": "advanced"}
 MARK = "installed.txt"   # written last: an engine folder without it is an install that did not finish
+# the files it reads besides PDFs (MinerU's own list, mineru/filetypes.py), by their extension, with the name a reader
+# knows them by. A picture is read like a scanned page, in either tier; the others have one way to be read (the fast
+# tier: their text and structure are in the file, no model is needed)
+PICTURES = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "jp2"}
+FILES = {"docx": "Word", "doc": "Word", "rtf": "RTF", "pptx": "PowerPoint", "ppt": "PowerPoint", "xlsx": "Excel", "xls": "Excel",
+         "odt": "OpenDocument", "ods": "OpenDocument", "odp": "OpenDocument", "epub": "EPUB", "html": "HTML", "htm": "HTML",
+         "mhtml": "MHTML", "mht": "MHTML", "csv": "CSV", "tsv": "TSV", "ofd": "OFD"} | {x: "Image" for x in PICTURES}
+
+
+def kind_of(name):
+    """A file's extension as the engine knows it ("tif" is its "tiff"), or None for a file it does not read."""
+    ext = Path(name).suffix.lower().lstrip(".")
+    ext = {"tif": "tiff", "shtml": "html"}.get(ext, ext)
+    return ext if ext == "pdf" or ext in FILES else None
+
+
+def tier_for(file, tier):
+    """The tier a file is read in: a PDF's or a picture's as asked, any other file's the fast one."""
+    ext = Path(str(file)).suffix.lower().lstrip(".")
+    return tier if ext == "pdf" or ext in PICTURES else "fast"
 
 
 class Stopped(Exception):
@@ -172,9 +193,18 @@ def uninstall():
 BAR = re.compile(r"^Two Step Extraction:\s+\d+%\|.*?\|\s*(?P<done>\d+)/(?P<total>\d+)")
 
 
+def _whole(z):
+    """Whether the engine's zip was written to its end, with the document in it."""
+    try:
+        with zipfile.ZipFile(z) as f:
+            return "structured_content.json" in f.namelist()
+    except (OSError, zipfile.BadZipFile):
+        return False
+
+
 def convert(pdf, out, tier="fast", progress=lambda *a: None, log=lambda *a: None, stop=None):
-    """A PDF converted into out/ (MinerU's zip, unpacked: structured_content.json, images/; and the PDF itself, as
-    input.pdf). Progress by page, from
+    """A PDF (or another file the engine reads: FILES) converted into out/ (MinerU's zip, unpacked:
+    structured_content.json, images/; and a PDF itself, as input.pdf). Progress by page, from
     the model's own bars (the accurate tier's last pass, "Two Step Extraction", is the long one)."""
     e = where()
     if e is None:
@@ -190,10 +220,16 @@ def convert(pdf, out, tier="fast", progress=lambda *a: None, log=lambda *a: None
         if m and int(m.group("total")):
             progress("convert", int(m.group("done")), int(m.group("total")))
 
+    tier = tier_for(pdf, tier)
     cmd = [_bin(e, "mineru-kit"), "parse", pdf, "-o", z, "--format", "zip", "--tier", TIERS.get(tier, tier)]
     if TIERS.get(tier, tier) == "advanced":
         cmd.append("--disable-image-analysis")
-    _run(cmd, _env(e), log, stop, on_line)
+    try:
+        _run(cmd, _env(e), log, stop, on_line)
+    except RuntimeError:   # it may fail on its way out, its work written (a picture: a lock of its OCR library's)
+        if not _whole(z):
+            raise
+        log("the engine ended abnormally after writing its output, which is kept")
     with zipfile.ZipFile(z) as f:
         for name in f.namelist():   # nothing outside out/
             if name.startswith("/") or ".." in Path(name).parts:
@@ -202,7 +238,8 @@ def convert(pdf, out, tier="fast", progress=lambda *a: None, log=lambda *a: None
     z.unlink()
     if not (out / "structured_content.json").exists():
         raise RuntimeError("the engine wrote no document")
-    shutil.copyfile(pdf, out / PDF)   # the file beside its output: a figure is cut from its page (crop)
+    if Path(str(pdf)).suffix.lower() == ".pdf":
+        shutil.copyfile(pdf, out / PDF)   # the file beside its output: a figure is cut from its page (crop)
     return out
 
 

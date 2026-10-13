@@ -88,9 +88,9 @@ python3 -m pip install -r requirements.txt
 python3 -m textfold serve
 ```
 
-The first time, [connect a model](#connect-a-model); then paste the link of any web page, the link or DOI of a paper on arXiv, PubMed Central, bioRxiv or medRxiv, a Wikipedia article, or a GitHub repository (its README), or drag in a PDF or a Markdown file, and pick a language.
+The first time, [connect a model](#connect-a-model); then paste the link of any web page, the link or DOI of a paper on arXiv, PubMed Central, bioRxiv or medRxiv, a Wikipedia article, or a GitHub repository (its README), or drag in a file (a PDF, Word, PowerPoint or Excel file, an EPUB, a saved web page, a picture, Markdown or text), and pick a language.
 
-You need Python 3.9 or newer (the one macOS ships with works). An arXiv paper needs its HTML version, as most papers since late 2023 have; a bioRxiv or medRxiv preprint, or a Wikipedia article in any language, is read from the site itself; any other paper needs its open full text in [Europe PMC](https://europepmc.org) (open-access articles in PubMed Central, and preprints such as Research Square's); a Markdown file needs nothing. A PDF that names a paper TextFold can read online opens in that version; any other PDF needs the PDF engine (MinerU, about 3.4 GB), which the landing offers to install, as does `python3 -m textfold engine install`.
+You need Python 3.9 or newer (the one macOS ships with works). An arXiv paper needs its HTML version, as most papers since late 2023 have; a bioRxiv or medRxiv preprint, or a Wikipedia article in any language, is read from the site itself; any other paper needs its open full text in [Europe PMC](https://europepmc.org) (open-access articles in PubMed Central, and preprints such as Research Square's); a Markdown file needs nothing. A PDF that names a paper TextFold can read online opens in that version; any other PDF, and a picture, needs the PDF engine (MinerU, about 3.4 GB), which the landing offers to install, as does `python3 -m textfold engine install`. Word, PowerPoint, Excel and EPUB files open without it; with it, they are read more completely.
 
 ## Connect a model
 
@@ -182,7 +182,7 @@ More in [plugins/textfold](plugins/textfold/README.md).
 
 <div align="center">
 
-<sub>Built on [trafilatura](https://github.com/adbar/trafilatura), which finds the article on a web page, and [MinerU](https://github.com/opendatalab/MinerU), which converts PDFs; PDFs are shown with [PDF.js](https://github.com/mozilla/pdf.js) and formulas with [KaTeX](https://katex.org). Thanks to their authors.</sub>
+<sub>Built on [trafilatura](https://github.com/adbar/trafilatura), which finds the article on a web page, [MinerU](https://github.com/opendatalab/MinerU), which converts PDFs, and [mammoth](https://github.com/mwilliamson/python-mammoth), which reads Word files; PDFs are shown with [PDF.js](https://github.com/mozilla/pdf.js) and formulas with [KaTeX](https://katex.org). Thanks to their authors.</sub>
 
 [Apache 2.0](./LICENSE) © 2026 Xia Chen · [Development](docs/DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md) · [Feedback](https://github.com/chenxiachan/textfold/issues)
 

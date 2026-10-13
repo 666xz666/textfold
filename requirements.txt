@@ -7,5 +7,8 @@ mdit-py-plugins
 latex2mathml
 # any web page's article
 trafilatura>=2.0
+# Word files (and Excel's), read without the PDF engine
+mammoth
+openpyxl
 # only for the Anthropic API (Claude Code, Codex, Pi and OpenAI-compatible providers need nothing more):
 # anthropic

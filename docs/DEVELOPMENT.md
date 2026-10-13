@@ -243,6 +243,17 @@ page or the file, heading depth from numbering, a figure's panels grouped under 
 after the references put before them, short front matter dropped. A file that waits for the engine is kept in
 `uploads/` with a note of its name and language beside it, and converted once the engine is installed.
 
+Other files take the same road (`POST /api/files`, `take_file`; `doc-<file hash>`, the file kept as `original.<ext>`).
+With the engine installed, it reads them all: Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, HTML and MHTML, CSV,
+OFD (its fast tier only: no model is needed) and pictures (either tier, as a scanned page). Without it, TextFold reads
+the common ones itself, at once (`office.py`): .docx through mammoth, its formulas turned from OMML into LaTeX first
+(`omml.py`, written for what latex2mathml and KaTeX both read); .pptx, .xlsx and .epub from their own XML; .csv and
+.tsv; a saved page's article (.html, .mhtml, its pictures from inside the file); and on a Mac .doc, .rtf and .odt
+through `textutil`. It writes the engine's shape (`structured_content.json` and `images/`), so `pdfdoc.py` stores both
+alike; a file whose structure is its own keeps its headings' depths, its captions and its notes. A picture, an old
+PowerPoint or Excel file, an OpenDocument sheet or deck still wait for the engine; a file the engine fails on falls back
+to `office.py`.
+
 The server has two queues (`Jobs`): generation (model calls) and the engine (installs, conversions), each one job at a
 time; a conversion's `next` is the generation that follows it. A converted PDF opens as soon as it is stored.
 
@@ -289,7 +300,10 @@ textfold/wiki.py     Wikipedia articles, any language edition (wiki-<lang>-<page
 textfold/github.py   a GitHub repository's README (gh-<owner>--<repo>)
 textfold/webpage.py  any other web page: its article (trafilatura), hidden text removed first (web-<host>-<hash>)
 textfold/engine.py   the PDF engine: MinerU in a Python of its own under the app data folder; install, removal, conversion
-textfold/pdfdoc.py   a converted PDF as a document: MinerU's structured output into Markdown and HTML (pdf-<file hash>)
+textfold/pdfdoc.py   a converted PDF as a document: MinerU's structured output into Markdown and HTML (pdf-<file hash>;
+                     another file, doc-<file hash>)
+textfold/office.py   Word, PowerPoint, Excel, CSV, EPUB and saved web pages read without the engine, in its shape
+textfold/omml.py     Office's formulas (OMML) as LaTeX
 textfold/pdf.py      a paper's original PDF for the side-by-side view (source.pdf)
 textfold/tokens.py   tokenizer, sentence splitter, LCS alignment
 textfold/ladder.py   one model call per section; validation; written words aligned to source words for the morph

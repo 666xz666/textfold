@@ -22,22 +22,34 @@ def _say(*a):
 
 def get(a):
     """A document at one level, on stdout: written first when it has no levels yet (a model is called), unless
-    --no-generate. A PDF goes through the PDF engine; a Markdown file is read as it is."""
-    from . import engine, fold, models, pdfdoc, store
+    --no-generate. A PDF (or a Word, PowerPoint, Excel, EPUB or HTML file, a picture) goes through the PDF engine; a
+    Markdown or text file is read as it is."""
+    from . import engine, fold, models, office, pdfdoc, store
     f = Path(a.ref).expanduser()
-    if f.is_file() and f.suffix.lower() == ".pdf":
+    ext = engine.kind_of(f.name) if f.is_file() else None
+    if ext:
         data = f.read_bytes()
-        pid = pdfdoc.pid_of(data)
-        if not (store.pdir(pid) / "meta.json").exists():
+        pid = pdfdoc.pid_of(data, ext)
+        if not (store.pdir(pid) / "meta.json").exists() and not engine.where() and ext != "pdf" and office.reads(ext):
+            office.save(pid, f, f.name)   # (the engine reads it more completely, when it is installed)
+        elif not (store.pdir(pid) / "meta.json").exists():
             if not engine.where():
-                _say("This PDF needs the PDF engine: python3 -m textfold engine install")
+                what = "PDF" if ext == "pdf" else "picture" if ext in engine.PICTURES else f"{engine.FILES[ext]} file"
+                _say(f"This {what} needs the PDF engine: python3 -m textfold engine install")
                 return 2
-            tier = models.load_settings().get("pdf_tier") or "fast"
+            tier = engine.tier_for(f"x.{ext}", models.load_settings().get("pdf_tier") or "fast")
             out = store.DATA / "uploads" / f"{pid}-{tier}"
-            engine.convert(f, out, tier, progress=lambda s, d, t: _say(f"  converting {d}/{t}") if t else None, log=lambda line: None)
+            src = f
+            if f.suffix.lower() != f".{ext}":   # (an extension the engine knows by another: .tif)
+                src = store.DATA / "uploads" / f"{pid}.{ext}"
+                src.parent.mkdir(parents=True, exist_ok=True)
+                src.write_bytes(data)
+            engine.convert(src, out, tier, progress=lambda s, d, t: _say(f"  converting {d}/{t}") if t else None, log=lambda line: None)
             pdfdoc.store_pdf(pid, out, pdfdoc.read_output(out), f.name, tier)
-            (store.pdir(pid) / "source.pdf").write_bytes(data)
+            (store.pdir(pid) / pdfdoc.kept_name(pid, src)).write_bytes(data)
             shutil.rmtree(out, ignore_errors=True)   # the engine's output (and its copy of the file), stored
+            if src != f:
+                src.unlink(missing_ok=True)
     elif f.is_file():
         pid = local.import_file(f)
     else:
@@ -90,7 +102,7 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "get":
         from .fold import LEVELS
         ap = argparse.ArgumentParser(prog="python3 -m textfold get", description="A document at one level: the map first, then the parts that matter, deeper.")
-        ap.add_argument("ref", help="a link (any web page, arXiv, PubMed Central, bioRxiv, Wikipedia, GitHub), an arXiv id, a DOI, or a .md or .pdf file")
+        ap.add_argument("ref", help="a link (any web page, arXiv, PubMed Central, bioRxiv, Wikipedia, GitHub), an arXiv id, a DOI, or a file (.pdf, .docx, .pptx, .xlsx, .epub, .html, a picture, .md, .txt)")
         ap.add_argument("--level", default="topic", choices=LEVELS, help="topic (a map of the sections) ... full (every word); default topic")
         ap.add_argument("--section", help="one section: its number (3.2), its id (S3), or its place in the list (1 is the first)")
         ap.add_argument("--lang", default="en", help="the language to read it in (en, zh, de, ...); default en")

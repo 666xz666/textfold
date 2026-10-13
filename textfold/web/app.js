@@ -41,7 +41,10 @@
   function jobFor(pid) { return jobs.find((j) => j.pid === pid && live(j)); }
   function pct(j) { return j.total ? Math.round((100 * j.done) / j.total) : (j.stage === 'done' ? 100 : 6); }
   // where a job is: its stage and count, or that it is stopping
-  const stageOf = (j, T) => (j.stopping ? T.stopping : `${T.stages[j.stage] || (T.pstages || {})[j.stage] || j.stage}${j.total ? ` ${j.done}/${j.total}` : ''}`);
+  const stageOf = (j, T) => {
+    const st = j.stage === 'convert' && j.file && !/\.pdf$/i.test(j.file) ? 'convert-file' : j.stage;   // a Word file, a picture
+    return j.stopping ? T.stopping : `${T.stages[st] || (T.pstages || {})[st] || st}${j.total ? ` ${j.done}/${j.total}` : ''}`;
+  };
   const stopBtn = (j, T) => `<button type="button" class="sb-stop" data-stop="${j.id}" title="${esc(T.stop)}" aria-label="${esc(T.stop)}"${j.stopping ? ' disabled' : ''}><i></i></button>`;
   const progress = (j, T) => `<span class="sb-prog"><i style="width:${pct(j)}%"></i></span><span class="sb-stage">${esc(stageOf(j, T))}${j.lang ? ` · ${esc(I18N.NATIVE[j.lang])}` : ''}</span>`;
   const jobName = (j, T) => (j.kind === 'install' ? T.engine : j.title || j.pid);
@@ -62,7 +65,7 @@
         (j ? stopBtn(j, T) : `<button type="button" class="sb-del" data-del="${p.id}" title="${esc(T.del_paper)}" aria-label="${esc(T.del_paper)}">×</button>`) + '</div>';
     };
     // papers, Wikipedia articles, GitHub READMEs and documents of one's own, each under its name when there is more than one kind
-    const kindOf = (id) => (/^wiki-/.test(id) ? 'wiki' : /^gh-/.test(id) ? 'gh' : /^web-/.test(id) ? 'web' : /^(md|pdf)-/.test(id) ? 'doc' : 'paper');
+    const kindOf = (id) => (/^wiki-/.test(id) ? 'wiki' : /^gh-/.test(id) ? 'gh' : /^web-/.test(id) ? 'web' : /^(md|pdf|doc)-/.test(id) ? 'doc' : 'paper');
     const groups = [['paper', T.papers], ['wiki', T.g_wiki], ['gh', 'GitHub'], ['web', T.g_web], ['doc', T.g_docs]]
       .map(([k, name]) => [name, papers.filter((p) => kindOf(p.id) === k)]).filter(([, ps]) => ps.length);
     const listed_ = groups.length > 1
@@ -225,17 +228,25 @@
       return refs.slice(0, 4);
     } finally { loading.destroy(); }
   }
-  // a PDF to the server, with what it says it is: the paper online, or a conversion, or a wait for the engine
-  async function uploadPdf(file, lang) {
+  // a file to the server: a PDF with what it says it is (the paper online, or a conversion, or a wait for the engine);
+  // a Word file, an e-book, a picture, converted the same way
+  async function uploadFile(file, lang) {
     let refs = [];
-    try { refs = await refsOf(file); } catch { /* a PDF pdf.js cannot open: the engine may still read it */ }
-    const r = await fetch('/api/pdfs', { method: 'POST', body: file, headers: { 'Content-Type': 'application/pdf',
+    if (isPdf(file)) try { refs = await refsOf(file); } catch { /* a PDF pdf.js cannot open: the engine may still read it */ }
+    const r = await fetch('/api/files', { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream',
       'X-Name': encodeURIComponent(file.name), 'X-Lang': lang, 'X-Refs': encodeURIComponent(JSON.stringify(refs)) } });
     const d = await r.json();
     if (!r.ok || d.error) throw new Error(d.error || r.statusText);
     return d;
   }
   const isPdf = (file) => /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+  // what TextFold opens: what the PDF engine reads (engine.FILES), and Markdown and text, read as they are
+  const ENGINE_EXT = ['pdf', 'docx', 'doc', 'rtf', 'pptx', 'ppt', 'xlsx', 'xls', 'odt', 'ods', 'odp', 'epub', 'html', 'htm', 'mhtml', 'mht',
+    'csv', 'tsv', 'ofd', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tif', 'tiff', 'jp2'];
+  const TEXT_EXT = ['md', 'markdown', 'mdown', 'txt'];
+  const extOf = (name) => ((/\.([a-z0-9]+)$/i.exec(name || '') || [])[1] || '').toLowerCase();
+  const forEngine = (file) => isPdf(file) || ENGINE_EXT.includes(extOf(file.name));
+  const isText = (file) => TEXT_EXT.includes(extOf(file.name));
   // OpenRouter's consent page. In the browser: this tab goes there and comes back with the key. Inside the app: the
   // system browser (where the reader is signed in) goes there, and the app waits for the key, then offers the models.
   async function connectOpenRouter(back) {
@@ -249,10 +260,10 @@
     }
   }
   const errText = (msg) => (msg === 'no-html' ? t().no_html : msg === 'bad-ref' ? t().bad_ref : msg === 'no-model' ? t().no_model
-    : msg === 'not-markdown' || msg === 'empty' ? t().md_only : msg === 'no-fulltext' ? t().no_fulltext
+    : msg === 'not-markdown' || msg === 'empty' || msg === 'not-supported' ? t().md_only : msg === 'no-fulltext' ? t().no_fulltext
     : msg === 'no-readme' ? t().no_readme : msg === 'github-limit' ? t().github_limit : msg === 'needs-engine' ? t().pdf_needs
     : msg === 'busy' ? t().engine_busy : msg === 'not-pdf' ? t().not_pdf : msg === 'too-large' ? t().pdf_large
-    : msg === 'web-notext' ? t().web_notext : msg === 'web-pdf' ? t().web_pdf : msg === 'web-blocked' ? t().web_blocked : msg);
+    : msg === 'bad-file' ? t().file_bad : msg === 'web-notext' ? t().web_notext : msg === 'web-pdf' ? t().web_pdf : msg === 'web-blocked' ? t().web_blocked : msg);
 
   // ── on a reader page: generate a language, or regenerate the current one ──
   if (PAPER) {
@@ -268,17 +279,18 @@
       if (!e.dataTransfer.files.length) return;
       e.preventDefault(); over = 0;
       const file = e.dataTransfer.files[0];
-      if (isPdf(file)) {
-        say(t().pdf_reading);
+      if (forEngine(file)) {
+        say(isPdf(file) ? t().pdf_reading : t().file_reading);
         try {
-          const d = await uploadPdf(file, (window.__reader && window.__reader.lang) || store.get('dr-lang') || uiLang);
+          const d = await uploadFile(file, (window.__reader && window.__reader.lang) || store.get('dr-lang') || uiLang);
+          if (d.paper) { location.href = `/p/${d.paper}?lang=${encodeURIComponent(d.job.lang)}`; return; }   // read already
           const q = new URLSearchParams({ t: file.name });
           if (d.needs === 'engine') q.set('engine', d.upload); else { q.set('follow', d.job.id); if (d.via === 'online') q.set('ref', d.ref); }
           location.href = `/?${q}`;
         } catch (x) { say(errText(x.message), 4000); }
         return;
       }
-      if (!/\.(md|markdown|mdown|txt)$/i.test(file.name)) { say(t().md_only, 3000); return; }
+      if (!isText(file)) { say(t().md_only, 4000); return; }
       try {
         const r = await api('/api/import', { name: file.name, text: await file.text() });
         location.href = `/?start=${encodeURIComponent(r.paper)}&t=${encodeURIComponent(r.title)}`;
@@ -323,7 +335,7 @@
       location.href = `/p/${PAPER.id}?lang=${encodeURIComponent(lang)}`;
     }
     const src = PAPER.source || {};
-    if (src.kind === 'pdf' && src.tier !== 'accurate') {
+    if ((src.kind === 'pdf' && src.tier !== 'accurate') || (src.kind === 'file' && src.tier === 'fast')) {
       const acc = h('button', 'cmpbtn accbtn');
       acc.type = 'button';
       acc.textContent = t().convert_acc;
@@ -381,6 +393,7 @@
     document.getElementById('sources').textContent = T.sources;
     document.getElementById('sources').title = T.sources_tip;
     document.getElementById('dropzone-t').textContent = T.drop_zone;
+    document.getElementById('dropzone-k').textContent = T.drop_types;
     document.getElementById('ui-help-t').textContent = T.tut_open;
     document.getElementById('ui-help').title = T.tut_open;
     document.getElementById('open-settings').textContent = T.settings;
@@ -467,12 +480,12 @@
         await submit(ref, lang, false, onCard(label, mine));
       } catch (x) { card.hidden = true; fail(errText(x.message)); }
     }
-    // a PDF that needs the engine: what it is and what it takes, and its install, in the card; once installed, the
-    // PDF waiting for it converts (the server starts that), and the card follows the conversion
+    // a file that needs the engine: what it is and what it takes, and its install, in the card; once installed, the
+    // file waiting for it converts (the server starts that), and the card follows the conversion
     function engineCard(upload, name) {
-      const T = t();
+      const T = t(), other = /^doc-/.test(upload);   // not a PDF: a Word file, an e-book, a picture
       card.hidden = false;
-      card.innerHTML = `<div class="jc-t">${esc(T.pdf_needs)}</div><div class="jc-s">${esc(name)}</div><p class="jc-why">${esc(T.pdf_needs_why)}</p>
+      card.innerHTML = `<div class="jc-t">${esc(other ? T.file_needs : T.pdf_needs)}</div><div class="jc-s">${esc(name)}</div><p class="jc-why">${esc(other ? T.file_needs_why : T.pdf_needs_why)}</p>
         <div class="jc-acts"><button type="button" class="primary jc-install">${esc(T.engine_install)}</button><button type="button" class="jc-later">${esc(T.not_now)}</button></div>`;
       card.querySelector('.jc-later').onclick = () => { card.hidden = true; };
       card.querySelector('.jc-install').onclick = async () => {
@@ -488,16 +501,17 @@
         } catch (x) { fail(errText(x.message)); }
       };
     }
-    async function openPdf(file) {
-      if (file.size > 100 * 1024 * 1024) { fail(t().pdf_large); return; }
+    async function openUpload(file) {
+      if (file.size > 100 * 1024 * 1024) { fail(isPdf(file) ? t().pdf_large : t().file_large); return; }
       const lang = sel.value, mine = {};
       latest = mine;
       card.hidden = false;
-      card.innerHTML = `<div class="jc-t">${esc(file.name)}</div><div class="jc-s">${esc(t().pdf_reading)}</div><span class="sb-prog"><i style="width:4%"></i></span>`;
+      card.innerHTML = `<div class="jc-t">${esc(file.name)}</div><div class="jc-s">${esc(isPdf(file) ? t().pdf_reading : t().file_reading)}</div><span class="sb-prog"><i style="width:4%"></i></span>`;
       try {
-        const d = await uploadPdf(file, lang);
+        const d = await uploadFile(file, lang);
         if (latest !== mine) return;
         if (d.needs === 'engine') { engineCard(d.upload, file.name); return; }
+        if (d.paper) { location.href = `/p/${d.paper}?lang=${encodeURIComponent(lang)}`; return; }   // read already
         watch(d.job, onCard(d.via === 'online' ? null : file.name, mine, d.via === 'online' ? t().pdf_online.replace('{ref}', d.ref) : ''));
       } catch (x) { card.hidden = true; fail(errText(x.message)); }
     }
@@ -509,12 +523,13 @@
       if (!modelName) { fail(t().no_model); return; }   // connect a model first (the card below)
       start(ref);
     };
-    // a Markdown file, from the bar's mark or dropped anywhere on the page: stored by the server, then generated
+    // a file, from the drop zone or dropped anywhere on the page: one the engine reads is converted (no model is
+    // needed to read it); a Markdown or text file is stored by the server, then generated
     async function openFile(file) {
       err.hidden = true;
       if (!file) return;
-      if (isPdf(file)) { openPdf(file); return; }   // converted here: no model needed to read it
-      if (!/\.(md|markdown|mdown|txt)$/i.test(file.name)) { fail(t().md_only); return; }
+      if (forEngine(file)) { openUpload(file); return; }
+      if (!isText(file)) { fail(t().md_only); return; }
       if (!modelName) { fail(t().no_model); return; }
       try {
         const r = await api('/api/import', { name: file.name, text: await file.text() });
@@ -522,6 +537,8 @@
       } catch (x) { fail(errText(x.message)); }
     }
     const fileIn = document.getElementById('file'), zone = document.getElementById('dropzone');
+    fileIn.accept = [...ENGINE_EXT, ...TEXT_EXT].map((x) => `.${x}`).join(',');
+    zone.title = [...ENGINE_EXT, ...TEXT_EXT].filter((x) => !['htm', 'mht', 'jpeg', 'tif', 'markdown', 'mdown'].includes(x)).map((x) => `.${x}`).join(' ');
     zone.onclick = () => fileIn.click();
     fileIn.onchange = () => { openFile(fileIn.files[0]); fileIn.value = ''; };
     let depth = 0;   // dragenter and dragleave fire for every child the file passes over
