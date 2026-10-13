@@ -32,6 +32,7 @@ Your agent writes more than you have time to read. A [Claude Code mod](https://c
 
 ## What's new
 
+- **October 13, 2026: save a page as one file.** **Save**, at the top of the reader, keeps the page as one HTML file that opens anywhere, with the notes you choose and, if you like, its original PDF to read beside it; or only your notes. You choose where it goes.
 - **October 13, 2026: Word, PowerPoint, Excel, e-books and more.** Drop a Word, PowerPoint or Excel file, a CSV, an EPUB or a saved web page, and it opens at once, formulas included, with nothing more to install. With the PDF engine installed, these files go through it and are read more completely, and so do pictures and older Office files.
 - **October 13, 2026: whole figures, and a guide.** A figure the PDF engine cut into pieces now comes out whole, cut from its page. A short guide opens on your first visit, and again from **How it works**.
 - **October 9, 2026: PaperFold is now TextFold.** The same reader, named for everything it folds: papers, READMEs, Wikipedia articles and your agent's replies. Links to the old repository lead here, `python3 -m adr` still runs, and your settings move over by themselves.
@@ -60,7 +61,7 @@ A paper asks you to hold its whole argument in mind while you read it one paragr
 - **Zoom under your fingers.** Pinch, ⌘-scroll or drag the level bar. Stop halfway, turn back, or open one paragraph alone.
 - **Always know who is speaking.** The authors' words are set in a serif and AI's in a sans serif. Each paragraph is colored by its role in the argument.
 - **Ask, and see the evidence.** Ask about a passage or about the whole paper. Every answer cites the paragraphs it rests on, one click away.
-- **Notes that zoom with the paper.** Highlight and write in the margin, and what you marked stays as you zoom out. **Save**, at the top, keeps the page with them as one HTML file, or only your notes, wherever you choose; also as PDF, Markdown for Obsidian or JSON.
+- **Notes that zoom with the paper.** Highlight and write in the margin, and what you marked stays as you zoom out. **Save**, at the top, keeps the page with them as one HTML file, its original PDF inside if you like, or only your notes, wherever you choose; also as PDF, Markdown for Obsidian or JSON.
 - **Your language.** Twelve languages, translated sentence by sentence, with every formula as typeset.
 
 <table>
@@ -114,7 +115,7 @@ TextFold uses a model you already have, and there is no account to create. It lo
 | Click a paragraph | open just that paragraph |
 | Click a figure | see it enlarged |
 | **Original**, at the top | read beside the paper's PDF |
-| **Save**, at the top | keep the page as one file, or only your notes |
+| **Save**, at the top | keep the page as one file (its original PDF inside, if you like), or only your notes |
 | Select text | highlight, write a note, or ask |
 | **Ask the paper**, bottom right | ask about the whole paper |
 | `L` | next language |
