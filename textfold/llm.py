@@ -101,7 +101,7 @@ def _claude(prompt, schema, model, effort, timeout, system=SYSTEM):
     path = agents.path_of("claude-code")
     if not path:
         raise RuntimeError("Claude Code was not found on this computer")
-    cmd = [path, "-p", "--model", model, "--tools", "", "--strict-mcp-config", "--no-session-persistence",
+    cmd = [*agents.argv(path), "-p", "--model", model, "--tools", "", "--strict-mcp-config", "--no-session-persistence",
            "--output-format", "json", "--json-schema", json.dumps(schema), "--system-prompt", system]
     env = agents.child_env()
     if effort == "off":   # Claude Code has no such level: no thinking is a thinking budget of nothing

@@ -15,8 +15,9 @@ Agents run here only as one-shot text generators: no tools, no session, a scratc
 import glob
 import json
 import os
+import queue
 import re
-import select
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -44,6 +45,12 @@ REGISTRY = [
 ]
 PREFIX = {"claude-code": "claude/", "codex": "codex/", "pi": "pi/"}
 COMMON = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "~/.bun/bin", "~/.npm-global/bin", "~/.local/bin"]
+WIN = os.name == "nt"
+if WIN:   # npm's global folder, Claude Code's own installer (~/.local/bin, above), Scoop, Node itself
+    COMMON = [os.path.join(os.environ.get("APPDATA") or "~/AppData/Roaming", "npm"), "~/.local/bin", "~/.bun/bin", "~/scoop/shims",
+              os.path.join(os.environ.get("ProgramFiles") or "C:/Program Files", "nodejs")]
+# Windows: a program is claude.exe, or npm's shim claude.cmd (the bare `claude` beside it is a shell script)
+EXTS = (".exe", ".cmd", ".bat") if WIN else ("",)
 
 
 def _version_key(p):
@@ -56,6 +63,8 @@ _login_path = None
 def search_dirs():
     """PATH, the login shell's PATH, common install dirs, version-manager dirs (ThoughtDAG where.cjs)."""
     global _login_path
+    if _login_path is None and WIN:
+        _login_path = ""   # no login shell to ask
     if _login_path is None:
         shell = os.environ.get("SHELL", "/bin/zsh")
         try:
@@ -99,10 +108,32 @@ def child_env():
 
 def locate(binary, extra=()):
     for d in [os.path.expanduser(x) for x in extra] + search_dirs():
-        f = os.path.join(d, binary)
-        if os.path.isfile(f) and os.access(f, os.X_OK):
-            return f
+        for ext in EXTS:
+            f = os.path.join(d, binary + ext)
+            if os.path.isfile(f) and os.access(f, os.X_OK):
+                return f
     return None
+
+
+_SHIM = re.compile(r'"%~?dp0%?\\([^"]+\.[cm]?js)"\s+%\*')
+
+
+def argv(path):
+    """The command that runs an agent found at `path`. On Windows npm's shim (claude.cmd) would hand its arguments to
+    cmd.exe, which ends a multi-line system prompt at its first line break and reads its quotes and carets: the
+    script the shim names is run by node instead."""
+    if not (WIN and path.lower().endswith(".cmd")):
+        return [path]
+    try:
+        m = _SHIM.search(Path(path).read_text(errors="replace"))
+    except OSError:
+        m = None
+    script = m and Path(path).parent / m.group(1).replace("\\", os.sep)
+    if not (script and script.is_file()):
+        return [path]
+    node = Path(path).parent / "node.exe"
+    node = str(node) if node.is_file() else shutil.which("node", path=os.pathsep.join(search_dirs()))
+    return [node, str(script)] if node else [path]
 
 
 def _run(args, timeout, **kw):
@@ -112,7 +143,7 @@ def _run(args, timeout, **kw):
 def _help_levels(path, flag, pattern):
     """Effort or thinking levels as the CLI's own --help lists them."""
     try:
-        text = _run([path, "--help"], 8).stdout
+        text = _run([*argv(path), "--help"], 8).stdout
     except Exception:
         return []
     m = re.search(pattern, text, re.S)
@@ -133,6 +164,8 @@ def _rpc(args, requests, timeout=30, cwd=None):
     """Write JSON lines, collect the replies whose id we asked for."""
     p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
                          env=child_env(), cwd=cwd or str(HOME))
+    lines = queue.Queue()   # read by a thread: select() cannot wait on a pipe on Windows
+    threading.Thread(target=lambda: [*map(lines.put, p.stdout), lines.put(None)], daemon=True).start()
     got = {}
     try:
         for r in requests:
@@ -141,11 +174,11 @@ def _rpc(args, requests, timeout=30, cwd=None):
         want = {r["id"] for r in requests if "id" in r}
         t0 = time.time()
         while want - set(got) and time.time() - t0 < timeout:
-            ready, _, _ = select.select([p.stdout], [], [], 0.5)
-            if not ready:
+            try:
+                line = lines.get(timeout=0.5)
+            except queue.Empty:
                 continue
-            line = p.stdout.readline()
-            if not line:
+            if line is None:
                 break
             try:
                 d = json.loads(line)
@@ -159,7 +192,7 @@ def _rpc(args, requests, timeout=30, cwd=None):
 
 
 def _codex_models(path):
-    got = _rpc([path, "app-server"], [
+    got = _rpc([*argv(path), "app-server"], [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize",
          "params": {"clientInfo": {"name": "textfold", "title": "TextFold", "version": "0.4"}, "capabilities": None}},
         {"jsonrpc": "2.0", "method": "initialized"},
@@ -181,7 +214,7 @@ def _codex_models(path):
 
 def _pi_models(path):
     levels = _help_levels(path, "--thinking", r"--thinking <level>\s+Set thinking level:\s*([^\n]*)")
-    got = _rpc([path, "--mode", "rpc", "--no-session"], [{"id": "1", "type": "get_available_models"}])
+    got = _rpc([*argv(path), "--mode", "rpc", "--no-session"], [{"id": "1", "type": "get_available_models"}])
     data = (got.get("1") or {}).get("data")
     rows = data.get("models", []) if isinstance(data, dict) else (data or [])
     return [{"id": f"pi/{r['provider']}/{r['id']}", "name": f"Pi · {r.get('name') or r['id']}", "runtime": "pi",
@@ -215,7 +248,7 @@ def scan(log=None):
                 else:
                     seen[real] = label
                     try:
-                        out = _run([path, "--version"], 8)
+                        out = _run([*argv(path), "--version"], 8)
                         row["version"] = ((out.stdout or out.stderr).strip().splitlines() or [""])[0][:80]
                     except Exception as e:
                         row["error"] = str(e)[:200]
@@ -289,7 +322,7 @@ def run_codex(model, prompt, schema, system, effort, timeout):
     with tempfile.TemporaryDirectory() as tmp:  # a scratch cwd: no repository, nothing to edit
         sf, of = Path(tmp) / "schema.json", Path(tmp) / "out.txt"
         sf.write_text(json.dumps(_strict(schema)))
-        args = [path, "exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only", "-m", model,
+        args = [*argv(path), "exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only", "-m", model,
                 "--output-schema", str(sf), "-o", str(of)]
         # off is "none" (gpt-5.5 takes it, and refuses "minimal"); a model that refuses "none" runs at "low"
         for level in (["none", "low"] if effort == "off" else [effort]):
@@ -306,7 +339,7 @@ def run_pi(model, prompt, schema, system, effort, timeout):
     path = path_of("pi")
     if not path:
         raise RuntimeError("Pi was not found on this computer")
-    args = [path, "-p", "--mode", "json", "--no-tools", "--no-session", "--no-context-files", "--no-extensions", "--no-skills",
+    args = [*argv(path), "-p", "--mode", "json", "--no-tools", "--no-session", "--no-context-files", "--no-extensions", "--no-skills",
             "--no-prompt-templates", "--model", model, "--system-prompt", system]
     if effort:
         args += ["--thinking", effort]

@@ -41,9 +41,11 @@ Loopback only, and POSTs from other origins are refused. Settings and keys live 
 """
 import base64
 import json
+import os
 import queue
 import re
 import shutil
+import subprocess
 import tempfile
 import threading
 import time
@@ -715,7 +717,20 @@ def make_handler(jobs):
     return Handler
 
 
+def _quiet_children():
+    """Windows: the app starts the server without a console, and every console program it starts in turn (an agent,
+    MinerU, npx) would open a window of its own for as long as it runs. They start without one."""
+    init = subprocess.Popen.__init__
+
+    def quiet(self, *a, **kw):
+        kw["creationflags"] = kw.get("creationflags", 0) | subprocess.CREATE_NO_WINDOW
+        init(self, *a, **kw)
+    subprocess.Popen.__init__ = quiet
+
+
 def serve(port=3017):
+    if os.name == "nt":
+        _quiet_children()
     jobs = Jobs()
     # look for the agents on this computer while the server comes up
     threading.Thread(target=agents.scan, kwargs={"log": print}, daemon=True).start()
