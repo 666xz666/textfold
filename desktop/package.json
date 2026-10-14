@@ -40,7 +40,16 @@
     ],
     "mac": {
       "category": "public.app-category.education",
-      "icon": "build/icon.icon",
+      "icon": "build/icon.icns",
+      "extendInfo": {
+        "CFBundleIconName": "Icon"
+      },
+      "extraResources": [
+        {
+          "from": "build/Assets.car",
+          "to": "Assets.car"
+        }
+      ],
       "target": [
         "dmg",
         "zip"

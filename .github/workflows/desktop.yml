@@ -5,8 +5,9 @@
 # A version tag (v0.10.2) builds the three into a draft release, published only when every one has succeeded; run by
 # hand (Actions › desktop › Run workflow) they are kept as the run's artifacts. Without the signing secrets a build by
 # hand is unsigned (electron-builder skips signing when there is no CSC_LINK); a tag's is refused.
-# On a Mac the icon is desktop/build/icon.icon, in macOS 26's own format, so that the system draws it as its own and not
-# small on a grey plate; actool turns it into Assets.car, and into the icon.icns that earlier systems show.
+# On a Mac the icon is in macOS 26's own format, so that the system draws it as its own and not small on a grey plate:
+# desktop/build/Assets.car (with CFBundleIconName) and icon.icns for earlier systems, both compiled from
+# desktop/build/icon.icon on macOS 26 (icon.yml), the one system whose actool can draw it.
 # The release also carries what the installed apps update from (desktop/main.js): latest.yml for Windows, one
 # latest-mac.yml for both Macs (desktop/scripts/latest-mac.py), and each file's blockmap, for a download of what changed.
 name: desktop
@@ -72,11 +73,6 @@ jobs:
           P12: ${{ secrets.MAC_CERT_P12_BASE64 }}
           PW: ${{ secrets.MAC_CERT_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
-      # the app's icon for macOS 26 (desktop/build/icon.icon, made the way Icon Composer makes one) is compiled by
-      # actool 26, which comes with Xcode 26: the images have it beside their default Xcode 16
-      - name: Xcode 26, for the icon
-        if: runner.os == 'macOS'
-        run: sudo xcode-select -s /Applications/Xcode_26.3.app && actool --version | grep -A1 short-bundle-version
       - run: npm ci
         working-directory: desktop
       - name: npm run ${{ matrix.script }}
