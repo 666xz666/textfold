@@ -289,9 +289,10 @@ class ServerTest(Setup):
     def setUpClass(cls):
         super().setUpClass()
         cls.port = free_port()
-        # (the packages a user installed stay found: where they are is HOME's, unless PYTHONUSERBASE says)
-        env = {**os.environ, "HOME": str(cls.home), "TEXTFOLD_DATA": str(cls.data), "TEXTFOLD_NO_MODELS": "1",
-               "PYTHONUSERBASE": site.getuserbase()}
+        # (the packages a user installed stay found: where they are is HOME's, unless PYTHONUSERBASE says; on Windows the
+        # home is USERPROFILE's, and the engine is under LOCALAPPDATA)
+        env = {**os.environ, "HOME": str(cls.home), "USERPROFILE": str(cls.home), "LOCALAPPDATA": str(cls.home / "AppData" / "Local"),
+               "TEXTFOLD_DATA": str(cls.data), "TEXTFOLD_NO_MODELS": "1", "PYTHONUSERBASE": site.getuserbase()}
         cls.proc = subprocess.Popen([sys.executable, "-m", "textfold", "serve", "--port", str(cls.port)], cwd=ROOT, env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):

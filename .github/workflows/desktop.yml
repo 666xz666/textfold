@@ -4,7 +4,7 @@
 # TextFold's tests and reads files before anything is packed (desktop/scripts/smoke.py).
 # A version tag (v0.10.2) builds the three into a draft release, published only when every one has succeeded; run by
 # hand (Actions › desktop › Run workflow) they are kept as the run's artifacts. Without the signing secrets a build by
-# hand is unsigned (electron-builder skips signing when CSC_LINK is empty); a tag's is refused.
+# hand is unsigned (electron-builder skips signing when there is no CSC_LINK); a tag's is refused.
 name: desktop
 on:
   push:
@@ -65,8 +65,13 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
       - run: npm ci
         working-directory: desktop
-      - run: npm run ${{ matrix.script }}
+      - name: npm run ${{ matrix.script }}
         working-directory: desktop
+        shell: bash
+        run: |
+          # an empty CSC_LINK is read as a file's name (the folder's): without the secrets, nothing to sign with
+          [ -n "$CSC_LINK" ] || unset CSC_LINK CSC_KEY_PASSWORD
+          npm run ${{ matrix.script }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # the payload script asks GitHub for the newest CPython build
           CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CERT_PASSWORD && secrets.MAC_CERT_P12_BASE64 || '' }}

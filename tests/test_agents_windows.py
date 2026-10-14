@@ -70,7 +70,8 @@ class WindowsAgents(unittest.TestCase):
         bin_ = self.dir / "elsewhere"
         node = touch(bin_ / ("node.exe" if os.name == "nt" else "node"))
         with mock.patch.object(agents, "WIN", True), mock.patch.object(agents, "search_dirs", lambda: [str(bin_)]):
-            self.assertEqual(agents.argv(str(shim)), [str(node), str(cli)])
+            got = agents.argv(str(shim))
+        self.assertEqual([os.path.normcase(x) for x in got], [os.path.normcase(str(node)), os.path.normcase(str(cli))])   # (Windows: node.EXE)
 
     def test_a_shim_that_names_no_script_runs_as_it_is(self):
         shim = touch(self.dir / "odd.cmd", "@echo off\r\nodd-real.exe %*\r\n")
