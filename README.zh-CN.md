@@ -93,6 +93,7 @@ python3 -m textfold serve
 | PDF | 如果它是网上能读到的论文，就读网上的版本，你的文件放在旁边对照；其他 PDF 由 PDF 引擎在你的电脑上转换（MinerU，约 3.4 GB，在首页安装一次即可） |
 | Word、PowerPoint、Excel 文件，CSV、EPUB、保存的网页 | 文档本身，标题、表格、图片和公式都保留：不装引擎 TextFold 自己就能读，装了 PDF 引擎读得更完整 |
 | 图片 | 由 PDF 引擎识别出的文字 |
+| Zotero 文献库里的条目（拖放框下面的 **Zotero 文献库**） | 有 arXiv 版本就读 arXiv；否则读它的 PDF 或其他附件，和你直接拖进来一样；再没有就按 DOI 读。TextFold 读的是你电脑上的 Zotero 应用，需要先在 Zotero 里打开 **设置 › 高级 › 允许此计算机上的其他应用程序与 Zotero 通信** |
 | Markdown 或纯文本文件 | 原样的文件 |
 
 读过的文档保存在系统存放应用数据的文件夹里，和桌面 App 共用。
@@ -194,13 +195,15 @@ claude plugin install textfold@textfold
 
 ## 最新
 
+- **2026 年 10 月 14 日：直接读你的 Zotero 文献库。** 拖放框下面的 **Zotero 文献库** 按 Zotero 里的样子列出你的文献库和分类，任何条目点一下就能打开：arXiv 上有就读 arXiv，没有就读它自己的 PDF。感谢 [@adalach](https://github.com/adalach)。
+- **2026 年 10 月 14 日：读 arXiv 页面更安全了。** 页面里可能运行脚本的部分，会在阅读器显示之前去掉，图都保持原样。感谢 [@neil-patel77](https://github.com/neil-patel77)。
 - **2026 年 10 月 13 日：把一页存成一个文件。** 阅读页顶部的 **保存** 把整页存成一个 HTML 文件，可以带上标注和原文 PDF；也可以只存标注。[保存一页 ↓](#保存一页)
 - **2026 年 10 月 13 日：Word、PowerPoint、Excel、电子书等文件。** 拖入 Word、PowerPoint、Excel 文件，或 CSV、EPUB、保存的网页，马上就能打开，公式也在，不用另装任何东西。
-- **2026 年 10 月 13 日：完整的图，和使用说明。** PDF 引擎拆成碎块的图，现在从原页上整幅裁出来。第一次打开会弹出一份简短的使用说明，之后可以从 **使用说明** 再打开。
 
 <details>
 <summary>更早</summary>
 
+- **2026 年 10 月 13 日：完整的图，和使用说明。** PDF 引擎拆成碎块的图，现在从原页上整幅裁出来。第一次打开会弹出一份简短的使用说明，之后可以从 **使用说明** 再打开。
 - **2026 年 10 月 9 日：PaperFold 改名为 TextFold。** 还是同一个阅读器，新名字涵盖它能折叠的一切：论文、网页、PDF、README，以及 agent 的回答。旧仓库的链接会自动跳到这里，设置也会自动搬过来。
 - **2026 年 10 月 9 日：任意网页和 PDF。** 粘贴任何网页的链接，就能在五个层级上读它的正文，网页对读者隐藏的文字会被去掉。拖入一个 PDF：如果它是一篇网上能读到的论文，就打开网上的版本，你的 PDF 放在旁边对照；其他 PDF 在你的电脑上转换。
 - **2026 年 10 月 9 日：给 agent 用。** `python3 -m textfold get <链接> --level topic` 输出一份文档的地图，`--section` 再展开需要的那一节。[了解更多 ↓](#给-agent-和脚本用)
@@ -210,6 +213,15 @@ claude plugin install textfold@textfold
 - **2026 年 10 月 6 日：不只读 arXiv。** PubMed Central、bioRxiv、medRxiv、任何语言的维基百科，以及你自己的 Markdown 文件。
 
 </details>
+
+<br>
+
+## 贡献者
+
+<a href="https://github.com/neil-patel77" title="@neil-patel77"><img src="https://github.com/neil-patel77.png?size=80" width="40" height="40" alt="@neil-patel77" /></a>
+<a href="https://github.com/adalach" title="@adalach"><img src="https://github.com/adalach.png?size=80" width="40" height="40" alt="@adalach" /></a>
+
+欢迎贡献：先看 [CONTRIBUTING.md](https://github.com/chenxiachan/textfold/blob/main/CONTRIBUTING.md)。
 
 <br>
 

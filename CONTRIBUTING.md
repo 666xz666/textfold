@@ -28,6 +28,7 @@ Then open `http://localhost:3017` and connect a model (the README says how).
 ## Pull requests
 
 - One change per pull request: what it changes, why, and how you checked it.
+- Run the tests before you send it: `python3 -m unittest discover tests` (they need nothing more than the requirements, and touch none of your papers).
 - Match the code around it: plain names, and comments that say why rather than what.
 - Keep keys and papers out of commits. Settings and keys live in `~/.textfold/`; papers and their levels in `papers/`, which git ignores.
 

@@ -93,6 +93,7 @@ Open `http://localhost:3017`. The first time, [connect a model](#connect-a-model
 | A PDF | the paper online when the PDF names one, with your file beside it; any other PDF, converted on your computer by the PDF engine (MinerU, about 3.4 GB, installed once from the landing) |
 | A Word, PowerPoint or Excel file, a CSV, an EPUB, a saved web page | the document with its headings, tables, pictures and formulas: read by TextFold itself, or more completely by the PDF engine once it is installed |
 | A picture | its text, read by the PDF engine |
+| An item of your Zotero library (**Zotero library**, under the drop zone) | its arXiv paper when it has one; else its PDF or other file, read as if you dropped it; else its DOI. TextFold asks the Zotero app on your computer, once **Settings › Advanced › Allow other applications on this computer to communicate with Zotero** is on |
 | A Markdown or text file | the file as written |
 
 What you read is kept in your system's folder for app data, shared with the desktop app.
@@ -194,13 +195,15 @@ More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plu
 
 ## What's new
 
+- **October 14, 2026: your Zotero library.** **Zotero library**, under the drop zone, shows your library and its collections as Zotero does, and opens any item in a click: from arXiv when it is there, else from its own PDF. Thanks to [@adalach](https://github.com/adalach).
+- **October 14, 2026: arXiv pages, read more safely.** What could run script in a page is taken out before the reader draws it, and its figures stay as they were. Thanks to [@neil-patel77](https://github.com/neil-patel77).
 - **October 13, 2026: save a page as one file.** **Save**, at the top of the reader, keeps the page as one HTML file, with your notes and its original PDF if you like, or only your notes. [Save a page ↓](#save-a-page)
 - **October 13, 2026: Word, PowerPoint, Excel, e-books and more.** Drop a Word, PowerPoint or Excel file, a CSV, an EPUB or a saved web page, and it opens at once, formulas included, with nothing more to install.
-- **October 13, 2026: whole figures, and a guide.** A figure the PDF engine cut into pieces now comes out whole, cut from its page. A short guide opens on your first visit, and again from **How it works**.
 
 <details>
 <summary>Earlier</summary>
 
+- **October 13, 2026: whole figures, and a guide.** A figure the PDF engine cut into pieces now comes out whole, cut from its page. A short guide opens on your first visit, and again from **How it works**.
 - **October 9, 2026: PaperFold is now TextFold.** The same reader, named for everything it folds: papers, web pages, PDFs, READMEs and your agent's replies. Links to the old repository lead here, and your settings move over by themselves.
 - **October 9, 2026: any web page, and PDFs.** Paste any web page's link and read its article at five levels, without the text the page hides from its readers. Drop a PDF: when it names a paper that can be read online, that version opens with your PDF beside it; any other PDF is converted on your computer.
 - **October 9, 2026: for agents.** `python3 -m textfold get <link> --level topic` prints a document's map, and `--section` unfolds the part that matters. [More ↓](#for-agents-and-scripts)
@@ -210,6 +213,15 @@ More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plu
 - **October 6, 2026: more than arXiv.** PubMed Central, bioRxiv, medRxiv, Wikipedia in any language, and your own Markdown files.
 
 </details>
+
+<br>
+
+## Contributors
+
+<a href="https://github.com/neil-patel77" title="@neil-patel77"><img src="https://github.com/neil-patel77.png?size=80" width="40" height="40" alt="@neil-patel77" /></a>
+<a href="https://github.com/adalach" title="@adalach"><img src="https://github.com/adalach.png?size=80" width="40" height="40" alt="@adalach" /></a>
+
+Contributions are welcome: start with [CONTRIBUTING.md](https://github.com/chenxiachan/textfold/blob/main/CONTRIBUTING.md).
 
 <br>
 
