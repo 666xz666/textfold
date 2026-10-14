@@ -26,6 +26,7 @@ dependencies = [
     "mdit-py-plugins",
     "latex2mathml",
     "trafilatura>=2.0",
+    "lxml_html_clean",   # trafilatura needs it (through justext's lxml[html_clean]), which an older pip leaves out
     "mammoth",
     "openpyxl",
 ]

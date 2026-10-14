@@ -7,6 +7,8 @@ mdit-py-plugins
 latex2mathml
 # any web page's article
 trafilatura>=2.0
+# trafilatura needs it (through justext's lxml[html_clean]), which an older pip, as macOS's own, leaves out
+lxml_html_clean
 # Word files (and Excel's), read without the PDF engine
 mammoth
 openpyxl
