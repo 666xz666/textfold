@@ -551,7 +551,8 @@ def make_handler(jobs):
                     reply, code = take_file(jobs, got["data"], named)
                     pid = reply.get("paper") or reply.get("upload") or (reply.get("job") or {}).get("pid")
                     if code == 200 and pid:
-                        zotero.link(lib, key, pid, got["title"])
+                        zotero.link(lib, key, pid, got["title"], got["record"])
+                        zotero.apply(pid)   # (read at once, or read before: its record now; else once converted)
                     return self.json({**reply, "name": got["name"]}, code)
                 if u.path == "/api/engine/install":
                     return self.json(jobs.install_engine())

@@ -27,7 +27,7 @@ from textfold import models, store, zotero
 
 ROOT = Path(__file__).resolve().parents[1]
 PDF = b"%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n"
-SNAPSHOT = ("<!doctype html><html><head><title>A saved page</title></head><body><article><h1>A saved page</h1>"
+SNAPSHOT = ("<!doctype html><html><head><title>Snapshot 2024</title></head><body><article><h1>Snapshot 2024</h1>"
             "<p>The first paragraph of a page Zotero saved, long enough to be read as the article it is.</p>"
             "<h2>Its method</h2><p>A second paragraph, under a heading of its own, so the page has a shape.</p></article></body></html>")
 
@@ -258,6 +258,21 @@ class ReadTest(Setup):
             with self.assertRaises(ValueError):
                 zotero.read(lib, key)
 
+    def test_a_document_from_an_items_file_takes_the_items_record(self):
+        d = self.data / "papers" / "pdf-fedcba9876543210"
+        d.mkdir()
+        (d / "meta.json").write_text(json.dumps({"id": d.name, "title": "WHAT THE PDF SAYS", "authors": [], "date": "",
+                                                 "doi": "", "abs_url": "", "source": {"kind": "pdf", "name": "paper.pdf"}, "label": "PDF · paper.pdf"}))
+        self.assertFalse(zotero.apply(d.name))   # not read from Zotero: as it was
+        got = zotero.read("users/0", "PDFSKEY2")
+        zotero.link("users/0", "PDFSKEY2", d.name, got["title"], {**got["record"], "citekey": "lovelace2024"})
+        self.assertTrue(zotero.apply(d.name))
+        m = json.loads((d / "meta.json").read_text())
+        self.assertEqual((m["title"], m["authors"], m["date"], m["doi"], m["abs_url"], m["label"]),
+                         ("A paper with its PDF", ["Lovelace, Ada"], "2024-05-01", "10.1234/abcd", "https://doi.org/10.1234/abcd", "Zotero · lovelace2024"))
+        self.assertEqual(m["zotero"], {"library": "users/0", "item": "PDFSKEY2", "citekey": "lovelace2024"})
+        self.assertFalse(zotero.apply("2201.11903"))   # a paper read online keeps its own record
+
     def test_an_item_read_is_marked_while_its_document_is_here(self):
         (self.data / "papers" / "doc-0123456789abcdef").mkdir()
         (self.data / "papers" / "doc-0123456789abcdef" / "meta.json").write_text("{}")
@@ -316,6 +331,10 @@ class ServerTest(Setup):
         self.assertTrue((self.data / "papers" / pid / "source.html").exists())
         self.assertEqual(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/p/{pid}", timeout=30).status, 200)
         self.assertEqual(json.loads((self.data / "zotero.json").read_text())["users/0/HTMLKEY2"]["paper"], pid)
+        m = json.loads((self.data / "papers" / pid / "meta.json").read_text())   # Zotero's title, not the page's own
+        self.assertEqual((m["title"], m["authors"], m["label"]), ("A saved page", ["Lovelace, Ada"], "Zotero · snap.html"))
+        listed = {p["id"]: p for p in self.call("/api/papers")[1]}
+        self.assertEqual((listed[pid]["title"], listed[pid].get("zotero")), ("A saved page", True))
 
     def test_a_pdf_waits_for_the_engine_as_a_dropped_one_does(self):
         code, d = self.call("/api/zotero/read", {"item": "users/0/PLNPKEY2", "lang": "en"})   # (no DOI: nothing looked up online)

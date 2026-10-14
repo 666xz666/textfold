@@ -280,7 +280,9 @@ paper when it names one, handed back to the page to generate as a pasted link is
 page, a Word file), where Zotero says it is or in its `storage/`, given to `take_file` as a dropped file is, with its
 DOI as the PDF's `X-Refs`; else its DOI. A file is read only when it is one TextFold reads (a PDF by its first bytes,
 any other by its name), and a file name that leaves `storage/` is not followed. `zotero.json`, in the data folder,
-says which item became which document, so the library marks what is open. The page may change the library chosen and
+says which item became which document, so the library marks what is open, and keeps the item's record: a document read
+from the item's own file takes Zotero's title, authors, date, DOI and citekey (`zotero.apply`, once it is stored), and
+lists among the papers. The page may change the library chosen and
 nothing else: Zotero's address and data folder (`"zotero": {"base", "data_dir"}`) are set in the settings file only.
 `tests/test_zotero.py` runs it all against a fake Zotero.
 

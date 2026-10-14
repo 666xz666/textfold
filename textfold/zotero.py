@@ -9,7 +9,8 @@ An item is read by the best text it has: its arXiv paper when it names one (arXi
 file (a PDF, an e-book, a saved web page, a Word file), taken as a file dropped on the landing is (server.take_file:
 the paper online when its DOI names one, else the PDF engine, else TextFold's own reading), so it is kept beside the
 paper as any original is; else its DOI, in Europe PMC. zotero.json, in the data folder, says which item became which
-document, so the library marks what is open.
+document, so the library marks what is open, and keeps the item's record: a document read from the item's own file
+takes its title, authors, date, DOI and citekey from Zotero (apply), which knows them better than the file does.
 
 The library chosen is the reader's settings (~/.textfold/settings.json, "zotero": {"library"}). So are, for a Zotero
 elsewhere, its address and its data folder ("base", "data_dir"), which only that file sets: no page may point the
@@ -174,8 +175,8 @@ def _check(lib):
 
 def read(lib, key):
     """What an item is read from: {"ref", "title"} for a paper online (its arXiv id, else its DOI when it has no file),
-    or {"data", "name", "refs", "title"} for its file, to be taken as a dropped file is. ValueError("no-file") when it
-    has neither."""
+    or {"data", "name", "refs", "title", "record"} for its file, to be taken as a dropped file is. ValueError("no-file")
+    when it has neither."""
     _check(lib)
     if not KEY.fullmatch(key or ""):
         raise ValueError("bad-item")
@@ -187,10 +188,24 @@ def read(lib, key):
         f = _file(lib, att)
         if f:
             name = f.name if engine.kind_of(f.name) else f"{f.name}.pdf"   # (a PDF kept under a name without .pdf)
-            return {"data": f.read_bytes(), "name": name, "refs": [it["doi"]] if it["doi"] else [], "title": it["title"]}
+            return {"data": f.read_bytes(), "name": name, "refs": [it["doi"]] if it["doi"] else [], "title": it["title"],
+                    "record": record_of(r, it)}
     if it["doi"]:
         return {"ref": it["doi"], "title": it["title"]}
     raise ValueError("no-file")
+
+
+def record_of(r, it):
+    """The item's record, as a document's meta takes it: authors as "Last, First", as arXiv's are."""
+    d, m = r["data"], r.get("meta", {})
+    authors = []
+    for c in d.get("creators", []):
+        if c.get("creatorType") in ("author", None):
+            name = f"{c['lastName']}, {c.get('firstName', '')}".rstrip(", ") if c.get("lastName") else c.get("name", "")
+            if name:
+                authors.append(name)
+    return {"title": it["title"] if it["title"] != "(untitled)" else "", "authors": authors,
+            "date": m.get("parsedDate") or d.get("date") or "", "doi": it["doi"], "url": d.get("url") or "", "citekey": it["citekey"]}
 
 
 def _attachments(lib, key):
@@ -244,15 +259,43 @@ def links():
         return {}
 
 
-def link(lib, key, pid, title):
+def link(lib, key, pid, title, record=None):
     f = _links_file()
     with _lock:
         try:
             data = json.loads(f.read_text())
         except (OSError, ValueError):
             data = {}
-        data[f"{lib}/{key}"] = {"paper": pid, "title": title}
+        data[f"{lib}/{key}"] = {"paper": pid, "title": title, **({"record": record} if record else {})}
         f.parent.mkdir(parents=True, exist_ok=True)
         tmp = f.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
         tmp.replace(f)
+
+
+def apply(pid):
+    """A document read from an item's own file (pdf-…, doc-…) given the item's record: its title, authors, date and DOI
+    as Zotero has them, and its citekey as the name of its source. Called once the document is stored (pdfdoc.store_pdf),
+    and when the item is read (a document read at once, or read before); True when it changed."""
+    if not pid.startswith(("pdf-", "doc-")):
+        return False
+    mf = store.pdir(pid) / "meta.json"
+    try:
+        data = json.loads(_links_file().read_text())
+        meta = json.loads(mf.read_text())
+    except (OSError, ValueError):
+        return False
+    found = [(where, v) for where, v in data.items() if isinstance(v, dict) and v.get("paper") == pid and v.get("record")]
+    if not found:
+        return False
+    where, v = found[-1]
+    rec, (lib, _, key) = v["record"], where.rpartition("/")
+    for k in ("title", "authors", "date", "doi"):
+        if rec.get(k):
+            meta[k] = rec[k]
+    if rec.get("url") or rec.get("doi"):
+        meta["abs_url"] = rec.get("url") or f"https://doi.org/{rec['doi']}"
+    meta["label"] = f"Zotero · {rec.get('citekey') or (meta.get('source') or {}).get('name') or meta['title']}"
+    meta["zotero"] = {"library": lib, "item": key, "citekey": rec.get("citekey", "")}
+    mf.write_text(json.dumps(meta, ensure_ascii=False))
+    return True

@@ -68,9 +68,10 @@
         (j ? stopBtn(j, T) : `<button type="button" class="sb-del" data-del="${p.id}" title="${esc(T.del_paper)}" aria-label="${esc(T.del_paper)}">×</button>`) + '</div>';
     };
     // papers, Wikipedia articles, GitHub READMEs and documents of one's own, each under its name when there is more than one kind
-    const kindOf = (id) => (/^wiki-/.test(id) ? 'wiki' : /^gh-/.test(id) ? 'gh' : /^web-/.test(id) ? 'web' : /^(md|pdf|doc)-/.test(id) ? 'doc' : 'paper');
+    // (a file read from a Zotero item is among the papers: Zotero says what it is)
+    const kindOf = (p) => (p.zotero ? 'paper' : /^wiki-/.test(p.id) ? 'wiki' : /^gh-/.test(p.id) ? 'gh' : /^web-/.test(p.id) ? 'web' : /^(md|pdf|doc)-/.test(p.id) ? 'doc' : 'paper');
     const groups = [['paper', T.papers], ['wiki', T.g_wiki], ['gh', 'GitHub'], ['web', T.g_web], ['doc', T.g_docs]]
-      .map(([k, name]) => [name, papers.filter((p) => kindOf(p.id) === k)]).filter(([, ps]) => ps.length);
+      .map(([k, name]) => [name, papers.filter((p) => kindOf(p) === k)]).filter(([, ps]) => ps.length);
     const listed_ = groups.length > 1
       ? groups.map(([name, ps]) => `<div class="sb-group">${esc(name)}</div>${ps.map(item).join('')}`).join('')
       : papers.map(item).join('');

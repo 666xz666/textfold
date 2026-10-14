@@ -426,6 +426,8 @@ def store_pdf(pid, folder, sc, name, tier, replace=False):
             (d / "source.html").unlink()   # so that store_doc writes the document again
     try:
         local.store_doc(pid, html, meta, "source.md", text, lambda f: local.Images(f, Path(folder)).resolve, sizes=True)
+        from . import zotero
+        zotero.apply(pid)   # read from a Zotero item's file: the item's own title, authors and citekey
         (d / "layout.json").write_text(json.dumps(layout_of(sc), ensure_ascii=False))
         (d / "structured_content.json").write_text(json.dumps(sc, ensure_ascii=False))
     finally:

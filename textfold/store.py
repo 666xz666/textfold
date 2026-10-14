@@ -218,7 +218,8 @@ def papers():
         nf = d / "notes.json"
         out.append({"id": d.name, "title": meta["title"], "titles": titles, "authors": meta.get("authors", []),
                     "langs": langs_, "updated": max(mtimes) if mtimes else mf.stat().st_mtime,
-                    "notes": len(json.loads(nf.read_text()).get("notes", [])) if nf.exists() else 0})
+                    "notes": len(json.loads(nf.read_text()).get("notes", [])) if nf.exists() else 0,
+                    **({"zotero": True} if meta.get("zotero") else {})})
     return sorted(out, key=lambda p: -p["updated"])
 
 
