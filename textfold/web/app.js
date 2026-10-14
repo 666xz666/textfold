@@ -279,22 +279,29 @@
   // ── the app's own updates (desktop/main.js): a newer release, downloaded and installed when the reader says ──
   if (window.desktop && window.desktop.onUpdate) {
     const D = window.desktop, box = h('div', 'gen-toast upd-toast');
-    let last = null;
+    let last = null, fade = 0;
     box.hidden = true; toasts.append(box);
+    const SAID = { latest: 'up_latest', 'check-failed': 'up_check_failed', dev: 'up_dev' };   // answers to a check by hand
     const show = (s) => {
       last = s;
+      clearTimeout(fade);
       const T = t(), v = (x) => esc(x.replace('{v}', (s && s.version) || ''));
-      box.hidden = !s || s.dismissed || !['available', 'downloading', 'ready', 'failed'].includes(s.kind);
+      box.hidden = !s || s.dismissed || !['updated', 'available', 'downloading', 'ready', 'failed', ...Object.keys(SAID)].includes(s.kind);
       if (box.hidden) return;
       const x = `<button type="button" class="g-x" aria-label="${esc(T.close)}">×</button>`;
       const go = (label, primary) => `<span class="g-acts"><button type="button" class="g-go${primary ? ' primary' : ''}">${esc(label)}</button></span>`;
-      box.innerHTML = s.kind === 'available' ? `<b>${v(T.up_new)}</b>${x}${go(T.up_get, true)}`
+      const link = (href, label, primary) => `<a class="g-go${primary ? ' primary' : ''}" href="${esc(href)}" target="_blank" rel="noopener">${label}</a>`;
+      box.innerHTML = SAID[s.kind] ? `<b>${esc(T[SAID[s.kind]])}</b>${x}`
+        : s.kind === 'updated' ? `<b>${v(T.up_done)}</b>${x}<span class="g-acts">${link(s.notes, esc(T.up_whatsnew))}${link(s.repo, `★ ${esc(T.up_star)}`, true)}</span>`
+          + `<span class="g-note">${esc(T.up_star_why)}</span>`
+        : s.kind === 'available' ? `<b>${v(T.up_new)}</b>${x}${go(T.up_get, true)}`
         : s.kind === 'downloading' ? `<b>${esc(T.up_getting.replace('{p}', s.percent || 0))}</b><span class="sb-prog"><i style="width:${Math.max(3, s.percent || 0)}%"></i></span>`
         : s.kind === 'ready' ? `<b>${v(T.up_ready)}</b>${x}${go(T.up_restart, true)}`
         : `<b>${esc(T.up_failed)}</b>${x}${go(T.up_retry)}`;
+      if (s.transient) fade = setTimeout(() => { box.hidden = true; }, 6000);
       const close = box.querySelector('.g-x');
-      if (close) close.onclick = () => { box.hidden = true; D.dismissUpdate(); };
-      const b = box.querySelector('.g-go');
+      if (close) close.onclick = () => { box.hidden = true; if (!s.transient) D.dismissUpdate(); };
+      const b = box.querySelector('button.g-go');
       if (b) b.onclick = () => { b.disabled = true; if (s.kind === 'ready') D.installUpdate(); else D.downloadUpdate(); };
     };
     D.onUpdate(show);
@@ -816,7 +823,7 @@
       const t = T();
       dlg.innerHTML = `<div class="st"><h2>${esc(t.settings)}</h2>
         <section class="st-uilang"><h3>${esc(t.language)}</h3><select class="st-ui">${I18N.CODES.map((c) => `<option value="${c}"${c === uiLang ? ' selected' : ''}>${esc(I18N.NATIVE[c])}</option>`).join('')}</select></section>
-        ${app ? `<section class="st-app"><div class="st-uilang"><h3>TextFold ${esc(app)}</h3><span class="st-upd-msg"></span><button type="button" class="st-upd">${esc(t.up_check)}</button></div><p class="st-note">${esc(t.up_note)}</p></section>` : ''}
+        ${app ? `<section class="st-app"><div class="st-uilang"><h3>TextFold ${esc(app)}</h3><span class="st-upd-msg"></span><button type="button" class="st-upd">${esc(t.up_check)}</button></div><p class="st-note">${esc(t.up_note)} <a href="https://github.com/chenxiachan/textfold" target="_blank" rel="noopener">★ ${esc(t.up_star)}</a></p></section>` : ''}
         <section><h3>${esc(t.st_model)}</h3>${modelSection()}</section>
         <section><h3>${esc(t.st_agents)}</h3>${agentSection()}</section>
         <section><h3>${esc(t.st_providers)}</h3>${providerSection()}</section>

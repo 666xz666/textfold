@@ -8,9 +8,12 @@ What you read is kept where `python3 -m textfold serve` keeps it, so the two sha
 
 | System | File | Signed |
 |---|---|---|
-| macOS, Apple silicon | `TextFold-<version>-mac-arm64.dmg` (and `.zip`) | yes, and notarized |
-| macOS, Intel | `TextFold-<version>-mac-x64.dmg` (and `.zip`) | yes, and notarized |
-| Windows, 64-bit | `TextFold-<version>-win-x64-setup.exe` | not yet: SmartScreen asks once, More info › Run anyway |
+| macOS, Apple silicon | `TextFold-mac-arm64.dmg` | yes, and notarized |
+| macOS, Intel | `TextFold-mac-x64.dmg` | yes, and notarized |
+| Windows, 64-bit | `TextFold-win-x64-setup.exe` | not yet: SmartScreen asks once, More info › Run anyway |
+
+The installers' names carry no version, so `releases/latest/download/<name>` is always the newest (the download page
+links there); the `.zip` files the Macs update from do (`TextFold-<version>-mac-<arch>.zip`).
 
 ## Updates
 

@@ -6,7 +6,7 @@
 // ~/.textfold. Pages on other sites open in the system browser, where the reader is already signed in.
 // Run from the repository without a payload (`npm start`), it uses the python3 on the PATH (python on Windows) and the
 // repository itself.
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const net = require('net');
@@ -123,10 +123,24 @@ ipcMain.handle('save-file', async (e, name, data) => {
 // four hours; nothing of the reader's is sent. What it finds the page shows (app.js, in the reader's language). Nothing
 // downloads until the reader asks, and what was downloaded installs when they restart from the page, or when they next
 // quit. ThoughtDAG's flow. TEXTFOLD_UPDATES points it at another feed (a folder served over http), for a test run.
-let update = null;   // what the page shows: { kind: available | downloading | ready | failed, version, percent }
+let update = null;   // what the page shows: { kind: updated | available | downloading | ready | failed, version, percent }
 function tell(s) {
   update = s;
   if (win && !win.isDestroyed()) win.webContents.send('update', s);
+}
+// an answer to a check by hand (the menu's): shown for a moment, never kept
+function answer(s) {
+  if (win && !win.isDestroyed()) win.webContents.send('update', { ...s, transient: true });
+}
+const REPO = 'https://github.com/chenxiachan/textfold';
+// The first launch after an update says so, with what is new and a door to star the project (ThoughtDAG's). A first
+// install says nothing: the version it records is the next one's "was".
+function updatedFrom() {
+  const f = path.join(app.getPath('userData'), 'version');
+  let was = null;
+  try { was = fs.readFileSync(f, 'utf8').trim(); } catch { /* a first install */ }
+  try { fs.writeFileSync(f, app.getVersion()); } catch { /* a read-only folder: nothing to say next time */ }
+  return was && was !== app.getVersion() ? was : null;
 }
 ipcMain.handle('app:version', () => app.getVersion());
 ipcMain.handle('update:state', () => (update && !update.dismissed ? update : null));
@@ -136,12 +150,16 @@ function setupUpdates() {
   try { ({ autoUpdater: updater } = require('electron-updater')); } catch { updater = null; }
   if (!app.isPackaged || !updater) {
     ipcMain.handle('update:check', () => ({ kind: 'dev' }));
+    menu(async () => ({ kind: 'dev' }));
     return;
   }
+  const was = updatedFrom();
+  if (was) update = { kind: 'updated', version: app.getVersion(), from: was, notes: `${REPO}/releases/tag/v${app.getVersion()}`, repo: REPO };
   if (process.env.TEXTFOLD_UPDATES) updater.setFeedURL({ provider: 'generic', url: process.env.TEXTFOLD_UPDATES });
   updater.autoDownload = false;   // the reader starts the download, never the app
   updater.on('update-available', (info) => {
-    if (!update || update.kind === 'available' && update.version !== info.version) tell({ kind: 'available', version: info.version });
+    if (update && (update.kind === 'downloading' || update.kind === 'ready' || update.kind === 'available' && update.version === info.version)) return;
+    tell({ kind: 'available', version: info.version });
   });
   let shown = -1;
   updater.on('download-progress', (p) => {
@@ -156,9 +174,9 @@ function setupUpdates() {
   const look = () => updater.checkForUpdates().catch(() => null);
   setTimeout(look, 8000);
   setInterval(look, 4 * 60 * 60 * 1000);
-  // Settings › Check for updates: always an answer, and a version dismissed earlier offered again
-  ipcMain.handle('update:check', async () => {
-    if (update && (update.kind === 'downloading' || update.kind === 'ready')) return { ...update, dismissed: false };
+  // a check by hand (Settings, the menu): always an answer, and a version dismissed earlier offered again
+  const byHand = async () => {
+    if (update && (update.kind === 'downloading' || update.kind === 'ready')) { tell({ ...update, dismissed: false }); return update; }
     try {
       const r = await updater.checkForUpdates();
       if (!(r && r.isUpdateAvailable)) return { kind: 'latest', version: app.getVersion() };
@@ -167,7 +185,9 @@ function setupUpdates() {
     } catch {
       return { kind: 'check-failed' };
     }
-  });
+  };
+  ipcMain.handle('update:check', byHand);
+  menu(byHand);
   ipcMain.handle('update:download', () => {
     if (!update || !['available', 'failed'].includes(update.kind)) return;
     tell({ kind: 'downloading', version: update.version, percent: 0 });
@@ -181,6 +201,25 @@ function setupUpdates() {
     if (server) server.kill();   // (Windows: the installer replaces the bundled Python, which must not be running)
     updater.quitAndInstall(true, true);   // on Windows silently, and the new version opens
   });
+}
+
+// The menu: the system's own, with Check for Updates (in the app's menu on a Mac, in Help on Windows) and the project
+// on GitHub. Its words follow the system's language, as the rest of the menu does.
+const CHECK = { en: 'Check for Updates…', zh: '检查更新…', 'zh-Hant': '檢查更新…', ja: 'アップデートを確認…', ko: '업데이트 확인…',
+  es: 'Buscar actualizaciones…', fr: 'Rechercher des mises à jour…', de: 'Nach Updates suchen …', pt: 'Procurar atualizações…',
+  it: 'Cerca aggiornamenti…', ru: 'Проверить обновления…', hi: 'अपडेट देखें…' };
+function menu(byHand) {
+  const loc = app.getLocale();
+  const label = CHECK[/^zh-(TW|HK|MO)|Hant/i.test(loc) ? 'zh-Hant' : loc.split('-')[0]] || CHECK.en;
+  const check = { label, click: async () => { const r = await byHand(); if (r && r.kind !== 'available' && r.kind !== 'downloading' && r.kind !== 'ready') answer(r); } };
+  const github = { label: 'TextFold on GitHub', click: () => shell.openExternal(REPO) };
+  const mac = process.platform === 'darwin';
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    ...(mac ? [{ role: 'appMenu', submenu: [{ role: 'about' }, check, { type: 'separator' }, { role: 'services' }, { type: 'separator' },
+      { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit' }] }] : [{ role: 'fileMenu' }]),
+    { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' },
+    { role: 'help', submenu: mac ? [github] : [check, github] },
+  ]));
 }
 
 app.whenReady().then(() => { setupUpdates(); open(); });

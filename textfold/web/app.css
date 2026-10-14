@@ -168,6 +168,7 @@ button.primary:hover { background: var(--accent-deep); }
 .upd-toast .g-go { font: 600 13px var(--sans); border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; background: var(--card);
   color: var(--ink); cursor: pointer; }
 .upd-toast .g-go.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.upd-toast a.g-go { text-decoration: none; display: inline-block; }
 .upd-toast .g-go:disabled { opacity: .6; cursor: default; }
 .st-app .st-uilang h3 { flex: 1; }
 .st-upd-msg { font-size: 12.5px; color: var(--muted); }

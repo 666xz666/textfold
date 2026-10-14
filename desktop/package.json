@@ -53,10 +53,10 @@
     },
     "npmRebuild": false,
     "win": {
-      "target": "nsis",
-      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}"
+      "target": "nsis"
     },
     "nsis": {
+      "artifactName": "${productName}-win-${arch}-setup.${ext}",
       "shortcutName": "TextFold",
       "uninstallDisplayName": "TextFold"
     },
@@ -64,6 +64,9 @@
       "provider": "github",
       "owner": "chenxiachan",
       "repo": "textfold"
+    },
+    "dmg": {
+      "artifactName": "${productName}-mac-${arch}.${ext}"
     }
   },
   "dependencies": {
