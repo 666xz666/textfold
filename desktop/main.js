@@ -6,7 +6,7 @@
 // ~/.textfold. Pages on other sites open in the system browser, where the reader is already signed in.
 // Run from the repository without a payload (`npm start`), it uses the python3 on the PATH (python on Windows) and the
 // repository itself.
-const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, nativeTheme, shell } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const net = require('net');
@@ -78,7 +78,8 @@ function startServer(port) {
 async function open() {
   win = new BrowserWindow({
     width: 1360, height: 900, minWidth: 720, minHeight: 520, show: true, title: 'TextFold',
-    backgroundColor: '#FAF9F7', autoHideMenuBar: true,   // (Windows: the menu bar shows on Alt)
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1B1915' : '#FAF9F7',   // the start page's ground, dark or light
+    autoHideMenuBar: true,   // (Windows: the menu bar shows on Alt)
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
   });
   win.loadFile(path.join(__dirname, 'splash.html'));
