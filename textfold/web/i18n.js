@@ -339,6 +339,49 @@ window.DR_I18N = (() => {
       'पढ़ें', 'खोलें', 'फ़ाइल नहीं', 'इस आइटम की Zotero में ऐसी कोई फ़ाइल नहीं है जिसे TextFold पढ़ता हो, और न ही कोई DOI जिसका पूरा पाठ Europe PMC के पास हो।', 'मेरी लाइब्रेरी']),
   };
   for (const [code, words] of Object.entries(Z)) Object.assign(S[code], words);
+  // the app's own updates (desktop/main.js): a newer release, downloaded and installed when the reader says
+  const upd = (w) => ({ up_new: w[0], up_get: w[1], up_getting: w[2], up_ready: w[3], up_restart: w[4], up_failed: w[5], up_retry: w[6],
+    up_check: w[7], up_latest: w[8], up_check_failed: w[9], up_note: w[10] });
+  const U = {
+    en: upd(['TextFold {v} is out.', 'Download', 'Downloading the update… {p}%', 'TextFold {v} is ready.', 'Restart to update',
+      'The update could not be downloaded.', 'Try again', 'Check for updates', 'This is the newest version.', 'Could not check for updates.',
+      'When it starts, the app asks GitHub whether a newer version is out. Nothing of yours is sent.']),
+    zh: upd(['TextFold {v} 已发布。', '下载', '正在下载更新… {p}%', 'TextFold {v} 已下载好。', '重启并更新',
+      '更新没能下载下来。', '重试', '检查更新', '已经是最新版本。', '没能检查更新。',
+      '软件启动时会到 GitHub 查有没有新版本，不发送你的任何内容。']),
+    'zh-Hant': upd(['TextFold {v} 已發布。', '下載', '正在下載更新… {p}%', 'TextFold {v} 已下載完成。', '重新啟動並更新',
+      '更新沒能下載下來。', '重試', '檢查更新', '已經是最新版本。', '沒能檢查更新。',
+      '軟體啟動時會到 GitHub 查有沒有新版本，不傳送你的任何內容。']),
+    ja: upd(['TextFold {v} が公開されました。', 'ダウンロード', 'アップデートをダウンロード中… {p}%', 'TextFold {v} の準備ができました。', '再起動してアップデート',
+      'アップデートをダウンロードできませんでした。', 'もう一度', 'アップデートを確認', '最新のバージョンです。', 'アップデートを確認できませんでした。',
+      '起動時に、新しいバージョンがあるか GitHub に確認します。あなたの内容は送信しません。']),
+    ko: upd(['TextFold {v} 버전이 나왔습니다.', '다운로드', '업데이트 다운로드 중… {p}%', 'TextFold {v} 준비가 끝났습니다.', '다시 시작해 업데이트',
+      '업데이트를 다운로드하지 못했습니다.', '다시 시도', '업데이트 확인', '최신 버전입니다.', '업데이트를 확인하지 못했습니다.',
+      '앱을 시작할 때 GitHub에 새 버전이 있는지 확인합니다. 사용자의 내용은 보내지 않습니다.']),
+    es: upd(['Ya está TextFold {v}.', 'Descargar', 'Descargando la actualización… {p} %', 'TextFold {v} está listo.', 'Reiniciar para actualizar',
+      'No se pudo descargar la actualización.', 'Reintentar', 'Buscar actualizaciones', 'Esta es la versión más reciente.', 'No se pudieron buscar actualizaciones.',
+      'Al abrirse, la app pregunta a GitHub si hay una versión nueva. No envía nada tuyo.']),
+    fr: upd(['TextFold {v} est disponible.', 'Télécharger', 'Téléchargement de la mise à jour… {p} %', 'TextFold {v} est prêt.', 'Redémarrer pour mettre à jour',
+      'La mise à jour n’a pas pu être téléchargée.', 'Réessayer', 'Rechercher des mises à jour', 'C’est la version la plus récente.', 'Impossible de rechercher des mises à jour.',
+      'Au démarrage, l’app demande à GitHub si une version plus récente existe. Rien de ce qui est à vous n’est envoyé.']),
+    de: upd(['TextFold {v} ist da.', 'Herunterladen', 'Update wird geladen … {p} %', 'TextFold {v} ist bereit.', 'Neu starten und aktualisieren',
+      'Das Update konnte nicht geladen werden.', 'Erneut versuchen', 'Nach Updates suchen', 'Das ist die neueste Version.', 'Die Suche nach Updates ist fehlgeschlagen.',
+      'Beim Start fragt die App bei GitHub nach einer neueren Version. Von deinen Inhalten wird nichts gesendet.']),
+    pt: upd(['O TextFold {v} já saiu.', 'Baixar', 'Baixando a atualização… {p}%', 'O TextFold {v} está pronto.', 'Reiniciar para atualizar',
+      'Não foi possível baixar a atualização.', 'Tentar de novo', 'Procurar atualizações', 'Esta é a versão mais recente.', 'Não foi possível procurar atualizações.',
+      'Ao abrir, o app pergunta ao GitHub se há uma versão mais nova. Nada seu é enviado.']),
+    it: upd(['È uscito TextFold {v}.', 'Scarica', 'Download dell’aggiornamento… {p}%', 'TextFold {v} è pronto.', 'Riavvia per aggiornare',
+      'Non è stato possibile scaricare l’aggiornamento.', 'Riprova', 'Cerca aggiornamenti', 'Questa è la versione più recente.', 'Non è stato possibile cercare aggiornamenti.',
+      'All’avvio l’app chiede a GitHub se c’è una versione più recente. Non invia nulla di tuo.']),
+    ru: upd(['Вышел TextFold {v}.', 'Скачать', 'Загрузка обновления… {p}%', 'TextFold {v} готов.', 'Перезапустить и обновить',
+      'Не удалось скачать обновление.', 'Повторить', 'Проверить обновления', 'Это последняя версия.', 'Не удалось проверить обновления.',
+      'При запуске приложение спрашивает GitHub, нет ли новой версии. Ваши данные не отправляются.']),
+    hi: upd(['TextFold {v} आ गया है।', 'डाउनलोड करें', 'अपडेट डाउनलोड हो रहा है… {p}%', 'TextFold {v} तैयार है।', 'अपडेट के लिए फिर से शुरू करें',
+      'अपडेट डाउनलोड नहीं हो सका।', 'फिर से कोशिश करें', 'अपडेट देखें', 'यह सबसे नया संस्करण है।', 'अपडेट नहीं देखे जा सके।',
+      'शुरू होते समय ऐप GitHub से पूछता है कि कोई नया संस्करण आया है या नहीं। आपकी कोई सामग्री नहीं भेजी जाती।']),
+  };
+  for (const [code, words] of Object.entries(U)) Object.assign(S[code], words);
+  S.en.up_dev = 'Run from the code, this copy does not update itself.';
   const NATIVE = { en: 'English', zh: '简体中文', 'zh-Hant': '繁體中文', ja: '日本語', ko: '한국어', es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português', it: 'Italiano', ru: 'Русский', hi: 'हिन्दी' };
   const HTML_LANG = { zh: 'zh-CN', 'zh-Hant': 'zh-TW' };
   // a text that is not a paper (a web page, a README, a PDF, a letter): the questions about it in its words

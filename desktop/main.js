@@ -118,7 +118,72 @@ ipcMain.handle('save-file', async (e, name, data) => {
   return r.filePath;
 });
 
-app.whenReady().then(open);
+// ── updates ──────────────────────────────────────────────────────────
+// A packaged app asks GitHub for the newest release (its public latest*.yml) a few seconds after it starts and every
+// four hours; nothing of the reader's is sent. What it finds the page shows (app.js, in the reader's language). Nothing
+// downloads until the reader asks, and what was downloaded installs when they restart from the page, or when they next
+// quit. ThoughtDAG's flow. TEXTFOLD_UPDATES points it at another feed (a folder served over http), for a test run.
+let update = null;   // what the page shows: { kind: available | downloading | ready | failed, version, percent }
+function tell(s) {
+  update = s;
+  if (win && !win.isDestroyed()) win.webContents.send('update', s);
+}
+ipcMain.handle('app:version', () => app.getVersion());
+ipcMain.handle('update:state', () => (update && !update.dismissed ? update : null));
+ipcMain.handle('update:dismiss', () => { if (update) update.dismissed = true; });
+function setupUpdates() {
+  let updater;
+  try { ({ autoUpdater: updater } = require('electron-updater')); } catch { updater = null; }
+  if (!app.isPackaged || !updater) {
+    ipcMain.handle('update:check', () => ({ kind: 'dev' }));
+    return;
+  }
+  if (process.env.TEXTFOLD_UPDATES) updater.setFeedURL({ provider: 'generic', url: process.env.TEXTFOLD_UPDATES });
+  updater.autoDownload = false;   // the reader starts the download, never the app
+  updater.on('update-available', (info) => {
+    if (!update || update.kind === 'available' && update.version !== info.version) tell({ kind: 'available', version: info.version });
+  });
+  let shown = -1;
+  updater.on('download-progress', (p) => {
+    if (win && !win.isDestroyed()) win.setProgressBar(p.percent / 100);   // the Dock's or the taskbar's bar too
+    const percent = Math.floor(p.percent);
+    if (percent !== shown) { shown = percent; tell({ ...update, kind: 'downloading', percent }); }
+  });
+  updater.on('update-downloaded', (info) => {
+    if (win && !win.isDestroyed()) win.setProgressBar(-1);
+    tell({ kind: 'ready', version: info.version });
+  });
+  const look = () => updater.checkForUpdates().catch(() => null);
+  setTimeout(look, 8000);
+  setInterval(look, 4 * 60 * 60 * 1000);
+  // Settings › Check for updates: always an answer, and a version dismissed earlier offered again
+  ipcMain.handle('update:check', async () => {
+    if (update && (update.kind === 'downloading' || update.kind === 'ready')) return { ...update, dismissed: false };
+    try {
+      const r = await updater.checkForUpdates();
+      if (!(r && r.isUpdateAvailable)) return { kind: 'latest', version: app.getVersion() };
+      tell({ kind: 'available', version: r.updateInfo.version });
+      return update;
+    } catch {
+      return { kind: 'check-failed' };
+    }
+  });
+  ipcMain.handle('update:download', () => {
+    if (!update || !['available', 'failed'].includes(update.kind)) return;
+    tell({ kind: 'downloading', version: update.version, percent: 0 });
+    updater.downloadUpdate().catch(() => {
+      if (win && !win.isDestroyed()) win.setProgressBar(-1);
+      tell({ kind: 'failed', version: update.version });
+    });
+  });
+  ipcMain.handle('update:install', () => {
+    if (!update || update.kind !== 'ready') return;
+    if (server) server.kill();   // (Windows: the installer replaces the bundled Python, which must not be running)
+    updater.quitAndInstall(true, true);   // on Windows silently, and the new version opens
+  });
+}
+
+app.whenReady().then(() => { setupUpdates(); open(); });
 app.on('window-all-closed', () => app.quit());
 app.on('before-quit', () => { if (server) server.kill(); });
 app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) open(); });

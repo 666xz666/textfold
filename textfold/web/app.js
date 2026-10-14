@@ -25,6 +25,7 @@
     renderSidebar();
     if (landing) renderLanding();
     if (window.__reader && window.__reader.setUi) window.__reader.setUi(code);
+    document.dispatchEvent(new Event('tf-lang'));   // (what else speaks it: the app's update)
   }
   let papers = BOOT.papers || [];
   let jobs = BOOT.jobs || [];
@@ -272,9 +273,38 @@
     : msg === 'bad-file' ? t().file_bad : msg === 'no-file' ? t().no_file : msg === 'not-running' ? t().z_off : msg === 'api-off' ? t().z_api_off
     : msg === 'web-notext' ? t().web_notext : msg === 'web-pdf' ? t().web_pdf : msg === 'web-blocked' ? t().web_blocked : msg);
 
+  // the corner where the page says what is under way, one above the other: a generation, the app's update
+  const toasts = h('div', 'toasts'); document.body.append(toasts);
+
+  // ── the app's own updates (desktop/main.js): a newer release, downloaded and installed when the reader says ──
+  if (window.desktop && window.desktop.onUpdate) {
+    const D = window.desktop, box = h('div', 'gen-toast upd-toast');
+    let last = null;
+    box.hidden = true; toasts.append(box);
+    const show = (s) => {
+      last = s;
+      const T = t(), v = (x) => esc(x.replace('{v}', (s && s.version) || ''));
+      box.hidden = !s || s.dismissed || !['available', 'downloading', 'ready', 'failed'].includes(s.kind);
+      if (box.hidden) return;
+      const x = `<button type="button" class="g-x" aria-label="${esc(T.close)}">×</button>`;
+      const go = (label, primary) => `<span class="g-acts"><button type="button" class="g-go${primary ? ' primary' : ''}">${esc(label)}</button></span>`;
+      box.innerHTML = s.kind === 'available' ? `<b>${v(T.up_new)}</b>${x}${go(T.up_get, true)}`
+        : s.kind === 'downloading' ? `<b>${esc(T.up_getting.replace('{p}', s.percent || 0))}</b><span class="sb-prog"><i style="width:${Math.max(3, s.percent || 0)}%"></i></span>`
+        : s.kind === 'ready' ? `<b>${v(T.up_ready)}</b>${x}${go(T.up_restart, true)}`
+        : `<b>${esc(T.up_failed)}</b>${x}${go(T.up_retry)}`;
+      const close = box.querySelector('.g-x');
+      if (close) close.onclick = () => { box.hidden = true; D.dismissUpdate(); };
+      const b = box.querySelector('.g-go');
+      if (b) b.onclick = () => { b.disabled = true; if (s.kind === 'ready') D.installUpdate(); else D.downloadUpdate(); };
+    };
+    D.onUpdate(show);
+    D.updateState().then(show).catch(() => {});
+    document.addEventListener('tf-lang', () => show(last));
+  }
+
   // ── on a reader page: generate a language, or regenerate the current one ──
   if (PAPER) {
-    const toast = h('div', 'gen-toast'); toast.hidden = true; document.body.append(toast);
+    const toast = h('div', 'gen-toast'); toast.hidden = true; toasts.append(toast);
     // a Markdown file dropped on a paper's page: stored, then generated from the landing (?start=)
     let over = 0;
     const hasFile = (e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes('Files');
@@ -703,6 +733,7 @@
   // ── settings: the model, the agents on this computer, the API providers (ThoughtDAG's model access) ──
   async function openSettings(opts) {
     let data = await api('/api/models');
+    const app = window.desktop && window.desktop.checkForUpdates ? await window.desktop.version() : null;   // in the app: its version
     let form = null;          // the provider being added or edited: {key?, preset, name, base, api_key, found, picked}
     let test = null;          // the last connection test
     let bridgeStarting = false;
@@ -785,6 +816,7 @@
       const t = T();
       dlg.innerHTML = `<div class="st"><h2>${esc(t.settings)}</h2>
         <section class="st-uilang"><h3>${esc(t.language)}</h3><select class="st-ui">${I18N.CODES.map((c) => `<option value="${c}"${c === uiLang ? ' selected' : ''}>${esc(I18N.NATIVE[c])}</option>`).join('')}</select></section>
+        ${app ? `<section class="st-app"><div class="st-uilang"><h3>TextFold ${esc(app)}</h3><span class="st-upd-msg"></span><button type="button" class="st-upd">${esc(t.up_check)}</button></div><p class="st-note">${esc(t.up_note)}</p></section>` : ''}
         <section><h3>${esc(t.st_model)}</h3>${modelSection()}</section>
         <section><h3>${esc(t.st_agents)}</h3>${agentSection()}</section>
         <section><h3>${esc(t.st_providers)}</h3>${providerSection()}</section>
@@ -830,6 +862,15 @@
 
     function wire() {
       q('.st-close').onclick = () => dlg.close();
+      const up = q('.st-upd');
+      if (up) up.onclick = async () => {   // an answer either way; one found shows as the corner's toast too
+        const msg = q('.st-upd-msg'), t = T();
+        up.disabled = true; msg.textContent = '…';
+        const r = await window.desktop.checkForUpdates().catch(() => ({ kind: 'check-failed' }));
+        up.disabled = false;
+        msg.textContent = r.kind === 'latest' ? t.up_latest : r.kind === 'dev' ? t.up_dev : r.kind === 'check-failed' ? t.up_check_failed
+          : r.kind === 'ready' ? t.up_ready.replace('{v}', r.version) : t.up_new.replace('{v}', r.version || '');
+      };
       q('.st-ui').onchange = (e) => { setUiLang(e.target.value); render(); };
       const sel = q('.st-model');
       if (sel) sel.onchange = async () => { test = null; update(await api('/api/models/select', { model: sel.value })); };

@@ -12,6 +12,15 @@ What you read is kept where `python3 -m textfold serve` keeps it, so the two sha
 | macOS, Intel | `TextFold-<version>-mac-x64.dmg` (and `.zip`) | yes, and notarized |
 | Windows, 64-bit | `TextFold-<version>-win-x64-setup.exe` | not yet: SmartScreen asks once, More info › Run anyway |
 
+## Updates
+
+The app asks GitHub for the newest release a few seconds after it starts and every four hours: it reads the
+release's public `latest-mac.yml` or `latest.yml`, and sends nothing of the reader's. A newer version shows as a note
+at the bottom right of the page, in the reader's language. Nothing downloads until they click Download (only what
+changed, when the blockmap allows), and the new version installs when they click Restart, or the next time they quit.
+Settings shows the version and checks by hand. A copy run from the code (`npm start`) does not update itself.
+`TEXTFOLD_UPDATES=<url>` points the app at another folder of release files, for a test.
+
 ## Build
 
 ```bash
@@ -39,8 +48,11 @@ payload/python/bin/python3 scripts/smoke.py      # payload\python\python.exe scr
 
 `.github/workflows/desktop.yml` builds the three on their own systems (macos-15, macos-15-intel, windows-latest) when a
 version is tagged, as `publish.yml` sends the package to PyPI. They go into a draft release, published once all three
-have succeeded. The tag, `textfold/__init__.py` and this folder's `package.json` name the same version, or nothing is
-built. Run by hand (Actions › desktop › Run workflow), the files are the run's artifacts.
+have succeeded, with the files the apps update from: `latest.yml`, and one `latest-mac.yml` for both Macs
+(`scripts/latest-mac.py`, since each Mac's build writes its own). The tag, `textfold/__init__.py` and this folder's
+`package.json` name the same version, or nothing is built. Run by hand (Actions › desktop › Run workflow), the files
+are the run's artifacts, and a version may be given to the app alone: two such builds, an older and a newer, try an
+update from one to the other.
 
 ## Signing and notarization
 

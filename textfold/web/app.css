@@ -150,9 +150,12 @@ button.primary:hover { background: var(--accent-deep); }
 .jc-acts button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .jc-stop:disabled, .gen-toast .g-stop:disabled { opacity: .45; cursor: default; border-color: var(--line); color: var(--muted); }
 
-/* ── generation progress over a paper ───────────────────── */
+/* ── generation progress over a paper, the app's update ─── */
 /* bottom right, over the ask button: out of the way of the paper's title and of what is being read */
-.gen-toast { position: fixed; z-index: 35; right: 20px; bottom: 62px; width: min(380px, calc(100vw - 32px));
+.toasts { position: fixed; z-index: 35; right: 20px; bottom: 62px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  pointer-events: none; }
+.toasts > * { pointer-events: auto; }
+.gen-toast { width: min(380px, calc(100vw - 32px));
   display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 12px 14px; border-radius: 12px; background: var(--card);
   border: 1px solid var(--line); box-shadow: 0 16px 44px -20px rgba(40, 30, 10, .45); font: 13.5px var(--sans); }
 .gen-toast b { font-weight: 650; }
@@ -161,6 +164,15 @@ button.primary:hover { background: var(--accent-deep); }
 .gen-toast .g-x { grid-row: 1; grid-column: 2; border: 0; background: none; font-size: 18px; color: var(--muted); cursor: pointer; }
 .gen-toast .g-stop { grid-row: 1; grid-column: 2; align-self: start; }
 .gen-toast .g-note { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.upd-toast .g-acts { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 8px; }
+.upd-toast .g-go { font: 600 13px var(--sans); border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; background: var(--card);
+  color: var(--ink); cursor: pointer; }
+.upd-toast .g-go.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.upd-toast .g-go:disabled { opacity: .6; cursor: default; }
+.st-app .st-uilang h3 { flex: 1; }
+.st-upd-msg { font-size: 12.5px; color: var(--muted); }
+.st-upd { font: 13px var(--sans); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.st-upd:disabled { opacity: .6; cursor: default; }
 
 /* ── settings ────────────────────────────────────────────── */
 dialog.settings { border: 1px solid var(--line); border-radius: 16px; padding: 0; width: min(660px, calc(100vw - 32px)); max-height: calc(100vh - 48px); background: var(--card); color: var(--ink);
@@ -219,7 +231,7 @@ dialog.settings::backdrop { background: rgba(30, 25, 15, .28); }
   #sidebar.collapsed .sb-rail { position: fixed; top: 8px; left: 8px; padding: 0; }
   #sidebar.collapsed .sb-rail .rail-btn:not(.rail-open) { display: none; }
   .sb-del { opacity: 1; }
-  .gen-toast { right: 12px; bottom: 112px; }
+  .toasts { right: 12px; bottom: 112px; }
   .hero h1 { font-size: 32px; }
   #newform .bar { padding: 6px 6px 6px 14px; }
   #newform input { flex-basis: calc(100% - 40px); }   /* the link on its own line; the language and Generate below it */

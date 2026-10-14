@@ -5,11 +5,18 @@
 # A version tag (v0.10.2) builds the three into a draft release, published only when every one has succeeded; run by
 # hand (Actions › desktop › Run workflow) they are kept as the run's artifacts. Without the signing secrets a build by
 # hand is unsigned (electron-builder skips signing when there is no CSC_LINK); a tag's is refused.
+# The release also carries what the installed apps update from (desktop/main.js): latest.yml for Windows, one
+# latest-mac.yml for both Macs (desktop/scripts/latest-mac.py), and each file's blockmap, for a download of what changed.
 name: desktop
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: "The app's version alone, for a test of its updates (an older build and a newer one); empty: the code's"
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -71,8 +78,9 @@ jobs:
         run: |
           # an empty CSC_LINK is read as a file's name (the folder's): without the secrets, nothing to sign with
           [ -n "$CSC_LINK" ] || unset CSC_LINK CSC_KEY_PASSWORD
-          npm run ${{ matrix.script }}
+          npm run ${{ matrix.script }} ${VERSION:+-- -c.extraMetadata.version=$VERSION}
         env:
+          VERSION: ${{ inputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # the payload script asks GitHub for the newest CPython build
           CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CERT_PASSWORD && secrets.MAC_CERT_P12_BASE64 || '' }}
           CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CERT_PASSWORD || '' }}
@@ -93,25 +101,44 @@ jobs:
             desktop/out/*.dmg
             desktop/out/*.zip
             desktop/out/*.exe
+            desktop/out/*.blockmap
+            desktop/out/latest*.yml
           if-no-files-found: error
       - name: Into the draft release
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           shopt -s nullglob
-          gh release upload "$TAG" desktop/out/*.dmg desktop/out/*.zip desktop/out/*.exe -R "$REPO" --clobber
+          files=(desktop/out/*.dmg desktop/out/*.zip desktop/out/*.exe desktop/out/*.blockmap)
+          [ -f desktop/out/latest.yml ] && files+=(desktop/out/latest.yml)   # (a Mac's latest-mac.yml waits for the other's, below)
+          gh release upload "$TAG" "${files[@]}" -R "$REPO" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: textfold-mac-*
+          path: macs
+      - name: One update file for both Macs
+        run: |
+          python3 desktop/scripts/latest-mac.py macs/textfold-mac-arm64/latest-mac.yml macs/textfold-mac-x64/latest-mac.yml > latest-mac.yml
+          cat latest-mac.yml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: textfold-mac-update
+          path: latest-mac.yml
       - name: The release, once every system's app is in it
-        run: gh release edit "$TAG" -R "$REPO" --draft=false --latest
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          gh release upload "$TAG" latest-mac.yml -R "$REPO" --clobber
+          gh release edit "$TAG" -R "$REPO" --draft=false --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}

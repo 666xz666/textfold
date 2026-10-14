@@ -65,5 +65,8 @@
       "owner": "chenxiachan",
       "repo": "textfold"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
