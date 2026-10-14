@@ -156,8 +156,8 @@ TextFold 用你已有的模型，不需要注册账号。启动时它会自己�
 `python3 -m textfold get` 一次给出一份文档的一个层级，从最概括的开始。agent 可以先读地图，再决定把上下文花在哪一节：
 
 ```bash
-python3 -m textfold get https://arxiv.org/abs/2201.11903        # 地图：每一节的主题
-python3 -m textfold get 2201.11903 --level key --section 3      # 某一节：每个要点和它的理由
+python3 -m textfold get https://arxiv.org/abs/2512.23916        # 地图：每一节的主题
+python3 -m textfold get 2512.23916 --level key --section 3      # 某一节：每个要点和它的理由
 python3 -m textfold get report.pdf --json                       # 整份文档，TextFold 格式
 ```
 
@@ -168,7 +168,7 @@ python3 -m textfold get report.pdf --json                       # 整份文档�
 阅读页顶部的 **保存** 把一页存成一个 HTML 文件，不需要服务器，在哪里都能打开：各个层级、你选的标注，还可以带上原文 PDF 在左边对照。也可以只存你的标注，存成网页、PDF、Obsidian 用的 Markdown 或 JSON。命令行也能导出这一页，只是不带你的标注：
 
 ```bash
-python3 -m textfold export 2201.11903
+python3 -m textfold export 2512.23916
 ```
 
 TextFold 只是一个工具，它的许可证只管代码。分享文件时，请遵守原文的许可条款，它标在每篇的标题下方。

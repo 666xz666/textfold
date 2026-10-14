@@ -156,8 +156,8 @@ TextFold uses a model you already have, and there is no account to create. It lo
 `python3 -m textfold get` gives a document one level at a time, coarsest first, so an agent reads the map before it spends its context on the whole text:
 
 ```bash
-python3 -m textfold get https://arxiv.org/abs/2201.11903        # the map: every section's topic
-python3 -m textfold get 2201.11903 --level key --section 3      # one section: its points, each with its reason
+python3 -m textfold get https://arxiv.org/abs/2512.23916        # the map: every section's topic
+python3 -m textfold get 2512.23916 --level key --section 3      # one section: its points, each with its reason
 python3 -m textfold get report.pdf --json                       # the whole document, in the TextFold format
 ```
 
@@ -168,7 +168,7 @@ A document not folded yet is folded first, with the model you connected. Every l
 **Save**, at the top of the reader, keeps a page as one HTML file that opens anywhere without a server: its levels, the notes you choose and, if you like, its original PDF to read beside it. It can also keep only your notes, as a page, a PDF, Markdown for Obsidian or JSON. From the command line, the page without your notes:
 
 ```bash
-python3 -m textfold export 2201.11903
+python3 -m textfold export 2512.23916
 ```
 
 TextFold is a tool, and its license covers its code. When you share a file, follow the terms of the original text, shown under its title.
