@@ -297,6 +297,48 @@ window.DR_I18N = (() => {
       n_asked_at: "{level} स्तर पर पूछा गया", n_keep: "मेरे हाइलाइट रखें", n_keep_tip: "ज़ूम आउट करने पर आपके हाइलाइट किए अंश बने रहते हैं", n_more: "आगे पूछें…", n_highlight: "हाइलाइट", n_note: "नोट", n_ask: "पूछें", n_ask_ph: "इस अंश के बारे में पूछें…", n_note_ph: "नोट लिखें…", n_thinking: "सोच रहे हैं…", n_copy: "लिंक कॉपी करें", n_copied: "कॉपी हो गया", n_delete: "हटाएँ", n_notes: "नोट्स", n_export_md: "Markdown निर्यात करें (Obsidian)", n_export_json: "नोट्स डेटा निर्यात करें (JSON)", n_failed: "कोई उत्तर नहीं", n_open: "रीडर में खोलें", n_local: "नोट्स इसी ब्राउज़र में रहते हैं", n_all: "सभी", n_del_sure: "हटाने के लिए फिर क्लिक करें", n_export_pdf: "PDF निर्यात करें: केवल नोट्स", n_none: "अभी कुछ नहीं", home: "होम", del_paper: "हटाएँ", del_confirm: "“{title}” हटाएँ?\n\nइसके स्तर, अनुवाद और आपके {n} नोट्स papers/.trash में चले जाएँगे, जहाँ से उन्हें वापस लाया जा सकता है।", del_busy: "यह अभी बन रहा है। पूरा होने पर हटाएँ।", n_whole: "पूरा शोधपत्र", n_chat: "शोधपत्र से पूछें", n_chat_ph: "पूरे शोधपत्र के बारे में पूछें…", n_chat_new: "नई बातचीत", n_chat_hint: "उत्तर शोधपत्र से ही आते हैं, उन अनुच्छेदों के साथ जिन पर वे टिके हैं।", n_try: "ऐसे पूछकर देखें", n_starters: ["यह शोधपत्र कौन-सी समस्या हल करता है, और इसमें नया क्या है?", "इसके मुख्य दावे का प्रमुख प्रमाण क्या है?", "विधि चरण-दर-चरण कैसे काम करती है?", "इसकी सीमाएँ क्या हैं, और क्या अनसुलझा रह गया है?", "यह पहले के काम से कैसे तुलना करता है?"], n_pstarters: ["इसे सरल शब्दों में समझाइए", "इसका प्रमाण क्या है?", "यह मुख्य दावे से कैसे जुड़ता है?"], n_infer: "अनुमान", n_infer_tip: "शोधपत्र से नहीं: मॉडल का अपना अनुमान या सामान्य ज्ञान", n_cite_bad: "यह संदर्भ शोधपत्र के किसी अनुच्छेद से मेल नहीं खाता", n_demo: "यह एक स्थिर डेमो पेज है: यहाँ उत्तर देने के लिए कोई मॉडल नहीं है। अपने कंप्यूटर पर TextFold चलाएँ, एक मॉडल जोड़ें, और किसी भी शोधपत्र से प्रश्न पूछें।", n_demo_link: "TextFold प्राप्त करें", n_export_pdf_paper: "PDF निर्यात करें: {level} स्तर पर शोधपत्र, नोट्स के साथ", or_button: "एक क्लिक में जोड़ें", or_hint: "OpenRouter पर एक बार अनुमति दें: कुंजी बनकर इसी कंप्यूटर पर रहती है, कुछ चिपकाना नहीं पड़ता। मुफ़्त मॉडल तुरंत चलते हैं।", or_minted: "अनुमति मिल गई। जिन मॉडलों का उपयोग करना है उन्हें चुनें, फिर सहेजें।", or_failed: "OpenRouter अनुमति पूरी नहीं हुई: {error}। फिर कोशिश करें या कुंजी चिपकाएँ।", free: "मुफ़्त", bridge_name: "ChatGPT सदस्यता (लोकल ब्रिज)", bridge_hint: "आपकी ChatGPT सदस्यता का उपयोग करता है। ब्रिज (openai-oauth) इसी कंप्यूटर पर 127.0.0.1:10531 पर चलता है और Codex के लॉगिन से जुड़ता है; लॉगिन न हो तो ब्राउज़र खुलता है। Node.js चाहिए।", bridge_on: "ब्रिज चल रहा है · {n} मॉडल", bridge_off: "ब्रिज नहीं चल रहा", bridge_start: "ब्रिज शुरू करें", bridge_starting: "शुरू हो रहा है… (ChatGPT लॉगिन के लिए ब्राउज़र खुल सकता है)", bridge_no_node: "पहले Node.js इंस्टॉल करें, या टर्मिनल में यह चलाएँ:", copy: "कॉपी", ui_lang: "इंटरफ़ेस की भाषा", st_search: "मॉडल खोजें", st_auto: "अपने आप जुड़ा", cn_title: "पहले एक मॉडल जोड़ें", cn_sub: "TextFold आपके पास पहले से मौजूद मॉडल से पाठ को मोड़ता है। एक तरीका चुनें:", cn_or: "OpenRouter एक क्लिक में · मुफ़्त मॉडल", cn_gpt: "मेरी ChatGPT सदस्यता का उपयोग करें", cn_more: "अन्य तरीके (API कुंजी, Claude Code…)", no_model: "अभी कोई मॉडल नहीं जुड़ा है: नीचे एक जोड़ें।", license: "लाइसेंस", lic_arxiv: "arXiv लाइसेंस: केवल पढ़ने के लिए, पुनर्वितरण नहीं",
     },
   };
+  // a Zotero library (zotero.py): browsed in a dialog, an item read in a click
+  const zot = (w) => ({ z_lib: w[0], z_all: w[1], z_search: w[2], z_none: w[3], z_off: w[4], z_api_off: w[5], z_read: w[6], z_open: w[7],
+    z_nofile: w[8], no_file: w[9], z_mine: w[10] });
+  const Z = {
+    en: zot(['Zotero library', 'All items', 'Search titles, authors, years…', 'No items here.', 'Zotero is not running. Open Zotero, then try again.',
+      'Turn on Zotero’s local API: Zotero › Settings › Advanced › “Allow other applications on this computer to communicate with Zotero”.',
+      'Read', 'Open', 'no file', 'This item has no file in Zotero that TextFold reads, and no DOI whose full text Europe PMC holds.', 'My Library']),
+    zh: zot(['Zotero 文献库', '全部条目', '搜索标题、作者、年份…', '这里没有条目。', 'Zotero 没有在运行。打开 Zotero 后再试。',
+      '请打开 Zotero 的本地 API：Zotero › 设置 › 高级 ›「允许此计算机上的其他应用程序与 Zotero 通信」。',
+      '阅读', '打开', '无文件', '这个条目在 Zotero 里没有 TextFold 能读的文件，也没有 Europe PMC 收录全文的 DOI。', '我的文库']),
+    'zh-Hant': zot(['Zotero 文獻庫', '全部條目', '搜尋標題、作者、年份…', '這裡沒有條目。', 'Zotero 沒有在執行。開啟 Zotero 後再試。',
+      '請開啟 Zotero 的本機 API：Zotero › 設定 › 進階 ›「允許此電腦上的其他應用程式與 Zotero 通訊」。',
+      '閱讀', '開啟', '無檔案', '這個條目在 Zotero 裡沒有 TextFold 能讀的檔案，也沒有 Europe PMC 收錄全文的 DOI。', '我的文庫']),
+    ja: zot(['Zotero ライブラリ', 'すべてのアイテム', 'タイトル・著者・年で検索…', 'ここにはアイテムがありません。', 'Zotero が起動していません。Zotero を開いてから、もう一度お試しください。',
+      'Zotero のローカル API をオンにしてください：Zotero › 設定 › 詳細 ›「このコンピュータ上の他のアプリケーションが Zotero と通信することを許可」。',
+      '読む', '開く', 'ファイルなし', 'このアイテムには、TextFold が読める Zotero 内のファイルも、Europe PMC が全文を持つ DOI もありません。', 'マイライブラリ']),
+    ko: zot(['Zotero 라이브러리', '모든 항목', '제목, 저자, 연도 검색…', '여기에는 항목이 없습니다.', 'Zotero가 실행 중이 아닙니다. Zotero를 연 뒤 다시 시도하세요.',
+      'Zotero 로컬 API를 켜세요: Zotero › 설정 › 고급 › “이 컴퓨터의 다른 애플리케이션이 Zotero와 통신하도록 허용”.',
+      '읽기', '열기', '파일 없음', '이 항목에는 TextFold가 읽을 수 있는 Zotero 파일이 없고, Europe PMC가 전문을 가진 DOI도 없습니다.', '내 라이브러리']),
+    es: zot(['Biblioteca de Zotero', 'Todos los elementos', 'Busca títulos, autores, años…', 'No hay elementos aquí.', 'Zotero no está abierto. Abre Zotero y vuelve a intentarlo.',
+      'Activa la API local de Zotero: Zotero › Ajustes › Avanzado › «Permitir que otras aplicaciones de este equipo se comuniquen con Zotero».',
+      'Leer', 'Abrir', 'sin archivo', 'Este elemento no tiene en Zotero un archivo que TextFold lea, ni un DOI cuyo texto completo tenga Europe PMC.', 'Mi biblioteca']),
+    fr: zot(['Bibliothèque Zotero', 'Tous les documents', 'Rechercher titres, auteurs, années…', 'Aucun document ici.', 'Zotero n’est pas ouvert. Ouvrez Zotero, puis réessayez.',
+      'Activez l’API locale de Zotero : Zotero › Paramètres › Avancés › « Autoriser d’autres applications de cet ordinateur à communiquer avec Zotero ».',
+      'Lire', 'Ouvrir', 'pas de fichier', 'Ce document n’a dans Zotero ni fichier que TextFold sait lire, ni DOI dont Europe PMC détient le texte intégral.', 'Ma bibliothèque']),
+    de: zot(['Zotero-Bibliothek', 'Alle Einträge', 'Titel, Autoren, Jahre suchen…', 'Hier sind keine Einträge.', 'Zotero läuft nicht. Öffne Zotero und versuche es erneut.',
+      'Schalte Zoteros lokale API ein: Zotero › Einstellungen › Erweitert › „Anderen Anwendungen auf diesem Computer erlauben, mit Zotero zu kommunizieren“.',
+      'Lesen', 'Öffnen', 'keine Datei', 'Dieser Eintrag hat in Zotero keine Datei, die TextFold liest, und keine DOI, deren Volltext Europe PMC hat.', 'Meine Bibliothek']),
+    pt: zot(['Biblioteca do Zotero', 'Todos os itens', 'Pesquise títulos, autores, anos…', 'Não há itens aqui.', 'O Zotero não está aberto. Abra o Zotero e tente de novo.',
+      'Ative a API local do Zotero: Zotero › Configurações › Avançado › “Permitir que outros aplicativos neste computador se comuniquem com o Zotero”.',
+      'Ler', 'Abrir', 'sem arquivo', 'Este item não tem no Zotero um arquivo que o TextFold leia, nem um DOI cujo texto completo o Europe PMC tenha.', 'Minha biblioteca']),
+    it: zot(['Libreria Zotero', 'Tutti gli elementi', 'Cerca titoli, autori, anni…', 'Nessun elemento qui.', 'Zotero non è aperto. Apri Zotero e riprova.',
+      'Attiva l’API locale di Zotero: Zotero › Impostazioni › Avanzate › «Consenti ad altre applicazioni su questo computer di comunicare con Zotero».',
+      'Leggi', 'Apri', 'nessun file', 'Questo elemento non ha in Zotero un file che TextFold legga, né un DOI di cui Europe PMC abbia il testo completo.', 'La mia libreria']),
+    ru: zot(['Библиотека Zotero', 'Все записи', 'Искать по названию, авторам, году…', 'Здесь нет записей.', 'Zotero не запущен. Откройте Zotero и попробуйте снова.',
+      'Включите локальный API Zotero: Zotero › Настройки › Дополнительно › «Разрешить другим приложениям на этом компьютере обмениваться данными с Zotero».',
+      'Читать', 'Открыть', 'нет файла', 'У этой записи нет в Zotero файла, который читает TextFold, и нет DOI, полный текст которого есть в Europe PMC.', 'Моя библиотека']),
+    hi: zot(['Zotero लाइब्रेरी', 'सभी आइटम', 'शीर्षक, लेखक, वर्ष खोजें…', 'यहाँ कोई आइटम नहीं है।', 'Zotero नहीं चल रहा है। Zotero खोलें, फिर दोबारा कोशिश करें।',
+      'Zotero का लोकल API चालू करें: Zotero › Settings › Advanced › “Allow other applications on this computer to communicate with Zotero”।',
+      'पढ़ें', 'खोलें', 'फ़ाइल नहीं', 'इस आइटम की Zotero में ऐसी कोई फ़ाइल नहीं है जिसे TextFold पढ़ता हो, और न ही कोई DOI जिसका पूरा पाठ Europe PMC के पास हो।', 'मेरी लाइब्रेरी']),
+  };
+  for (const [code, words] of Object.entries(Z)) Object.assign(S[code], words);
   const NATIVE = { en: 'English', zh: '简体中文', 'zh-Hant': '繁體中文', ja: '日本語', ko: '한국어', es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português', it: 'Italiano', ru: 'Русский', hi: 'हिन्दी' };
   const HTML_LANG = { zh: 'zh-CN', 'zh-Hant': 'zh-TW' };
   // a text that is not a paper (a web page, a README, a PDF, a letter): the questions about it in its words

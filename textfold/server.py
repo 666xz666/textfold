@@ -29,6 +29,12 @@
   GET  /api/bridge             the ChatGPT bridge (127.0.0.1:10531): running and its models, or what starting it needs
   POST /api/bridge/start       start it detached (bridges.py)
   POST /api/openrouter/start   {back}: the OpenRouter consent URL (OAuth PKCE); GET /oauth/openrouter is its return
+  GET  /api/zotero             Zotero Desktop (its local API): running, its libraries, the one chosen (zotero.py)
+  GET  /api/zotero/collections ?lib=users/0 | groups/<id>: the library's collections, each with its parent
+  GET  /api/zotero/items       ?lib=…&collection=<key>&q=…: its items, each with the document it became, if any
+  POST /api/zotero/library     {library}: the one to browse, kept
+  POST /api/zotero/read        {item: "<lib>/<key>", lang}: an item read. {ref} for its paper online, generated as a
+                               link is; else its file, taken as a file dropped on the landing is (/api/files' reply)
 
 Loopback only, and POSTs from other origins are refused. Settings and keys live in
 ~/.textfold/settings.json (mode 600), never in the project folder, which may be synced or shared.
@@ -49,7 +55,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-from . import agents, bridges, build, engine, fetch, langs, llm, local, models, notes, office, pdf, pdfdoc, pipeline, providers, store
+from . import agents, bridges, build, engine, fetch, langs, llm, local, models, notes, office, pdf, pdfdoc, pipeline, providers, store, zotero
 
 STATIC = {"app.js": "text/javascript", "app.css": "text/css", "reader.js": "text/javascript",
           "reader.css": "text/css", "i18n.js": "text/javascript", "tutorial.js": "text/javascript"}
@@ -463,6 +469,19 @@ def make_handler(jobs):
                     return self.json(pdfdoc.place(m.group(1)))
                 if u.path == "/api/engine":
                     return self.json({**engine.status(), "pending": sorted(jobs.pending)})
+                if u.path.startswith("/api/zotero"):
+                    q = {k: v[0] for k, v in parse_qs(u.query).items()}
+                    try:
+                        if u.path == "/api/zotero":
+                            return self.json(zotero.status())
+                        if u.path == "/api/zotero/collections":
+                            return self.json(zotero.collections(q.get("lib", "")))
+                        if u.path == "/api/zotero/items":
+                            return self.json(zotero.items(q.get("lib", ""), q.get("collection", ""), q.get("q", "")[:200]))
+                    except zotero.Off as e:   # Zotero closed, or its local API off: the app says which
+                        return self.json({"error": str(e)}, 503)
+                    except ValueError as e:
+                        return self.json({"error": str(e)}, 400)
                 m = re.fullmatch(r"/api/notes/([\w.-]+)", u.path)
                 if m and store.valid_id(m.group(1)) and (store.pdir(m.group(1)) / "meta.json").exists():
                     return self.json(notes.read(m.group(1)))
@@ -509,6 +528,31 @@ def make_handler(jobs):
                     except ValueError as e:   # not a paper's reference, or (a DOI) none Europe PMC can read in full
                         return self.json({"error": str(e) if str(e) in ("no-fulltext", "no-article") else "bad-ref"}, 400)
                     return self.json(job)
+                if u.path == "/api/zotero/library":
+                    try:
+                        zotero.choose(str(body.get("library") or ""))
+                    except ValueError as e:
+                        return self.json({"error": str(e)}, 400)
+                    return self.json(zotero.status())
+                if u.path == "/api/zotero/read":   # an item of the Zotero library: its paper online, or its file as a dropped one
+                    lib, _, key = str(body.get("item") or "").rpartition("/")
+                    lang = body.get("lang") if body.get("lang") in langs.LANGS else "en"
+                    try:
+                        got = zotero.read(lib, key)
+                        if "ref" in got:   # generated as a pasted link is (from the page, which asks for a model first)
+                            pid = store.resolve(got["ref"])
+                            zotero.link(lib, key, pid, got["title"])
+                            return self.json({"ref": pid, "title": got["title"]})
+                    except zotero.Off as e:
+                        return self.json({"error": str(e)}, 503)
+                    except ValueError as e:   # no file and no paper online; not a library or item
+                        return self.json({"error": str(e) if str(e) in ("no-file", "no-fulltext", "bad-library", "bad-item") else "bad-ref"}, 400)
+                    named = {"X-Name": quote(got["name"]), "X-Lang": lang, "X-Refs": quote(json.dumps(got["refs"]))}
+                    reply, code = take_file(jobs, got["data"], named)
+                    pid = reply.get("paper") or reply.get("upload") or (reply.get("job") or {}).get("pid")
+                    if code == 200 and pid:
+                        zotero.link(lib, key, pid, got["title"])
+                    return self.json({**reply, "name": got["name"]}, code)
                 if u.path == "/api/engine/install":
                     return self.json(jobs.install_engine())
                 if u.path == "/api/engine/remove":

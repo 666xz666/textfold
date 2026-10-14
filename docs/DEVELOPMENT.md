@@ -272,6 +272,18 @@ are where text meant for a model is put), its article taken out by trafilatura a
 Markdown path. Too little text (`web-notext`), a refusal (`web-blocked`), and a link to a PDF (fetched, then read as a
 dropped PDF) each have their own answer.
 
+A Zotero library (`zotero.py`): **Zotero library**, under the landing's drop zone and at the foot of the sidebar,
+opens the library chosen (the reader's own, or a group) as Zotero shows it, its collections at the left and the items
+of the one chosen at the right, through Zotero Desktop's local API (`localhost:23119`, read only, on once the reader
+allows other applications to talk to Zotero). `POST /api/zotero/read` reads an item by the best text it has: its arXiv
+paper when it names one, handed back to the page to generate as a pasted link is; else its file (a PDF, an EPUB, a saved
+page, a Word file), where Zotero says it is or in its `storage/`, given to `take_file` as a dropped file is, with its
+DOI as the PDF's `X-Refs`; else its DOI. A file is read only when it is one TextFold reads (a PDF by its first bytes,
+any other by its name), and a file name that leaves `storage/` is not followed. `zotero.json`, in the data folder,
+says which item became which document, so the library marks what is open. The page may change the library chosen and
+nothing else: Zotero's address and data folder (`"zotero": {"base", "data_dir"}`) are set in the settings file only.
+`tests/test_zotero.py` runs it all against a fake Zotero.
+
 `TEXTFOLD_NO_MODELS=1` makes a server find no model at all (no agent, no bridge, no provider): for test servers and CI,
 so that nothing calls a model by accident. Without a model a document is still fetched and parsed, and reads as written.
 
@@ -316,6 +328,7 @@ textfold/pdfdoc.py   a converted PDF as a document: MinerU's structured output i
 textfold/office.py   Word, PowerPoint, Excel, CSV, EPUB and saved web pages read without the engine, in its shape
 textfold/omml.py     Office's formulas (OMML) as LaTeX
 textfold/pdf.py      a paper's original PDF for the side-by-side view (source.pdf)
+textfold/zotero.py   a Zotero library through Zotero Desktop's local API; an item read as a link or a dropped file
 textfold/tokens.py   tokenizer, sentence splitter, LCS alignment
 textfold/ladder.py   one model call per section; validation; written words aligned to source words for the morph
 textfold/links.py    argument links, one call over the whole paper
@@ -331,7 +344,7 @@ textfold/build.py    reader pages: app mode (served) and static mode (one file)
 textfold/notes.py    the reader's notes (docs/notes-format.md) and questions answered by the model
 textfold/fold.py     the TextFold format (docs/format.md) and a document at one level as Markdown (python3 -m textfold get)
 textfold/web/   reader.js (render + FLIP morph), app.js (sidebar, landing, settings, jobs), i18n.js, CSS, templates
-tests/          python3 -m unittest discover tests: the arXiv page's safety pass (no other packages needed)
+tests/          python3 -m unittest discover tests: the arXiv page's safety pass, the Zotero library (a fake Zotero)
 tools/zoombench.py  zoom smoothness as the screen sees it (GPU, 2x, Chrome's frame trace), on out/compare/<id>/ pages
 tools/readme_assets.py  the README's pictures, made from a real paper in the reader
 ```

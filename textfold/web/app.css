@@ -51,8 +51,10 @@
 @media (prefers-reduced-motion: reduce) { .rail-open.busy::after { animation: none; } }
 .sb-empty { padding: 10px 9px; font-size: 13px; color: var(--faint); }
 .sb-foot { border-top: 1px solid var(--line-2); padding: 10px 12px 14px; }
-.sb-settings, .sb-help { width: 100%; text-align: left; border: 0; background: none; font: 550 13px var(--sans); color: var(--ink-2); padding: 6px 4px; border-radius: 7px; cursor: pointer; }
-.sb-settings:hover, .sb-help:hover { background: var(--surface); }
+.sb-settings, .sb-help, .sb-zotero { width: 100%; text-align: left; border: 0; background: none; font: 550 13px var(--sans); color: var(--ink-2); padding: 6px 4px; border-radius: 7px; cursor: pointer; }
+.sb-settings:hover, .sb-help:hover, .sb-zotero:hover { background: var(--surface); }
+.sb-zotero { display: flex; align-items: center; gap: 6px; }
+.sb-zotero svg { width: 15px; height: 15px; flex: none; }
 /* its edge, dragged to change its width */
 .sb-resize { position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; cursor: col-resize; touch-action: none; z-index: 1; }
 .sb-resize::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: var(--accent); opacity: 0; transition: opacity .15s; }
@@ -257,3 +259,36 @@ dialog.settings::backdrop { background: rgba(30, 25, 15, .28); }
 .st-pick .st-label { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); margin-bottom: 2px; }
 .st-pick label { display: flex; gap: 6px; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-pick em { color: var(--r-gap); font-style: normal; }
+
+/* a Zotero library (zotero.py): the button under the drop zone; the dialog, its collections at the left and the items
+   of the one chosen at the right */
+.zlib-open { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 10px; padding: 11px 16px;
+  font: 550 14px var(--sans); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 14px; cursor: pointer;
+  transition: border-color .15s, color .15s; }
+.zlib-open svg { width: 20px; height: 20px; flex: none; }
+.zlib-open:hover, .zlib-open:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+dialog.settings.zlib { width: min(980px, calc(100vw - 32px)); }
+.zl-head { display: flex; align-items: center; gap: 12px; }
+.zl-head h2 { margin: 0 !important; flex: 1; }
+.st .zl-lib { font-size: 14px; padding: 6px 10px; max-width: 45%; }
+.st.zlb button.zl-x:not(.primary) { font: 22px/1 var(--sans); border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; }
+.st.zlb .st-note.warn { margin-top: 12px; }
+.zlb .zl-q { margin: 14px 0 10px; }
+.zl-body { display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 14px; height: min(62vh, 640px); }
+.zl-tree, .zl-items { overflow: auto; border: 1px solid var(--line-2); border-radius: 10px; padding: 6px; }
+.zl-tree ul { list-style: none; margin: 0; padding: 0 0 0 12px; } .zl-tree > ul { padding-left: 0; }
+.zl-col { display: flex; align-items: center; gap: 2px; padding: 4px 6px; border-radius: 7px; font-size: 13.5px; cursor: pointer; color: var(--ink-2); }
+.zl-col span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zl-col:hover { background: var(--surface); } .zl-col.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.st.zlb button.zl-tw:not(.primary) { width: 18px; height: 18px; flex: none; border: 0; background: none; box-shadow: none; appearance: none; color: var(--faint); cursor: pointer; font-size: 11px; padding: 0; }
+.zl-item { display: flex; align-items: center; gap: 12px; padding: 9px 8px; border-bottom: 1px dashed var(--line-2); }
+.zl-tx { flex: 1; min-width: 0; }
+.zl-t { font: 550 14px/1.35 var(--serif); color: var(--ink); overflow-wrap: anywhere; }
+.zl-m { margin-top: 2px; font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.zl-m code { font: 11.5px var(--mono); color: var(--faint); overflow-wrap: anywhere; }
+.zl-m em { font-style: normal; font-size: 11px; padding: 0 6px; border-radius: 5px; border: 1px solid var(--line-2); color: var(--muted); }
+.st .zl-go { flex: none; font: 600 12.5px var(--sans); border-radius: 8px; padding: 5px 12px; cursor: pointer; text-decoration: none;
+  border: 1px solid var(--accent); color: var(--accent); background: none; }
+.st .zl-go.primary { border: 0; color: #fff; background: var(--accent); }
+.zl-no { flex: none; font-size: 12px; color: var(--faint); }
+@media (max-width: 720px) { .zl-body { grid-template-columns: 1fr; height: auto; } .zl-tree { max-height: 30vh; } .zl-items { max-height: 50vh; } }

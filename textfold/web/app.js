@@ -29,10 +29,13 @@
   let jobs = BOOT.jobs || [];
   let modelName = BOOT.model || '';       // the model generations use, as the settings name it
   const t = () => I18N.t(uiLang);
+  // an item picked in the Zotero library: on the landing it is read there; from a paper's page it goes there to be (?zotero=)
+  let pickItem = (item, title) => { location.href = `/?zotero=${encodeURIComponent(item)}&t=${encodeURIComponent(title)}`; };
 
   // ── sidebar ──────────────────────────────────────────────────────────
   const side = document.getElementById('sidebar');
   const MARK = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect class="m1" x="2" y="3" width="16" height="2.4" rx="1.2"/><rect class="m2" x="2" y="8.8" width="11" height="2.4" rx="1.2"/><rect class="m3" x="2" y="14.6" width="5" height="2.4" rx="1.2"/></svg>';
+  const BOOKS = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3.5h3v13H4z"/><path d="M8.5 3.5h3v13h-3z"/><path d="M13 4.2l2.8-.7 2.6 12.3-2.8.7z"/></svg>';
   const LIST = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3.5" width="15" height="13" rx="2.5"/><path d="M7.5 3.5v13"/></svg>';
   // a paper opens in the language last read in, else the interface's, else its first
   const pick = (p) => [store.get('dr-lang'), uiLang].find((l) => l && p.langs.includes(l)) || p.langs[0] || 'en';
@@ -86,7 +89,7 @@
       <a class="sb-new" href="/">＋ ${esc(T.new_paper)}</a>
       ${groups.length > 1 ? '' : `<div class="sb-label">${esc(groups.length ? groups[0][0] : T.papers)}</div>`}
       <nav class="sb-list">${pending.map(pend).join('')}${listed_ || (pending.length ? '' : `<div class="sb-empty">${esc(T.empty)}</div>`)}</nav>
-      <div class="sb-foot"><button type="button" class="sb-settings">⚙ ${esc(T.settings)}</button>${window.TFTutorial && PAPER ? `<button type="button" class="sb-help">? ${esc(T.tut_open)}</button>` : ''}<div class="sb-model">${esc(modelLabel())}</div></div>
+      <div class="sb-foot"><button type="button" class="sb-zotero">${BOOKS}${esc(T.z_lib)}</button><button type="button" class="sb-settings">⚙ ${esc(T.settings)}</button>${window.TFTutorial && PAPER ? `<button type="button" class="sb-help">? ${esc(T.tut_open)}</button>` : ''}<div class="sb-model">${esc(modelLabel())}</div></div>
       <div class="sb-resize" role="separator" aria-orientation="vertical" tabindex="0" title="${esc(T.sb_resize)}" aria-label="${esc(T.sb_resize)}"></div>`;
     // polled every second while something generates: drawn again only when it changed, and where it was scrolled to
     const busy = jobs.some(live);
@@ -98,6 +101,7 @@
     side.querySelector('.sb-toggle').onclick = () => setCollapsed(true);
     side.querySelector('.rail-open').onclick = () => setCollapsed(false);
     side.querySelectorAll('.sb-settings, .rail-settings').forEach((b) => { b.onclick = openSettings; });
+    side.querySelector('.sb-zotero').onclick = () => openLibrary();
     side.querySelectorAll('.sb-help, .rail-help').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); window.TFTutorial.open(uiLang); }; });
     side.querySelectorAll('.sb-del').forEach((b) => { b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); deletePaper(b.dataset.del); }; });
     side.querySelectorAll('.sb-stop').forEach((b) => { b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); stopJob(b.dataset.stop); }; });
@@ -263,7 +267,8 @@
     : msg === 'not-markdown' || msg === 'empty' || msg === 'not-supported' ? t().md_only : msg === 'no-fulltext' ? t().no_fulltext
     : msg === 'no-readme' ? t().no_readme : msg === 'github-limit' ? t().github_limit : msg === 'needs-engine' ? t().pdf_needs
     : msg === 'busy' ? t().engine_busy : msg === 'not-pdf' ? t().not_pdf : msg === 'too-large' ? t().pdf_large
-    : msg === 'bad-file' ? t().file_bad : msg === 'web-notext' ? t().web_notext : msg === 'web-pdf' ? t().web_pdf : msg === 'web-blocked' ? t().web_blocked : msg);
+    : msg === 'bad-file' ? t().file_bad : msg === 'no-file' ? t().no_file : msg === 'not-running' ? t().z_off : msg === 'api-off' ? t().z_api_off
+    : msg === 'web-notext' ? t().web_notext : msg === 'web-pdf' ? t().web_pdf : msg === 'web-blocked' ? t().web_blocked : msg);
 
   // ── on a reader page: generate a language, or regenerate the current one ──
   if (PAPER) {
@@ -394,6 +399,7 @@
     document.getElementById('sources').title = T.sources_tip;
     document.getElementById('dropzone-t').textContent = T.drop_zone;
     document.getElementById('dropzone-k').textContent = T.drop_types;
+    document.getElementById('zlib-open-t').textContent = T.z_lib;
     document.getElementById('ui-help-t').textContent = T.tut_open;
     document.getElementById('ui-help').title = T.tut_open;
     document.getElementById('open-settings').textContent = T.settings;
@@ -510,11 +516,36 @@
       try {
         const d = await uploadFile(file, lang);
         if (latest !== mine) return;
-        if (d.needs === 'engine') { engineCard(d.upload, file.name); return; }
-        if (d.paper) { location.href = `/p/${d.paper}?lang=${encodeURIComponent(lang)}`; return; }   // read already
-        watch(d.job, onCard(d.via === 'online' ? null : file.name, mine, d.via === 'online' ? t().pdf_online.replace('{ref}', d.ref) : ''));
+        took(d, file.name, mine, lang);
       } catch (x) { card.hidden = true; fail(errText(x.message)); }
     }
+    // the server's reply to a file: the engine it waits for, the document read already, or the job that reads it
+    function took(d, name, mine, lang) {
+      if (d.needs === 'engine') { engineCard(d.upload, name); return; }
+      if (d.paper) { location.href = `/p/${d.paper}?lang=${encodeURIComponent(lang)}`; return; }   // read already
+      watch(d.job, onCard(d.via === 'online' ? null : name, mine, d.via === 'online' ? t().pdf_online.replace('{ref}', d.ref) : ''));
+    }
+    // an item of the Zotero library (zotero.py): its paper online, generated as a link is; else its file, read as a
+    // file dropped here is
+    async function readItem(item, title) {
+      err.hidden = true;
+      const lang = sel.value, mine = {};
+      latest = mine;
+      card.hidden = false;
+      card.innerHTML = `<div class="jc-t">${esc(title)}</div><div class="jc-s">${esc(t().file_reading)}</div><span class="sb-prog"><i style="width:4%"></i></span>`;
+      try {
+        const d = await api('/api/zotero/read', { item, lang });
+        if (latest !== mine) return;
+        if (d.ref) {
+          if (!modelName) { card.hidden = true; fail(t().no_model); return; }
+          start(d.ref, title);
+          return;
+        }
+        took(d, d.name || title, mine, lang);
+      } catch (x) { card.hidden = true; fail(errText(x.message)); }
+    }
+    pickItem = readItem;
+    document.getElementById('zlib-open').onclick = () => openLibrary();
     form.onsubmit = async (e) => {
       e.preventDefault();
       err.hidden = true;
@@ -561,6 +592,7 @@
       history.replaceState(null, '', '/');
       if (modelName) start(started.get('start'), started.get('t')); else fail(t().no_model);
     }
+    if (started.get('zotero')) { history.replaceState(null, '', '/'); readItem(started.get('zotero'), started.get('t') || ''); }
     // a PDF dropped on a paper's page, uploaded there: its job followed here, or the engine it waits for
     if (started.get('engine')) { history.replaceState(null, '', '/'); engineCard(started.get('engine'), started.get('t') || ''); }
     if (started.get('follow')) {
@@ -572,6 +604,96 @@
       if (job) watch(job, onCard(ref ? null : started.get('t'), mine, ref ? t().pdf_online.replace('{ref}', ref) : ''));
     }
     if (jobs.some(live)) startPolling();
+  }
+
+  // ── a Zotero library (zotero.py): its collections as Zotero shows them, each item read in a click ──
+  async function openLibrary() {
+    const dlg = h('dialog', 'settings zlib'); document.body.append(dlg);
+    const COL = 'pf-zotero-col';
+    let st = { ok: true, libraries: [] }, cols = [], items = null, col = store.get(COL) || '', query = '', timer = null, seq = 0;
+    const opened = new Set();
+    const q = (sel) => dlg.querySelector(sel);
+    const lib = () => st.library || '';
+    async function load() {
+      st = await api('/api/zotero').catch((x) => ({ ok: false, error: x.message, libraries: [] }));
+      cols = [];
+      if (st.ok && lib()) {
+        cols = await api(`/api/zotero/collections?lib=${encodeURIComponent(lib())}`).catch(() => []);
+        if (col && !cols.some((c) => c.key === col)) col = '';
+        // the chosen collection's parents open, so it shows in the tree
+        for (let c = cols.find((x) => x.key === col); c && c.parent; c = cols.find((x) => x.key === c.parent)) opened.add(c.parent);
+      }
+      render(); list();
+    }
+    async function list() {
+      items = null; renderItems();
+      if (!st.ok || !lib()) return;
+      const mine = ++seq;
+      const qs = new URLSearchParams({ lib: lib(), collection: query ? '' : col, q: query });
+      const got = await api(`/api/zotero/items?${qs}`).catch(() => []);
+      if (mine === seq) { items = got; renderItems(); }
+    }
+    function tree(parent) {
+      return cols.filter((c) => c.parent === parent).map((c) => {
+        const kids = cols.some((x) => x.parent === c.key), open = opened.has(c.key);
+        return `<li><div class="zl-col${c.key === col && !query ? ' on' : ''}" data-col="${esc(c.key)}">` +
+          `<button type="button" class="zl-tw" data-tw="${esc(c.key)}"${kids ? '' : ' disabled'}>${kids ? (open ? '▾' : '▸') : ''}</button>` +
+          `<span>${esc(c.name)}</span></div>${kids && open ? `<ul>${tree(c.key)}</ul>` : ''}</li>`;
+      }).join('');
+    }
+    const treeHtml = () => `<div class="zl-col${!col && !query ? ' on' : ''}" data-col=""><span>${esc(t().z_all)}</span></div><ul>${tree('')}</ul>`;
+    function render() {
+      const T = t();
+      const libs = (st.libraries || []).map((l) => `<option value="${esc(l.id)}"${l.id === lib() ? ' selected' : ''}>${esc(l.name || T.z_mine)}</option>`).join('');
+      dlg.innerHTML = `<div class="st zlb"><div class="zl-head"><h2>${esc(T.z_lib)}</h2>
+          ${st.ok && libs ? `<select class="zl-lib" aria-label="${esc(T.z_lib)}">${libs}</select>` : ''}
+          <button type="button" class="zl-x" aria-label="${esc(T.st_close)}">×</button></div>
+        ${!st.ok ? `<p class="st-note warn">${esc(st.error === 'api-off' ? T.z_api_off : T.z_off)}</p>` : ''}
+        ${st.ok && lib() ? `<input class="st-search zl-q" type="search" placeholder="${esc(T.z_search)}" value="${esc(query)}">
+          <div class="zl-body"><nav class="zl-tree">${treeHtml()}</nav><div class="zl-items"></div></div>` : ''}</div>`;
+      q('.zl-x').onclick = () => dlg.close();
+      const ls = q('.zl-lib');
+      if (ls) ls.onchange = async () => { st = await api('/api/zotero/library', { library: ls.value }).catch(() => st); col = ''; store.set(COL, ''); load(); };
+      const box = q('.zl-q');
+      if (box) box.oninput = () => { clearTimeout(timer); timer = setTimeout(() => { query = box.value.trim(); renderTree(); list(); }, 300); };
+      wireTree();
+      renderItems();
+    }
+    function renderTree() { const n = q('.zl-tree'); if (!n) return; n.innerHTML = treeHtml(); wireTree(); }
+    function wireTree() {
+      dlg.querySelectorAll('.zl-col').forEach((n) => { n.onclick = () => {
+        col = n.dataset.col; store.set(COL, col); query = ''; if (q('.zl-q')) q('.zl-q').value = ''; renderTree(); list();
+      }; });
+      dlg.querySelectorAll('.zl-tw').forEach((b) => { b.onclick = (e) => {
+        e.stopPropagation(); if (opened.has(b.dataset.tw)) opened.delete(b.dataset.tw); else opened.add(b.dataset.tw); renderTree();
+      }; });
+    }
+    function renderItems() {
+      const box = q('.zl-items');
+      if (!box) return;
+      const T = t();
+      if (items === null) { box.innerHTML = '<p class="st-note">…</p>'; return; }
+      if (!items.length) { box.innerHTML = `<p class="st-note">${esc(T.z_none)}</p>`; return; }
+      box.innerHTML = items.map((it, i) => {
+        const who = it.authors.length > 2 ? `${it.authors[0]} et al.` : it.authors.join(', ');
+        const p = it.paper && papers.find((x) => x.id === it.paper);
+        const act = it.paper ? `<a class="zl-go" href="/p/${esc(it.paper)}${p ? `?lang=${pick(p)}` : ''}">${esc(T.z_open)}</a>`
+          : it.arxiv || it.file || it.doi || it.children ? `<button type="button" class="zl-go primary" data-i="${i}">${esc(T.z_read)}</button>`
+          : `<span class="zl-no">${esc(T.z_nofile)}</span>`;
+        const tags = [it.arxiv ? 'arXiv' : '', it.file].filter(Boolean).map((x) => `<em>${esc(x)}</em>`).join('');
+        return `<div class="zl-item"><div class="zl-tx"><div class="zl-t">${esc(it.title)}</div>` +
+          `<div class="zl-m">${esc([who, it.year].filter(Boolean).join(' · '))}${it.citekey ? ` <code>${esc(it.citekey)}</code>` : ''}${tags}</div></div>${act}</div>`;
+      }).join('');
+      box.querySelectorAll('button.zl-go').forEach((b) => { b.onclick = () => {
+        const it = items[+b.dataset.i];
+        dlg.close();
+        pickItem(`${lib()}/${it.key}`, it.title);
+      }; });
+    }
+    dlg.addEventListener('close', () => dlg.remove());
+    dlg.innerHTML = '<div class="st zlb"><p class="st-note">…</p></div>';
+    dlg.showModal();
+    load();
   }
 
   // ── settings: the model, the agents on this computer, the API providers (ThoughtDAG's model access) ──
