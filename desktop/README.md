@@ -1,0 +1,66 @@
+# TextFold as an app
+
+The same local server and reader in one window, with its own Python, so a reader needs nothing installed. Agents
+on the computer (Claude Code, Codex, Pi), the ChatGPT bridge and API providers work as they do in the browser.
+What you read is kept where `python3 -m textfold serve` keeps it, so the two share one library: on a Mac
+`~/Library/Application Support/TextFold/`, on Windows `%LOCALAPPDATA%\TextFold\`. Settings and keys are in
+`~/.textfold/`. `TEXTFOLD_DATA` points the app at another folder, as it does the server.
+
+| System | File | Signed |
+|---|---|---|
+| macOS, Apple silicon | `TextFold-<version>-mac-arm64.dmg` (and `.zip`) | yes, and notarized |
+| macOS, Intel | `TextFold-<version>-mac-x64.dmg` (and `.zip`) | yes, and notarized |
+| Windows, 64-bit | `TextFold-<version>-win-x64-setup.exe` | not yet: SmartScreen asks once, More info › Run anyway |
+
+## Build
+
+```bash
+cd desktop
+npm install
+npm run pack:mac      # unsigned, out/mac-<arch>/TextFold.app: to try it
+npm run dist:mac      # Apple silicon: signed and notarized .dmg and .zip (needs the signing environment below)
+npm run dist:mac:x64  # Intel, on an Intel Mac or on Apple silicon (its Python runs under Rosetta)
+npm run dist:win      # Windows, on Windows: the setup .exe
+```
+
+`npm run payload` (run by each) downloads a standalone CPython 3.12 for the system (python-build-standalone),
+installs `requirements.txt` into it and copies `textfold/` (the reader's pages inside it) beside it, in
+`desktop/payload/`. Build outside a synced folder (Dropbox, iCloud Drive), or have it skip `desktop/node_modules`,
+`desktop/payload` and `desktop/out` (several hundred MB).
+
+Before it ships, that Python runs TextFold's tests, reads a Markdown, an HTML and a CSV file without a model, and
+serves the reader with them listed:
+
+```bash
+payload/python/bin/python3 scripts/smoke.py      # payload\python\python.exe scripts\smoke.py on Windows
+```
+
+## Releases
+
+`.github/workflows/desktop.yml` builds the three on their own systems (macos-15, macos-15-intel, windows-latest) when a
+version is tagged, as `publish.yml` sends the package to PyPI. They go into a draft release, published once all three
+have succeeded. The tag, `textfold/__init__.py` and this folder's `package.json` name the same version, or nothing is
+built. Run by hand (Actions › desktop › Run workflow), the files are the run's artifacts.
+
+## Signing and notarization
+
+The Developer ID certificate and the Apple account are the ones ThoughtDAG's desktop build uses; nothing is tied
+to one app. The repository's secrets:
+
+| Secret | What |
+|---|---|
+| `MAC_CERT_P12_BASE64` | the Developer ID Application certificate, exported as .p12, in base64 |
+| `MAC_CERT_PASSWORD` | the .p12's password |
+| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | for notarization |
+
+On a computer, the same names without the prefix: `CSC_LINK` (the .p12's path or its base64) and `CSC_KEY_PASSWORD`,
+then the three Apple ones. The app id is `io.github.chenxiachan.textfold`. electron-builder signs every Mach-O file
+in the bundle, the bundled Python and its compiled modules included, with the hardened runtime and
+`build/entitlements.mac.plist`.
+
+## Windows
+
+The server runs with no console window of its own, and the programs it starts (agents, MinerU, npx) start without
+one either (`server._quiet_children`). An agent installed by npm is a `.cmd` shim, which would pass its arguments
+through cmd.exe; the script it names is run by node instead (`agents.argv`). The installer is per user, in
+`%LOCALAPPDATA%\Programs\TextFold`.

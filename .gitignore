@@ -12,12 +12,14 @@ tools/modelbench/
 tools/zoombench_ext.py
 research/
 launch/
-# the desktop app is built from its own repository
-desktop/
+# the app: its build tools, the runtime it ships, and the packages it makes
+desktop/node_modules/
+desktop/payload/
+desktop/out/
 # the maintainer's working log, kept on this computer
 STATUS.md
 
-# a pip build from the clone
-build/
-dist/
+# a pip build from the clone (desktop/build/ is the app's icon and entitlements)
+/build/
+/dist/
 *.egg-info/

@@ -44,6 +44,11 @@ Where things are kept: the code in the project (`textfold/`, with the reader's p
 project, or wherever `TEXTFOLD_DATA` points (`PAPERFOLD_DATA`, its earlier name, is read too); settings and keys in
 `~/.textfold/`.
 
+The app (`desktop/`, see its README): an Electron window around the same server, with its own CPython
+(python-build-standalone) and packages, so a reader installs nothing. For macOS, Apple silicon and Intel, signed and
+notarized with the certificate ThoughtDAG uses, and for Windows; each built on its own system by
+`.github/workflows/desktop.yml` when a version is tagged, beside the package for PyPI.
+
 A gallery for a free static host: `tools/gallery.json` lists one paper per field, each with its field and a line on
 why it is worth reading in every gallery language (en, zh, de). `python3 tools/gallery.py --make <model>` generates
 what the list lacks in a folder of its own (`out/gallery/papers`; a paper already in the library starts from there,
@@ -348,7 +353,10 @@ textfold/build.py    reader pages: app mode (served) and static mode (one file)
 textfold/notes.py    the reader's notes (docs/notes-format.md) and questions answered by the model
 textfold/fold.py     the TextFold format (docs/format.md) and a document at one level as Markdown (python3 -m textfold get)
 textfold/web/   reader.js (render + FLIP morph), app.js (sidebar, landing, settings, jobs), i18n.js, CSS, templates
-tests/          python3 -m unittest discover tests: the arXiv page's safety pass, the Zotero library (a fake Zotero)
+tests/          python3 -m unittest discover tests: the arXiv page's safety pass, the Zotero library (a fake Zotero),
+                agents on Windows
+desktop/       the app (its README): Electron around the same server, with its own Python; desktop/scripts/smoke.py
+                checks that Python before it ships (.github/workflows/desktop.yml)
 tools/zoombench.py  zoom smoothness as the screen sees it (GPU, 2x, Chrome's frame trace), on out/compare/<id>/ pages
 tools/readme_assets.py  the README's pictures, made from a real paper in the reader
 ```
