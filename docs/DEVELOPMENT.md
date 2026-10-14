@@ -59,9 +59,10 @@ each paper's static reader, opened at the Topic level. Only papers whose license
 in `out/gallery/fixes/<id>.json`, which the build puts through the same assembly as the model's replies (only the
 corrected fields change; the generated layers stay as they are). The corrections hold the papers' text, so they live in
 the gallery's own repository, github.com/chenxiachan/paperfold-gallery (`fixes/`), not here; the build stops when a
-paper's corrections are missing (`--unproofread` builds without them, for a look only). The site is published from that
-repository by GitHub Pages at https://chenxiachan.github.io/paperfold-gallery/: copy `out/gallery/site` and
-`out/gallery/fixes` into its clone (`out/gallery/deploy`) and push.
+paper's corrections are missing (`--unproofread` builds without them, for a look only). The gallery is served with the
+website, at https://chenxiachan.github.io/textfold/gallery/: copy `out/gallery/site` and `out/gallery/fixes` into that
+repository's clone (`out/gallery/deploy`) and push, then run the website's workflow (Actions › site › Run workflow), which
+takes the gallery from there. The repository's own Pages keeps its old address, each page sending on to its new one.
 
 Models (⚙ Model & API), ported from ThoughtDAG's model access:
 

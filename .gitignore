@@ -23,3 +23,7 @@ STATUS.md
 /build/
 /dist/
 *.egg-info/
+# the website's build (site/build.py): the pages it writes, and the preview with its checks
+site/dist/
+site/preview.html
+site/_*

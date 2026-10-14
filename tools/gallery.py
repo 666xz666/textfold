@@ -33,6 +33,7 @@ LIST = Path(__file__).with_suffix(".json")
 FIXES = ROOT / "out" / "gallery" / "fixes"   # <id>.json: proofreading's corrections; kept with the gallery, as they hold papers' text
 OPEN = ("/licenses/by/", "/licenses/by-sa/", "/licenses/by-nc/", "/licenses/by-nc-sa/", "/publicdomain/zero/")
 REPO = "https://github.com/chenxiachan/textfold"
+SITE = "https://chenxiachan.github.io/textfold/"   # where the gallery is served, at gallery/ (site/build.py --gallery)
 ISSUES = "https://github.com/chenxiachan/paperfold-gallery/issues"
 AUTHOR = "https://chenxiachan.github.io/"
 
@@ -302,6 +303,7 @@ def index(cards, want):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TextFold Gallery</title>
+<link rel="canonical" href="{SITE}gallery/">
 <meta name="description" content="Landmark papers from {n} fields in TextFold: fold any paper from every word to a one-screen map, in English, Chinese and German.">
 <style>
 :root {{ --bg: #FAF9F7; --card: #ffffff; --ink: #1f1d1a; --muted: #6b6558; --line: #e6e1d8; --accent: #6B5CE7; --soft: #efedfd; --warm: #E08A3C; }}
@@ -338,7 +340,7 @@ footer a {{ color: var(--accent); }}
 <main>
   <header><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="2.4" rx="1.2" fill="#6B5CE7"/><rect x="2" y="8.8" width="11" height="2.4" rx="1.2" fill="#6B5CE7" fill-opacity=".4"/><rect x="2" y="14.6" width="5" height="2.4" rx="1.2" fill="#E08A3C"/></svg><h1>TextFold</h1><nav class="langs">{tabs}</nav></header>
   <p class="lede">{each(lambda l: UI[l]["lede"].format(n=n, extra=extra(l)))}</p>
-  <a class="own" href="{REPO}">{each(lambda l: UI[l]["own"])} →</a>
+  <a class="own" href="{SITE}">{each(lambda l: UI[l]["own"])} →</a>
   <div class="grid">
 {"".join(rows)}
   </div>

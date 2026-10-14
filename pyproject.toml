@@ -40,7 +40,7 @@ textfold = "textfold.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/chenxiachan/textfold"
-Gallery = "https://chenxiachan.github.io/paperfold-gallery/"
+Gallery = "https://chenxiachan.github.io/textfold/gallery/"
 Issues = "https://github.com/chenxiachan/textfold/issues"
 
 [tool.setuptools]
