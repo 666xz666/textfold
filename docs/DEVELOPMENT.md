@@ -300,6 +300,7 @@ Frame intervals from requestAnimationFrame in a default headless browser hide mo
 ```
 textfold/fetch.py    arXiv HTML + metadata, figure images
 textfold/parse.py    LaTeXML → units (paragraph, list item, caption) as token streams; math, citations, refs stay atomic
+textfold/latexml_safe.py  what an arXiv page may carry into the reader: scripts, handlers and script URLs out, figures kept
 textfold/semantic.py any semantic HTML → the HTML parse.py reads; the sanitizing boundary
 textfold/markdown.py a Markdown file → semantic HTML (front matter, footnotes, math)
 textfold/local.py    documents from this computer: stored as papers (md-…), with their images
@@ -330,6 +331,7 @@ textfold/build.py    reader pages: app mode (served) and static mode (one file)
 textfold/notes.py    the reader's notes (docs/notes-format.md) and questions answered by the model
 textfold/fold.py     the TextFold format (docs/format.md) and a document at one level as Markdown (python3 -m textfold get)
 textfold/web/   reader.js (render + FLIP morph), app.js (sidebar, landing, settings, jobs), i18n.js, CSS, templates
+tests/          python3 -m unittest discover tests: the arXiv page's safety pass (no other packages needed)
 tools/zoombench.py  zoom smoothness as the screen sees it (GPU, 2x, Chrome's frame trace), on out/compare/<id>/ pages
 tools/readme_assets.py  the README's pictures, made from a real paper in the reader
 ```
