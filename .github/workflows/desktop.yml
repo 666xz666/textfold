@@ -3,8 +3,8 @@
 # Each is built on its own system, since the Python it ships and its packages are that system's, and that Python runs
 # TextFold's tests and reads files before anything is packed (desktop/scripts/smoke.py).
 # A version tag (v0.10.2) builds the three into a draft release, published only when every one has succeeded; run by
-# hand (Actions › desktop › Run workflow) they are kept as the run's artifacts. Without the secrets the Macs' builds are
-# unsigned (electron-builder skips signing when CSC_LINK is empty).
+# hand (Actions › desktop › Run workflow) they are kept as the run's artifacts. Without the signing secrets a build by
+# hand is unsigned (electron-builder skips signing when CSC_LINK is empty); a tag's is refused.
 name: desktop
 on:
   push:
@@ -56,13 +56,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: A tag's Mac app is signed
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
+        run: test -n "$P12" && test -n "$PW" && test -n "$APPLE_ID" || { echo "a signing secret is missing"; exit 1; }
+        env:
+          P12: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          PW: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
       - run: npm ci
         working-directory: desktop
       - run: npm run ${{ matrix.script }}
         working-directory: desktop
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # the payload script asks GitHub for the newest CPython build
-          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CERT_P12_BASE64 || '' }}
+          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CERT_PASSWORD && secrets.MAC_CERT_P12_BASE64 || '' }}
           CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CERT_PASSWORD || '' }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
