@@ -76,6 +76,16 @@ Your agent writes more than you have time to read. A [Claude Code mod](https://c
 </tr>
 </table>
 
+## Works on your Zotero
+
+Click **Zotero library**, under the drop zone, and your library is there as Zotero shows it: your collections, your group libraries, a search. **Read** opens any item.
+
+- **An item on arXiv** opens from arXiv. Any other opens from its PDF, with the PDF beside the text, or from the EPUB, saved web page or Word file it holds. An item with only a DOI opens from Europe PMC.
+- **It keeps what you entered in Zotero:** the title, the authors and the citekey.
+- **It stays on your computer.** TextFold asks the Zotero app you already run, the way citation plugins do: no account, no key, nothing sent to Zotero's servers, and nothing in your library changed.
+
+To turn it on, in Zotero 7: **Settings › Advanced › Allow other applications on this computer to communicate with Zotero**.
+
 ## Get started
 
 ```bash
@@ -93,7 +103,7 @@ Open `http://localhost:3017`. The first time, [connect a model](#connect-a-model
 | A PDF | the paper online when the PDF names one, with your file beside it; any other PDF, converted on your computer by the PDF engine (MinerU, about 3.4 GB, installed once from the landing) |
 | A Word, PowerPoint or Excel file, a CSV, an EPUB, a saved web page | the document with its headings, tables, pictures and formulas: read by TextFold itself, or more completely by the PDF engine once it is installed |
 | A picture | its text, read by the PDF engine |
-| An item of your Zotero library (**Zotero library**, under the drop zone) | its arXiv paper when it has one; else its PDF or other file, read as if you dropped it; else its DOI. TextFold asks the Zotero app on your computer, once **Settings › Advanced › Allow other applications on this computer to communicate with Zotero** is on |
+| An item of your Zotero library | its arXiv paper, else its PDF or other file, else its DOI. [Works on your Zotero ↑](#works-on-your-zotero) |
 | A Markdown or text file | the file as written |
 
 What you read is kept in your system's folder for app data, shared with the desktop app.
@@ -195,7 +205,7 @@ More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plu
 
 ## What's new
 
-- **October 14, 2026: your Zotero library.** **Zotero library**, under the drop zone, shows your library and its collections as Zotero does, and opens any item in a click: from arXiv when it is there, else from its own PDF. Thanks to [@adalach](https://github.com/adalach).
+- **October 14, 2026: your Zotero library.** **Zotero library**, under the drop zone, shows your library and its collections as Zotero does, and opens any item in a click: from arXiv when it is there, else from its own PDF. Thanks to [@adalach](https://github.com/adalach). [Works on your Zotero ↑](#works-on-your-zotero)
 - **October 14, 2026: arXiv pages, read more safely.** What could run script in a page is taken out before the reader draws it, and its figures stay as they were. Thanks to [@neil-patel77](https://github.com/neil-patel77).
 - **October 13, 2026: save a page as one file.** **Save**, at the top of the reader, keeps the page as one HTML file, with your notes and its original PDF if you like, or only your notes. [Save a page ↓](#save-a-page)
 - **October 13, 2026: Word, PowerPoint, Excel, e-books and more.** Drop a Word, PowerPoint or Excel file, a CSV, an EPUB or a saved web page, and it opens at once, formulas included, with nothing more to install.

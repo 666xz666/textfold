@@ -76,6 +76,16 @@ Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.
 </tr>
 </table>
 
+## 直接读你的 Zotero
+
+点拖放框下面的 **Zotero 文献库**，你的文献库就按 Zotero 里的样子出现：分类、群组文献库、搜索都在。任何条目点 **阅读** 就能打开。
+
+- **arXiv 上有的条目**，从 arXiv 读。其他条目读它的 PDF，PDF 放在旁边对照；没有 PDF 就读它附带的 EPUB、保存的网页或 Word 文件。只有 DOI 的条目，从 Europe PMC 读。
+- **你在 Zotero 里填的信息都保留**：标题、作者和 citekey。
+- **一切都在你的电脑上。** TextFold 读的是你已经在用的 Zotero 应用，和引文插件的方式一样：不需要账号和密钥，不向 Zotero 的服务器发送任何东西，也不会改动你的文献库。
+
+打开方法：在 Zotero 7 里勾选 **设置 › 高级 › 允许此计算机上的其他应用程序与 Zotero 通信**。
+
 ## 开始使用
 
 ```bash
@@ -93,7 +103,7 @@ python3 -m textfold serve
 | PDF | 如果它是网上能读到的论文，就读网上的版本，你的文件放在旁边对照；其他 PDF 由 PDF 引擎在你的电脑上转换（MinerU，约 3.4 GB，在首页安装一次即可） |
 | Word、PowerPoint、Excel 文件，CSV、EPUB、保存的网页 | 文档本身，标题、表格、图片和公式都保留：不装引擎 TextFold 自己就能读，装了 PDF 引擎读得更完整 |
 | 图片 | 由 PDF 引擎识别出的文字 |
-| Zotero 文献库里的条目（拖放框下面的 **Zotero 文献库**） | 有 arXiv 版本就读 arXiv；否则读它的 PDF 或其他附件，和你直接拖进来一样；再没有就按 DOI 读。TextFold 读的是你电脑上的 Zotero 应用，需要先在 Zotero 里打开 **设置 › 高级 › 允许此计算机上的其他应用程序与 Zotero 通信** |
+| Zotero 文献库里的条目 | 有 arXiv 版本就读 arXiv，否则读它的 PDF 或其他附件，再没有就按 DOI 读。[直接读你的 Zotero ↑](#直接读你的-zotero) |
 | Markdown 或纯文本文件 | 原样的文件 |
 
 读过的文档保存在系统存放应用数据的文件夹里，和桌面 App 共用。
@@ -195,7 +205,7 @@ claude plugin install textfold@textfold
 
 ## 最新
 
-- **2026 年 10 月 14 日：直接读你的 Zotero 文献库。** 拖放框下面的 **Zotero 文献库** 按 Zotero 里的样子列出你的文献库和分类，任何条目点一下就能打开：arXiv 上有就读 arXiv，没有就读它自己的 PDF。感谢 [@adalach](https://github.com/adalach)。
+- **2026 年 10 月 14 日：直接读你的 Zotero 文献库。** 拖放框下面的 **Zotero 文献库** 按 Zotero 里的样子列出你的文献库和分类，任何条目点一下就能打开：arXiv 上有就读 arXiv，没有就读它自己的 PDF。感谢 [@adalach](https://github.com/adalach)。[直接读你的 Zotero ↑](#直接读你的-zotero)
 - **2026 年 10 月 14 日：读 arXiv 页面更安全了。** 页面里可能运行脚本的部分，会在阅读器显示之前去掉，图都保持原样。感谢 [@neil-patel77](https://github.com/neil-patel77)。
 - **2026 年 10 月 13 日：把一页存成一个文件。** 阅读页顶部的 **保存** 把整页存成一个 HTML 文件，可以带上标注和原文 PDF；也可以只存标注。[保存一页 ↓](#保存一页)
 - **2026 年 10 月 13 日：Word、PowerPoint、Excel、电子书等文件。** 拖入 Word、PowerPoint、Excel 文件，或 CSV、EPUB、保存的网页，马上就能打开，公式也在，不用另装任何东西。
