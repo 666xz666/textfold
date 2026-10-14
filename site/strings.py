@@ -2,7 +2,7 @@
 # Every claim here is the README's or the app's own (versions, systems, file names); keep them true when either changes.
 # Few words: what the page must say and nothing the README says better (it links there).
 
-VERSION = "0.10.2"
+VERSION = "0.10.3"
 SITE = "https://chenxiachan.github.io/textfold/"
 REPO = "https://github.com/chenxiachan/textfold"
 DL = REPO + "/releases/latest/download/"
@@ -20,6 +20,8 @@ S = {
 
     "nav_download": ('Download',
         '下载'),
+    "nav_gallery": ('Gallery',
+        '在线试用'),
     "nav_pipe": ('Pipeline',
         '接入流程'),
     "nav_docs": ('Docs',

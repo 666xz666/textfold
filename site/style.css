@@ -126,7 +126,10 @@ main > section.wrap { padding-block: 80px 0; }
 }
 @media (max-width: 620px) {
   :root { --gutter: 16px; }
-  .nav nav .opt { display: none; }
+  .nav { gap: 10px; }
+  .nav nav { gap: 2px; }
+  .nav nav a { font-size: 13.5px; padding: 6px 7px; }
+  .nav nav .opt { display: none; }   /* a phone keeps the gallery: the downloads open the page */
   .hero { padding-top: 40px; }
   }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .cta { transition: none; } }
