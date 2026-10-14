@@ -14,7 +14,8 @@
   const api = (path, body) => fetch(path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error || r.statusText); return d; });
 
-  // the interface's language, the reader's own (settings; else the browser's), apart from the language a paper is read in
+  // the reader's language (settings; else the browser's): the interface speaks it, papers are read and made in it, and a
+  // switch of a paper's language is a switch of it (reader.js)
   const UI_KEY = 'pf-ui-lang';
   let uiLang = [store.get(UI_KEY), I18N.guess()].find((l) => l && I18N.NATIVE[l]) || 'en';
   function setUiLang(code) {
@@ -37,8 +38,8 @@
   const MARK = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect class="m1" x="2" y="3" width="16" height="2.4" rx="1.2"/><rect class="m2" x="2" y="8.8" width="11" height="2.4" rx="1.2"/><rect class="m3" x="2" y="14.6" width="5" height="2.4" rx="1.2"/></svg>';
   const BOOKS = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3.5h3v13H4z"/><path d="M8.5 3.5h3v13h-3z"/><path d="M13 4.2l2.8-.7 2.6 12.3-2.8.7z"/></svg>';
   const LIST = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3.5" width="15" height="13" rx="2.5"/><path d="M7.5 3.5v13"/></svg>';
-  // a paper opens in the language last read in, else the interface's, else its first
-  const pick = (p) => [store.get('dr-lang'), uiLang].find((l) => l && p.langs.includes(l)) || p.langs[0] || 'en';
+  // a paper opens in the reader's language, else the one last read in, else its first
+  const pick = (p) => [uiLang, store.get('dr-lang')].find((l) => l && p.langs.includes(l)) || p.langs[0] || 'en';
   const modelLabel = () => modelName;
   const live = (j) => j.status === 'queued' || j.status === 'running';
   function jobFor(pid) { return jobs.find((j) => j.pid === pid && live(j)); }
@@ -123,7 +124,7 @@
   // an unfinished paper goes on in the language it was last asked for (else the reader's), in the background
   function resume(pid) {
     const last = [...jobs].reverse().find((j) => j.pid === pid);
-    const lang = (last && last.lang) || [store.get('dr-lang'), uiLang].find((l) => l && I18N.NATIVE[l]) || 'en';
+    const lang = (last && last.lang) || uiLang;
     submit(pid, lang, false, () => {}).catch(() => {});
   }
   // a paper off the list, after a prompt that says what goes with it; the server moves its folder to papers/.trash
@@ -288,7 +289,7 @@
       if (forEngine(file)) {
         say(isPdf(file) ? t().pdf_reading : t().file_reading);
         try {
-          const d = await uploadFile(file, (window.__reader && window.__reader.lang) || store.get('dr-lang') || uiLang);
+          const d = await uploadFile(file, uiLang);
           if (d.paper) { location.href = `/p/${d.paper}?lang=${encodeURIComponent(d.job.lang)}`; return; }   // read already
           const q = new URLSearchParams({ t: file.name });
           if (d.needs === 'engine') q.set('engine', d.upload); else { q.set('follow', d.job.id); if (d.via === 'online') q.set('ref', d.ref); }
@@ -338,6 +339,7 @@
         if (u) break;
       }
       try { if (u) sessionStorage.setItem('pf-keep', JSON.stringify({ pid: PAPER.id, uid: u.dataset.u, top: u.getBoundingClientRect().top, level: R && R.level })); } catch { /* private window */ }
+      if (R && lang !== R.lang && I18N.NATIVE[lang]) store.set(UI_KEY, lang);   // a language just made: the interface goes with it
       location.href = `/p/${PAPER.id}?lang=${encodeURIComponent(lang)}`;
     }
     const src = PAPER.source || {};
@@ -358,7 +360,10 @@
       };
     }
     window.DRApp = {
-      onLang() { renderSidebar(); },
+      onLang(lang, ui) {   // (ui: the reader's language, which a switch of the paper's moves)
+        if (ui && ui !== uiLang && I18N.NATIVE[ui]) uiLang = ui;
+        renderSidebar();
+      },
       generate(lang, force) {
         const T = t(), name = I18N.NATIVE[lang];
         if (force && !confirm(`${T.regen} · ${name}?`)) return;
@@ -391,10 +396,11 @@
     document.getElementById('ref').placeholder = T.placeholder;
     document.getElementById('ref').setAttribute('aria-label', T.placeholder);
     document.getElementById('l-lang').textContent = T.read_in;
+    document.getElementById('lang').value = uiLang;
     const ui = document.getElementById('ui-lang');
     ui.value = uiLang;
-    document.getElementById('ui-lang-box').title = T.ui_lang;
-    ui.setAttribute('aria-label', T.ui_lang);
+    document.getElementById('ui-lang-box').title = T.language;
+    ui.setAttribute('aria-label', T.language);
     document.getElementById('go-t').textContent = T.generate;
     document.getElementById('sources').textContent = T.sources;
     document.getElementById('sources').title = T.sources_tip;
@@ -439,16 +445,13 @@
   if (landing) {
     const sel = document.getElementById('lang');
     for (const code of I18N.CODES) sel.append(Object.assign(h('option'), { value: code, textContent: I18N.NATIVE[code] }));
-    sel.value = [store.get('dr-lang'), uiLang].find((l) => l && I18N.NATIVE[l]);
-    sel.onchange = () => { store.set('dr-lang', sel.value); store.set('dr-lang-picked', '1'); };
-    // the interface language, top right; until a reader picks the language to read in, that follows it
+    sel.value = uiLang;
+    // the language, top right, and the one to read in, beside the bar: one language, so either moves both
     const ui = document.getElementById('ui-lang');
     for (const code of I18N.CODES) ui.append(Object.assign(h('option'), { value: code, textContent: I18N.NATIVE[code] }));
     ui.value = uiLang;
-    ui.onchange = () => {
-      setUiLang(ui.value);
-      if (!store.get('dr-lang-picked')) sel.value = ui.value;
-    };
+    sel.onchange = () => setUiLang(sel.value);
+    ui.onchange = () => setUiLang(ui.value);
     document.getElementById('open-settings').onclick = openSettings;
     const help = document.getElementById('ui-help');
     if (window.TFTutorial) help.onclick = () => window.TFTutorial.open(uiLang); else help.hidden = true;
@@ -781,7 +784,7 @@
     function render() {
       const t = T();
       dlg.innerHTML = `<div class="st"><h2>${esc(t.settings)}</h2>
-        <section class="st-uilang"><h3>${esc(t.ui_lang)}</h3><select class="st-ui">${I18N.CODES.map((c) => `<option value="${c}"${c === uiLang ? ' selected' : ''}>${esc(I18N.NATIVE[c])}</option>`).join('')}</select></section>
+        <section class="st-uilang"><h3>${esc(t.language)}</h3><select class="st-ui">${I18N.CODES.map((c) => `<option value="${c}"${c === uiLang ? ' selected' : ''}>${esc(I18N.NATIVE[c])}</option>`).join('')}</select></section>
         <section><h3>${esc(t.st_model)}</h3>${modelSection()}</section>
         <section><h3>${esc(t.st_agents)}</h3>${agentSection()}</section>
         <section><h3>${esc(t.st_providers)}</h3>${providerSection()}</section>

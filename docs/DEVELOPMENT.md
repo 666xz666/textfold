@@ -32,11 +32,13 @@ The landing takes a link or ID (arXiv, PubMed Central, Europe PMC, bioRxiv, medR
 file (the dashed box under the bar, or dropped anywhere on the page), and a language; a line under the bar names
 the sources it reads; the sidebar lists every paper generated so far. In a paper,
 the language menu switches between generated languages, generates a new one, or regenerates the current one.
-Two languages. The paper is read in one (the menu at the top right, 12 languages: English, 简体中文, 繁體中文,
-日本語, 한국어, Español, Français, Deutsch, Português, Italiano, Русский, हिन्दी): its text, and the names of its own
-parts (figures, tables, theorems, references, equations). The interface speaks the reader's own: the browser's,
-or the one chosen in Settings (kept in the browser, `pf-ui-lang`). A question is answered in the language it is
-asked in, the interface's when that is unclear.
+One language, the reader's (12 languages: English, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch,
+Português, Italiano, Русский, हिन्दी): the browser's, or the one last chosen (kept in the browser, `pf-ui-lang`). The
+interface speaks it, and a paper is read in it: its text, and the names of its own parts (figures, tables, theorems,
+references, equations). A switch of either is a switch of both: the paper's menu at the top right, a language
+generated there, Settings, or the two menus of the landing. A paper that has not that language yet opens in one it
+has, and the interface stays; nothing is generated unasked. A question is answered in the language it is asked in,
+the interface's when that is unclear.
 
 Where things are kept: the code in the project (`textfold/`, with the reader's pages in `textfold/web/`); papers and exports in `papers/` and `out/` of the
 project, or wherever `TEXTFOLD_DATA` points (`PAPERFOLD_DATA`, its earlier name, is read too); settings and keys in

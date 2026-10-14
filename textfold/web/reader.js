@@ -28,9 +28,10 @@
   const SRC = (D.meta.source || {}).kind;
   const PAPER = ['europepmc', 'biorxiv', 'medrxiv'].includes(SRC) || (!SRC && /^\d{4}\.\d{4,5}$/.test(D.meta.id));
   const T = Object.fromEntries(I18N.CODES.map((c) => [c, I18N.t(c, !PAPER)]));
-  // Two languages. The paper is read in `lang`: its text, and the names of its own parts (figures, tables, theorems,
-  // references, equations). The interface speaks the reader's own, `ui`: chosen in the app's settings, else the
-  // browser's. A Chinese reader of an English paper keeps a Chinese interface.
+  // One language, the reader's. The paper is read in `lang`: its text, and the names of its own parts (figures, tables,
+  // theorems, references, equations). The interface speaks `ui`: chosen in the app's settings, else the browser's. A
+  // switch of either is a switch of both (setLang, setUi). A paper that does not have the reader's language yet opens
+  // in one it has, and the interface stays as it was.
   const UI_KEY = 'pf-ui-lang';
   let ui = (() => { let v = null; try { v = localStorage.getItem(UI_KEY); } catch { /* private window */ } return v && T[v] ? v : I18N.guess(); })();
   const AVAIL = (D.meta.langs && D.meta.langs.length) ? D.meta.langs : ['en'];
@@ -410,7 +411,7 @@
     document.getElementById('back').textContent = `← ${t.back}`;
     for (const uid of unitEl.keys()) renderSide(uid);
     notesForLang();
-    if (window.DRApp) window.DRApp.onLang(lang);
+    if (window.DRApp) window.DRApp.onLang(lang, ui);
   }
 
   // a page read from the web is a snapshot: the day it was read, in the interface's language ("6 October 2026")
@@ -1436,6 +1437,7 @@
     if (!AVAIL.includes(l)) { if (window.DRApp) window.DRApp.generate(l, false); return; }
     if (busy) { queued = () => setLang(l); return; }
     store.set('dr-lang', l);
+    if (T[l]) { ui = l; store.set(UI_KEY, l); }   // the interface goes with the text
     if (D.app) history.replaceState(null, '', `?lang=${encodeURIComponent(l)}${location.hash}`);
     const hot = unitsNear(innerHeight * 1.5, innerHeight * 1.5);
     const band = level === 0 ? null : bandAround(defaultAnchor(), { 4: 30, 3: 45, 2: 60, 1: 150 }[level], hot);
@@ -3293,9 +3295,9 @@ math { font-size: 1.05em; }
     }
     for (const hd of pend) HEAD_IDX.set(hd, IDS.length - 1);
   }
-  // ?lang= (the app), #lang= (a static file), then the last choice, then the browser's languages
+  // ?lang= (the app), #lang= (a static file), then the reader's language, then the one last read in
   const asked = new URLSearchParams(location.search).get('lang') || (/[#&]lang=([\w-]+)/.exec(location.hash) || [])[1];
-  lang = [asked, D.lang, store.get('dr-lang'), I18N.guess(), 'en', AVAIL[0]].find((l) => l && AVAIL.includes(l));
+  lang = [asked, D.lang, ui, store.get('dr-lang'), 'en', AVAIL[0]].find((l) => l && AVAIL.includes(l));
   const start = /[#&]level=([^&]+)/.exec(location.hash);
   if (start) {
     const want = decodeURIComponent(start[1]).toLowerCase();
@@ -3330,11 +3332,12 @@ math { font-size: 1.05em; }
       if (typeof k.level === 'number' && k.level !== level) { setLevel(k.level); setTimeout(back, DUR + 120); } else back();
     }
   } catch { /* private window */ }
+  // the interface's language, from the app's settings: the text goes with it when the paper has that language
   function setUi(code) {
     if (!T[code] || code === ui) return;
     ui = code;
-    try { localStorage.setItem(UI_KEY, code); } catch { /* private window */ }
-    applyLang();
+    store.set(UI_KEY, code);
+    if (AVAIL.includes(code) && code !== lang) setLang(code); else applyLang();
   }
   window.__reader = { setLevel, setLang, setUi, get ui() { return ui; }, zoomBy,
     get compared() { if (!cmp || !cmp.grams) return null; const ids = [...order.keys()]; return { units: ids.length, found: ids.filter((id) => locate(id)).length, words: cmp.words.length }; }, get level() { return level; }, get lang() { return lang; }, get pos() { return pos; },
