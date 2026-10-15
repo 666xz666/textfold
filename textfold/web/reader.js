@@ -1962,7 +1962,13 @@
   });
   // questions to start from, or to go on with: a click puts one in the field, to be sent as it is or changed first
   const tryRow = (list, label) => `<div class="ch-try">${label ? `<span>${esc(label)}</span>` : ''}${list.map((q) => `<button type="button" class="np-ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`;
-  function fillAsk(field, q) { if (!field) return; field.value = q; field.focus(); field.setSelectionRange(q.length, q.length); }
+  function fillAsk(field, q) {
+    if (!field) return;
+    field.value = q;
+    field.dispatchEvent(new Event('input', { bubbles: true }));   // (the send button, lit)
+    field.focus();
+    field.setSelectionRange(q.length, q.length);
+  }
   function turnHtml(x, last, k, del) {
     const t = T[ui];
     const said = x.pending ? `<div class="np-wait">${esc(t.n_thinking)}</div>`
@@ -1973,11 +1979,12 @@
     const out = del && !x.pending ? `<button type="button" class="np-tdel" data-turn="${k}" title="${esc(t.n_turn_del)}" aria-label="${esc(t.n_turn_del)}">×</button>` : '';
     return `<div class="np-turn">${out}<div class="np-q">${esc(x.q)}</div>${said}</div>`;
   }
-  // the field to ask in, with its send button; while a question is under way, the field waits and the button stops it
+  // the field to ask in, with its send button; while a question is under way the button stops it, and the next question
+  // can be written meanwhile, to be sent once the answer is in
   const SEND = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15.5v-11M5.5 9 10 4.5 14.5 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function composer(cls, placeholder, value, waiting) {
     const t = T[ui];
-    return `<div class="np-compose"><textarea class="${cls}" rows="2" placeholder="${esc(placeholder)}"${waiting ? ' disabled' : ''}>${esc(value)}</textarea>` +
+    return `<div class="np-compose"><textarea class="${cls}" rows="2" placeholder="${esc(placeholder)}">${esc(value)}</textarea>` +
       (waiting ? `<button type="button" class="np-stop" title="${esc(t.n_stop)}" aria-label="${esc(t.n_stop)}"><i></i></button>`
         : `<button type="button" class="np-send" title="${esc(t.n_send)}" aria-label="${esc(t.n_send)}"${value.trim() ? '' : ' disabled'}>${SEND}</button>`) + '</div>';
   }
@@ -1994,6 +2001,7 @@
   const turnsOf = (n) => n.thread || (n.ask ? [n.ask] : []);
   function openNote(n, draft = false, back = '') {   // back: a question stopped, in the field again to be put right
     if (whole(n.anchor)) { openChat(n, back); return; }   // a conversation about the whole paper lives in the chat
+    const was = popNote && popNote.id === n.id && npop.querySelector('.np-input'), typed = was ? was.value : '';   // (drawn again: what is written stays)
     popNote = n; popDraft = draft;
     const t = T[ui], a = n.anchor, ask = n.kind === 'ask';
     let body;
@@ -2002,7 +2010,7 @@
       body = turns.map((x, k) => turnHtml(x, k === turns.length - 1, k, !waiting)).join('') +
         (turns.length && turns[turns.length - 1].model ? `<div class="np-model">${esc(turns[turns.length - 1].model)}</div>` : '') +
         (turns.length ? '' : tryRow(t.n_pstarters)) +
-        composer('np-input', turns.some((x) => x.a) ? t.n_more : t.n_ask_ph, waiting ? '' : back || (failed ? turns[turns.length - 1].q : ''), waiting);
+        composer('np-input', turns.some((x) => x.a) ? t.n_more : t.n_ask_ph, back || typed || (failed && !waiting ? turns[turns.length - 1].q : ''), waiting);
     } else {
       body = `<textarea class="np-text" rows="3" placeholder="${esc(t.n_note_ph)}">${esc(n.text || '')}</textarea>`;
     }
@@ -2014,7 +2022,7 @@
     npop.hidden = false;
     placePop();
     npop.scrollTop = npop.scrollHeight;   // the latest turn, and the field to go on
-    const field = npop.querySelector('.np-input:not(:disabled), .np-text');
+    const field = npop.querySelector('.np-input, .np-text');
     if (field) { field.focus(); field.setSelectionRange(field.value.length, field.value.length); }
   }
   function placePop() {
@@ -2045,14 +2053,14 @@
   });
   npop.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closeNote(); return; }
-    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.target.matches('.np-input') && e.target.value.trim()) { e.preventDefault(); askNote(popNote, e.target.value.trim()); }   // Shift+Enter: a new line, as in the chat
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.target.matches('.np-input')) { e.preventDefault(); sendPop(); }   // Shift+Enter: a new line, as in the chat
   });
   npop.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b || !popNote) return;
     const n = popNote;
     if (b.classList.contains('np-ask')) { fillAsk(npop.querySelector('.np-input'), b.dataset.q); return; }
-    if (b.classList.contains('np-send')) { const f = npop.querySelector('.np-input'); if (f.value.trim()) askNote(n, f.value.trim()); return; }
+    if (b.classList.contains('np-send')) { sendPop(); return; }
     if (b.classList.contains('np-stop')) { stopAsk(n); return; }
     if (b.classList.contains('np-tdel')) { deleteTurn(n, +b.dataset.turn); return; }
     if (b.classList.contains('np-cite') && b.dataset.to) { closeNote(); showEvidence(b.dataset.to, targetEl(n.anchor)); return; }
@@ -2136,11 +2144,13 @@
     asking.delete(n.id);
     a.ctl.abort();
     post('/api/ask/stop', { req: a.req }).catch(() => {});
+    const field = whole(n.anchor) ? chat.querySelector('.ch-input') : npop.querySelector('.np-input');
+    const back = field && field.value.trim() ? field.value : a.q;
     // the conversation as it was before the question; a first question, stopped, leaves no note (only the field again)
     const was = a.before && turnsOf(a.before).filter((x) => x.a).length ? { ...a.before, thread: turnsOf(a.before).filter((x) => x.a) } : null;
     if (was) { delete was.ask; saveNote(was); } else deleteNote(n);
     const fresh = was || { id: noteId(), kind: 'ask', anchor: n.anchor, text: '', thread: [] };
-    if (whole(n.anchor)) { chatNote = was; openChat(was, a.q); } else openNote(fresh, !was, a.q);
+    if (whole(n.anchor)) { chatNote = was; openChat(was, back); } else openNote(fresh, !was, back);
   }
   // a turn out of its conversation (not while a question is under way there): the note without it, or none
   function deleteTurn(n, k) {
@@ -2168,20 +2178,21 @@
   chatLabel();
   const latestChat = () => notes.filter((x) => x.anchor && whole(x.anchor)).sort((x, y) => (y.updated || '').localeCompare(x.updated || ''))[0] || null;
   function openChat(n, back = '') {
-    const t = T[ui], keep = !chat.hidden && chat.querySelector('.ch-input:not(:disabled)');
+    const t = T[ui], keep = !chat.hidden && chat.querySelector('.ch-input');
     const draft = back || (keep ? keep.value : '');
     chatNote = n;
     const turns = n ? turnsOf(n) : [], waiting = turns.some((x) => x.pending);
     chat.innerHTML = `<div class="ch-head"><b>${esc(t.n_chat)}</b><button type="button" class="ch-new">${esc(t.n_chat_new)}</button><button type="button" class="ch-x" aria-label="×">×</button></div>` +
       `<div class="ch-body">${turns.length ? turns.map((x, k) => turnHtml(x, k === turns.length - 1, k, !waiting)).join('')
         : `<div class="ch-hint">${esc(t.n_chat_hint)}</div>` + tryRow(t.n_starters, t.n_try)}</div>` +
-      `<div class="ch-foot">${composer('ch-input', turns.some((x) => x.a) ? t.n_more : t.n_chat_ph, waiting ? '' : draft, waiting)}</div>`;
+      `<div class="ch-foot">${composer('ch-input', turns.some((x) => x.a) ? t.n_more : t.n_chat_ph, draft, waiting)}</div>`;
     texify(chat);
     chat.hidden = false;
     chatBtn.classList.add('on');
     const body = chat.querySelector('.ch-body'), field = chat.querySelector('.ch-input');
     body.scrollTop = body.scrollHeight;
-    if (!waiting) { field.focus(); field.setSelectionRange(field.value.length, field.value.length); }
+    field.focus();
+    field.setSelectionRange(field.value.length, field.value.length);
   }
   function closeChat() { chat.hidden = true; chatBtn.classList.remove('on'); if (chat.contains(document.activeElement)) document.activeElement.blur(); }
   chatBtn.addEventListener('click', () => { if (!chat.hidden) closeChat(); else openChat(chatNote && notes.some((x) => x.id === chatNote.id) ? notes.find((x) => x.id === chatNote.id) : latestChat()); });
@@ -2198,7 +2209,7 @@
   });
   function chatSend(field) {
     const q = field.value.trim();
-    if (!q) return;
+    if (!q || (chatNote && asking.has(chatNote.id))) return;
     field.value = '';
     const n = chatNote || { id: noteId(), kind: 'ask', text: '', thread: [],
       anchor: { unit: null, section: null, on: 'paper', lang, level, tokens: null, sents: null, quote: { exact: '' } } };
@@ -2211,6 +2222,13 @@
     e.preventDefault();
     chatSend(e.target);
   });
+  // the field's words sent (not while the answer before is still being written: they wait in the field)
+  function sendPop() {
+    const f = npop.querySelector('.np-input'), q = f && f.value.trim();
+    if (!q || !popNote || asking.has(popNote.id)) return;
+    f.value = '';
+    askNote(popNote, q);
+  }
   // the send button, while there are words to send
   for (const box of [npop, chat]) box.addEventListener('input', (e) => {
     if (!e.target.matches('.np-input, .ch-input')) return;

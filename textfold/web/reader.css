@@ -523,7 +523,6 @@ li.u.has-notes::after { left: calc(-1.3em - 13px); }
 .np-compose { position: relative; margin-top: 6px; }
 .npop .np-compose .np-input { margin-top: 0; }
 .np-compose textarea { display: block; padding-right: 42px; }
-.np-compose textarea:disabled { opacity: .55; cursor: default; }
 .np-send, .np-stop { position: absolute; right: 6px; bottom: 6px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
   display: grid; place-items: center; cursor: pointer; }
 .np-send { background: var(--btn); color: var(--on-btn); }
