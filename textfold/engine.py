@@ -269,10 +269,12 @@ for page_no, (x0, y0, x1, y1), out in job["crops"]:
 
 def crop(pdf, crops):
     """Regions of a PDF's pages as pictures: crops is [(page, [x0, y0, x1, y1], out file)]; the out files written
-    (a region that cannot be cut is left out, and with no engine, all of them)."""
+    (a region that cannot be cut is left out). With no engine, cut here (crop_here)."""
     e = where()
-    if e is None or not crops:
+    if not crops:
         return set()
+    if e is None:
+        return crop_here(pdf, crops)
     job = json.dumps({"pdf": str(pdf), "crops": [[p, list(b), str(o)] for p, b, o in crops]})
     try:
         r = subprocess.run([str(_bin(e, "python")), "-c", CROP], input=job, capture_output=True, text=True,
@@ -285,4 +287,35 @@ def crop(pdf, crops):
             done.add(json.loads(line))
         except ValueError:
             pass
+    return {o for o in done if Path(o).is_file()}
+
+
+PDFIUM = threading.Lock()   # pdfium serves one thread at a time, and the server reads PDFs on more than one
+
+
+def crop_here(pdf, crops):
+    """crop in this process, with TextFold's own pypdfium2 (a PDF read without the engine, pdftext.py): CROP's lines.
+    Nothing when pypdfium2 is not installed."""
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        return set()
+    done = set()
+    with PDFIUM:
+        doc = pdfium.PdfDocument(str(pdf))
+        try:
+            for page_no, (x0, y0, x1, y1), out in crops:
+                try:
+                    page = doc[page_no - 1]
+                    if page.get_rotation():
+                        continue
+                    w, h = page.get_size()
+                    scale = min(3.0, 2000 / max((x1 - x0) * w, (y1 - y0) * h, 1))
+                    img = page.render(scale=scale, crop=(x0 * w, (1 - y1) * h, (1 - x1) * w, y0 * h)).to_pil()
+                    img.convert("RGB").save(out, quality=92)
+                    done.add(str(out))
+                except Exception:   # (a region that cannot be cut is left out, as there)
+                    continue
+        finally:
+            doc.close()
     return {o for o in done if Path(o).is_file()}

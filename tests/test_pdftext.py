@@ -2,8 +2,9 @@
 
 The pages below are cut from what pdf-inspector 1.25 writes for two real papers: an arXiv preprint in Springer's
 style (its headings found, its title set over two lines) and an Elsevier journal article (its headings run into their
-paragraphs in bold or italics, a running head over every page). The last test makes a PDF with Pillow, one with words
-in it and one that is a picture of a page, and checks which one is read without the engine.
+paragraphs in bold or italics, a running head over every page). The read tests make a PDF with Pillow, one with words
+in it and one that is a picture of a page, and check which one is read without the engine. The figure tests write a
+page by hand with a drawing between its paragraphs, labels on it and a caption under it.
 
 Run from the repo root:
     python3 -m unittest discover tests
@@ -65,11 +66,17 @@ relation-entity triples, KGs provide the semantic foundation.
 
 def typeset(lines):
     """A one-page PDF with its words in it (Helvetica), written by hand: [(font size, text)], top to bottom."""
-    ops = ["BT"]
-    y = 740
+    y, at = 740, []
     for size, text in lines:
         y -= size * 2
-        ops.append(f"/F1 {size} Tf 1 0 0 1 72 {y} Tm ({text}) Tj")
+        at.append((72, y, size, text))
+    return page_of(at)
+
+
+def page_of(words, boxes=()):
+    """A one-page PDF of words [(x, y, font size, text)] and filled boxes [(x, y, width, height)], in PDF points."""
+    ops = [f"0.3 0.5 0.8 rg {x} {y} {w} {h} re f" for x, y, w, h in boxes] + ["0 g BT"]
+    ops += [f"/F1 {size} Tf 1 0 0 1 {x} {y} Tm ({text}) Tj" for x, y, size, text in words]
     ops.append("ET")
     stream = "\n".join(ops).encode()
     objs = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -167,6 +174,64 @@ class Read(unittest.TestCase):
         from unittest import mock
         with mock.patch.dict(sys.modules, {"pdf_inspector": None}):   # (an import of it fails, as where it is not built)
             self.assertIsNone(pdftext.read("paper.pdf"))
+
+
+PROSE = "Folded text keeps every sentence of the paper and shows the parts that matter first, deeper on request."
+CAPTION = "Figure 1: Accuracy over the epochs of training, for the three models compared."
+
+
+def with_a_figure():
+    """A page: two paragraphs, a drawing between them with its labels on it, its caption under it."""
+    words = [(72, 720 - 14 * n, 10, PROSE) for n in range(4)]
+    words += [(90, 620, 8, "Accuracy"), (240, 490, 8, "Epochs"), (72, 455, 9, CAPTION)]
+    words += [(72, 420 - 14 * n, 10, PROSE) for n in range(12)]
+    return page_of(words, boxes=[(72, 480, 320, 170)])
+
+
+class Figures(unittest.TestCase):
+    def convert(self, tmp):
+        f = Path(tmp) / "paper.pdf"
+        f.write_bytes(with_a_figure())
+        out = pdftext.convert(f, Path(tmp) / "out")
+        return out, pdfdoc.read_output(out)
+
+    def test_a_figure_is_cut_whole_with_its_caption(self):
+        try:
+            import pypdfium2   # noqa: F401
+        except ImportError:
+            self.skipTest("pypdfium2 is not installed")
+        with tempfile.TemporaryDirectory() as tmp:
+            out, sc = self.convert(tmp)
+            pics = [b for p in sc["pages"] for b in p["blocks"] if b["type"] == "image"]
+            self.assertEqual(len(pics), 1)
+            self.assertTrue((out / pics[0]["image_source"]).is_file())
+            self.assertEqual(pics[0]["captions"][0]["content"], CAPTION)
+            x0, y0, x1, y1 = pics[0]["bbox"]   # (fractions of the page, from its upper left corner)
+            self.assertTrue(0.1 < x0 < 0.13 and 0.17 < y0 < 0.2 and 0.6 < x1 < 0.67 and 0.38 < y1 < 0.41, pics[0]["bbox"])
+            title, _, md = pdfdoc.to_markdown(sc, "paper.pdf")
+            self.assertIn(f'<img src="{pics[0]["image_source"]}"', md)
+            self.assertIn(f"<figcaption>{CAPTION}</figcaption>", md)
+            self.assertEqual(md.count(CAPTION), 1)
+            self.assertNotIn("Epochs", md)   # (the words drawn on it are its own)
+            self.assertEqual(md.count("deeper on request"), 16)
+
+    def test_without_pypdfium2_the_caption_stays(self):
+        import sys
+        from unittest import mock
+        with mock.patch.dict(sys.modules, {"pypdfium2": None}), tempfile.TemporaryDirectory() as tmp:
+            out, sc = self.convert(tmp)
+            self.assertFalse(any(b["type"] == "image" for p in sc["pages"] for b in p["blocks"]))
+            self.assertIn("Figure 1: Accuracy over the epochs", pdfdoc.to_markdown(sc, "paper.pdf")[2])
+
+    def test_a_caption_not_the_text_about_it(self):
+        for s in ("Figure 1: Accuracy", "Fig. 3. Overview", "Figure 4 | Results", "FIGURE 2. A map", "Figure 9:"):
+            self.assertIsNotNone(pdftext.CAPTION_AT.match(s), s)
+        for s in ("Figure 3 shows the results", "Fig. 6 (middle) shows", "Figures 2 and 3", "Table 1: Results"):
+            self.assertIsNone(pdftext.CAPTION_AT.match(s), s)
+
+    def test_arxivs_stamp_is_no_heading(self):
+        sc = pdftext.structure([(0, "# arXiv:2512.24601v3 [cs.AI] 11 May 2026\n\n# 1 Introduction\n\nText.\n")])
+        self.assertNotIn("arXiv:2512.24601v3", " ".join(c for _, c in kinds(sc)))
 
 
 if __name__ == "__main__":
