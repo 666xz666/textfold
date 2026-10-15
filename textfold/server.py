@@ -24,7 +24,8 @@
   POST /api/export            {paper, lang, langs: "current" | "all", kinds: ["hl", "note", "ask"], pdf}: the paper as one
                               HTML file: its levels, the reader's notes of the kinds chosen, and (pdf) its original PDF
                               with PDF.js, for the side-by-side view
-  POST /api/ask               {paper, id, question}: the model answers a note's question; the answer is stored in it
+  POST /api/ask               {paper, id, question, req}: the model answers a note's question; the answer is stored in it
+  POST /api/ask/stop          {req}: that question stopped: its answer, when it comes, is not stored
   POST /api/papers/delete     {paper}: move a paper to papers/.trash (not while it is being generated)
   GET  /api/folders           the reader's folders and which document is in which (library.py)
   POST /api/folders           {op: new | rename | delete | move, ...}: one change; the folders after it
@@ -431,7 +432,10 @@ def make_handler(jobs):
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", cache)
             self.end_headers()
-            self.wfile.write(data)
+            try:
+                self.wfile.write(data)
+            except (BrokenPipeError, ConnectionResetError):
+                pass   # (the reader stopped waiting: a question stopped, a page left)
 
         def json(self, obj, code=200):
             self.send(code, json.dumps(obj, ensure_ascii=False))
@@ -668,13 +672,19 @@ def make_handler(jobs):
                         return self.json(library.change(body))
                     except ValueError as e:
                         return self.json({"error": str(e)}, 400)
+                if u.path == "/api/ask/stop":
+                    notes.stop(str(body.get("req") or "")[:40])
+                    return self.json({"ok": True})
                 if u.path == "/api/ask":
                     pid = str(body.get("paper", ""))
                     if not store.valid_id(pid) or not (store.pdir(pid) / "meta.json").exists():
                         return self.json({"error": "no such paper"}, 404)
                     try:
                         return self.json(notes.ask(pid, str(body.get("id", "")), str(body.get("question", "")).strip()[:2000],
-                                                   models.for_task(models.resolve(None), "ask"), ui=str(body.get("ui") or "")))
+                                                   models.for_task(models.resolve(None), "ask"), ui=str(body.get("ui") or ""),
+                                                   req=str(body.get("req") or "")[:40] or None))
+                    except notes.Stopped:
+                        return self.json({"error": "stopped"}, 409)
                     except ValueError as e:
                         return self.json({"error": str(e)}, 400)
                     except Exception as e:  # the model failed: the note keeps its question, the reader can ask again

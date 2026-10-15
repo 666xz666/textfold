@@ -518,6 +518,28 @@ li.u.has-notes::after { left: calc(-1.3em - 13px); }
 .chat .np-a p { margin: 0 0 7px; } .chat .np-a ul, .chat .np-a ol { margin: 0 0 7px; padding-left: 18px; }
 .chat .np-a code { font: .9em var(--mono); background: var(--surface); padding: 0 3px; border-radius: 3px; }
 .chat .np-wait { color: var(--muted); font-style: italic; }
+/* a question's field, its button at the lower right: send (filled while there are words), or, while the model
+   answers, stop; and a turn's ×, under the pointer, to take it out of the conversation (reader.js, composer) */
+.np-compose { position: relative; margin-top: 6px; }
+.npop .np-compose .np-input { margin-top: 0; }
+.np-compose textarea { display: block; padding-right: 42px; }
+.np-compose textarea:disabled { opacity: .55; cursor: default; }
+.np-send, .np-stop { position: absolute; right: 6px; bottom: 6px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; }
+.np-send { background: var(--btn); color: var(--on-btn); }
+.np-send:hover:not(:disabled) { background: var(--btn-hover); }
+.np-send:disabled { background: var(--line); color: var(--card); cursor: default; }
+.np-send svg { width: 16px; height: 16px; }
+.np-stop { background: var(--ink); color: var(--card); }
+.np-stop:hover { background: var(--r-limitation); }
+.np-stop i { width: 9px; height: 9px; border-radius: 2px; background: currentColor; }
+.np-turn { position: relative; }
+.np-turn .np-q { padding-right: 20px; }
+.np-tdel { position: absolute; top: -3px; right: -5px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: none;
+  color: var(--faint); font: 400 16px/1 var(--sans); cursor: pointer; opacity: 0; }
+.np-turn + .np-turn .np-tdel { top: 5px; }
+.np-turn:hover .np-tdel, .np-tdel:focus-visible { opacity: 1; }
+.np-tdel:hover { background: var(--line-2); color: var(--r-limitation); }
 .chat .np-err { color: var(--r-limitation); font-size: 12.5px; }
 .chat .np-cites { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; }
 .chat .np-cite { font: 600 12px var(--sans); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px; padding: 2px 9px; cursor: pointer; }

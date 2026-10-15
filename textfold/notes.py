@@ -14,6 +14,19 @@ from .tokens import plain
 
 FORMAT, VERSION = "textfold/notes", 1   # (files written under earlier names say "paperfold/notes" or "dynamic-reader/notes")
 _LOCK = threading.Lock()   # the server answers on several threads; one writer at a time
+_STOPPED = set()           # the questions the reader stopped (by their request's id), until their answers come back
+_STOP_LOCK = threading.Lock()
+
+
+class Stopped(Exception):
+    """A question the reader stopped while the model was answering it: its answer, come back, is not kept."""
+
+
+def stop(req):
+    """The reader stopped a question (its words wrong, say). The model call under way is not called back; its answer,
+    when it comes, goes nowhere."""
+    with _STOP_LOCK:
+        _STOPPED.add(str(req))
 
 
 def _file(pid):
@@ -270,8 +283,9 @@ def _cited(answer, nums, units):
     return answer, cites
 
 
-def ask(pid, nid, question, spec, timeout=300, ui=None):
-    """Answer a question in note nid's conversation with the model, add the turn to the note, and return the note."""
+def ask(pid, nid, question, spec, timeout=300, ui=None, req=None):
+    """Answer a question in note nid's conversation with the model, add the turn to the note, and return the note.
+    Stopped meanwhile (stop, by req): Stopped, and the note as it is."""
     doc = store.assemble(pid)
     with _LOCK:
         note = next((n for n in read(pid)["notes"] if n["id"] == nid), None)
@@ -294,5 +308,9 @@ def ask(pid, nid, question, spec, timeout=300, ui=None):
                               "model": spec["id"], "lang": lang, "at": now()}]
     note.pop("ask", None)
     note["kind"] = "ask"
-    put(pid, note)
+    with _STOP_LOCK:   # (a stop and the answer crossing: the one second knows of the other)
+        if req and req in _STOPPED:
+            _STOPPED.discard(req)
+            raise Stopped(req)
+        put(pid, note)
     return note

@@ -1711,7 +1711,7 @@
   const notesOf = new Map();   // uid -> its notes
   let keepMine = store.get('dr-keep-mine') === '1';   // "keep my highlights" (a viewer's preference: kept in this browser)
   const NOTES_KEY = `dr-notes:${D.meta.id}${D.saved ? ':' + D.saved : ''}`;
-  const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const post = (path, body, signal) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal })
     .then((r) => r.json().then((d) => (r.ok ? d : Promise.reject(new Error(d.error || r.status)))));
   const noteId = () => 'n-' + Math.random().toString(36).slice(2, 10);
   // a note's target: a paragraph (its id), a section ("§" and its id: its one-line summary, or its title), or the
@@ -1963,14 +1963,23 @@
   // questions to start from, or to go on with: a click puts one in the field, to be sent as it is or changed first
   const tryRow = (list, label) => `<div class="ch-try">${label ? `<span>${esc(label)}</span>` : ''}${list.map((q) => `<button type="button" class="np-ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`;
   function fillAsk(field, q) { if (!field) return; field.value = q; field.focus(); field.setSelectionRange(q.length, q.length); }
-  function turnHtml(x, last) {
+  function turnHtml(x, last, k, del) {
     const t = T[ui];
     const said = x.pending ? `<div class="np-wait">${esc(t.n_thinking)}</div>`
       : x.demo ? `<div class="np-demo">${esc(t.n_demo)} <a href="${REPO}" target="_blank" rel="noopener">${esc(t.n_demo_link)} →</a></div>`
       : x.error ? `<div class="np-err">${esc(t.n_failed)}: ${esc(x.error)}</div>`
       : `<div class="np-a">${answerHtml(x.a)}</div>` + (/\[\[/.test(x.a || '') ? '' : (x.cites && x.cites.length ? `<div class="np-cites">${x.cites.map((c) => `<button type="button" class="np-cite" data-to="${esc(c)}">${esc(citeLabel(c))}</button>`).join('')}</div>` : '')) +   // an answer from before inline citations: its list
         (last && x.next && x.next.length ? `<div class="np-next">${tryRow(x.next)}</div>` : '');
-    return `<div class="np-turn"><div class="np-q">${esc(x.q)}</div>${said}</div>`;
+    const out = del && !x.pending ? `<button type="button" class="np-tdel" data-turn="${k}" title="${esc(t.n_turn_del)}" aria-label="${esc(t.n_turn_del)}">×</button>` : '';
+    return `<div class="np-turn">${out}<div class="np-q">${esc(x.q)}</div>${said}</div>`;
+  }
+  // the field to ask in, with its send button; while a question is under way, the field waits and the button stops it
+  const SEND = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15.5v-11M5.5 9 10 4.5 14.5 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function composer(cls, placeholder, value, waiting) {
+    const t = T[ui];
+    return `<div class="np-compose"><textarea class="${cls}" rows="2" placeholder="${esc(placeholder)}"${waiting ? ' disabled' : ''}>${esc(value)}</textarea>` +
+      (waiting ? `<button type="button" class="np-stop" title="${esc(t.n_stop)}" aria-label="${esc(t.n_stop)}"><i></i></button>`
+        : `<button type="button" class="np-send" title="${esc(t.n_send)}" aria-label="${esc(t.n_send)}"${value.trim() ? '' : ' disabled'}>${SEND}</button>`) + '</div>';
   }
   const whereA = (a) => { if (whole(a)) return T[ui].n_whole; if (a.unit) return where(a.unit); const sc = secs.get(a.section); return sc ? `${sc.c.num ? `§${sc.c.num} ` : ''}${(trOf(sc.c) || sc.c).title.replace(/\$/g, '')}` : ''; };
   // the element a note's target is drawn in: its paragraph, or its section's summary (its heading where that is hidden)
@@ -1983,17 +1992,17 @@
   const askedAt = (a) => T[ui].n_asked_at.replace('{level}', T[ui].levels[a.level ?? 4]);
   // a question note is a conversation about its passage: every turn asked there, and a field to ask the next
   const turnsOf = (n) => n.thread || (n.ask ? [n.ask] : []);
-  function openNote(n, draft = false) {
-    if (whole(n.anchor)) { openChat(n); return; }   // a conversation about the whole paper lives in the chat
+  function openNote(n, draft = false, back = '') {   // back: a question stopped, in the field again to be put right
+    if (whole(n.anchor)) { openChat(n, back); return; }   // a conversation about the whole paper lives in the chat
     popNote = n; popDraft = draft;
     const t = T[ui], a = n.anchor, ask = n.kind === 'ask';
     let body;
     if (ask) {
       const turns = turnsOf(n), waiting = turns.some((x) => x.pending), failed = turns.length && turns[turns.length - 1].error;
-      body = turns.map((x, k) => turnHtml(x, k === turns.length - 1)).join('') +
+      body = turns.map((x, k) => turnHtml(x, k === turns.length - 1, k, !waiting)).join('') +
         (turns.length && turns[turns.length - 1].model ? `<div class="np-model">${esc(turns[turns.length - 1].model)}</div>` : '') +
         (turns.length ? '' : tryRow(t.n_pstarters)) +
-        (waiting ? '' : `<textarea class="np-input" rows="2" placeholder="${esc(turns.some((x) => x.a) ? t.n_more : t.n_ask_ph)}">${esc(failed ? turns[turns.length - 1].q : '')}</textarea>`);
+        composer('np-input', turns.some((x) => x.a) ? t.n_more : t.n_ask_ph, waiting ? '' : back || (failed ? turns[turns.length - 1].q : ''), waiting);
     } else {
       body = `<textarea class="np-text" rows="3" placeholder="${esc(t.n_note_ph)}">${esc(n.text || '')}</textarea>`;
     }
@@ -2005,8 +2014,8 @@
     npop.hidden = false;
     placePop();
     npop.scrollTop = npop.scrollHeight;   // the latest turn, and the field to go on
-    const field = npop.querySelector('.np-input, .np-text');
-    if (field) field.focus();
+    const field = npop.querySelector('.np-input:not(:disabled), .np-text');
+    if (field) { field.focus(); field.setSelectionRange(field.value.length, field.value.length); }
   }
   function placePop() {
     if (!popNote) return;
@@ -2043,6 +2052,9 @@
     if (!b || !popNote) return;
     const n = popNote;
     if (b.classList.contains('np-ask')) { fillAsk(npop.querySelector('.np-input'), b.dataset.q); return; }
+    if (b.classList.contains('np-send')) { const f = npop.querySelector('.np-input'); if (f.value.trim()) askNote(n, f.value.trim()); return; }
+    if (b.classList.contains('np-stop')) { stopAsk(n); return; }
+    if (b.classList.contains('np-tdel')) { deleteTurn(n, +b.dataset.turn); return; }
     if (b.classList.contains('np-cite') && b.dataset.to) { closeNote(); showEvidence(b.dataset.to, targetEl(n.anchor)); return; }
     if (b.dataset.act === 'del') { closeNote(); deleteNote(n); }
     else if (b.dataset.act === 'ask') { closeNote(); openNote({ id: noteId(), kind: 'ask', anchor: n.anchor, text: '', thread: [] }, true); }
@@ -2087,27 +2099,62 @@
     if (el && (r.bottom < 0 || r.top > innerHeight)) el.scrollIntoView({ block: 'center' });
   });
 
-  // a question goes to the model with the turns before it; the note keeps the question at once, the answer fills it in
+  // a question goes to the model with the turns before it; the note keeps the question at once, the answer fills it in.
+  // Stopped (its words wrong, say), the turns before it are as they were and the question is in the field again.
+  const asking = new Map();   // a note's id -> the question under way: {req, ctl, q, before}
   async function askNote(n, q) {
     if (!D.app) {   // a page made to share has no model behind it: the question stays on screen, with how to ask for real
       const shown = { ...n, kind: 'ask', thread: [...turnsOf(n).filter((x) => x.a || x.demo), { q, demo: true }] };
       if (whole(n.anchor)) { chatNote = shown; openChat(shown); } else openNote(shown, true);
       return;
     }
+    if (asking.has(n.id)) return;
     const done = turnsOf(n).filter((x) => x.a), qlang = (turnsOf(n).find((x) => x.lang) || {}).lang || lang;
     const note = { ...n, kind: 'ask', thread: [...done, { q, a: '', pending: true, lang: qlang }] };
     delete note.ask;
+    const mine = { req: noteId(), ctl: new AbortController(), q, before: notes.find((x) => x.id === n.id) || null };
+    asking.set(n.id, mine);
     try { await saveNote(note); } catch { /* shown already; the answer below will report it */ }
     if (popNote && popNote.id === n.id) openNote(note);
     if (chatNote && chatNote.id === n.id) openChat(note);
     let answered;
-    try { answered = await post('/api/ask', { paper: D.meta.id, id: note.id, question: q, ui }); }
-    catch (err) { answered = { ...note, thread: [...done, { q, a: '', lang: qlang, error: String(err.message || err).slice(0, 200) }] }; }
+    try { answered = await post('/api/ask', { paper: D.meta.id, id: note.id, question: q, ui, req: mine.req }, mine.ctl.signal); }
+    catch (err) {
+      if (mine.ctl.signal.aborted || err.message === 'stopped') return;   // (stopAsk put it all back)
+      answered = { ...note, thread: [...done, { q, a: '', lang: qlang, error: String(err.message || err).slice(0, 200) }] };
+    } finally { if (asking.get(n.id) === mine) asking.delete(n.id); }
     notes = notes.filter((x) => x.id !== answered.id).concat([answered]);
     indexNotes();
     notesChanged([keyOf(answered.anchor)]);
     if (popNote && popNote.id === answered.id) openNote(answered);
     if (chatNote && chatNote.id === answered.id) openChat(answered);
+  }
+
+  function stopAsk(n) {
+    const a = asking.get(n.id);
+    if (!a) return;
+    asking.delete(n.id);
+    a.ctl.abort();
+    post('/api/ask/stop', { req: a.req }).catch(() => {});
+    // the conversation as it was before the question; a first question, stopped, leaves no note (only the field again)
+    const was = a.before && turnsOf(a.before).filter((x) => x.a).length ? { ...a.before, thread: turnsOf(a.before).filter((x) => x.a) } : null;
+    if (was) { delete was.ask; saveNote(was); } else deleteNote(n);
+    const fresh = was || { id: noteId(), kind: 'ask', anchor: n.anchor, text: '', thread: [] };
+    if (whole(n.anchor)) { chatNote = was; openChat(was, a.q); } else openNote(fresh, !was, a.q);
+  }
+  // a turn out of its conversation (not while a question is under way there): the note without it, or none
+  function deleteTurn(n, k) {
+    if (asking.has(n.id) || !confirm(T[ui].n_turn_del_q)) return;
+    const thread = turnsOf(n).filter((x, i) => i !== k && !x.pending);
+    if (!thread.length) {
+      deleteNote(n);
+      if (whole(n.anchor)) { chatNote = null; openChat(null); } else closeNote();
+      return;
+    }
+    const note = { ...n, kind: 'ask', thread };
+    delete note.ask;
+    saveNote(note);
+    if (whole(n.anchor)) { chatNote = note; openChat(note); } else openNote(note);
   }
 
   // ── the chat: questions about the whole paper. Each conversation is a note on the paper ({on: 'paper'}), so it
@@ -2120,22 +2167,21 @@
   function chatLabel() { chatBtn.innerHTML = `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v6.5A1.5 1.5 0 0 1 16 14H9l-3.5 3v-3H4a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 4 4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${esc(T[ui].n_chat)}`; }
   chatLabel();
   const latestChat = () => notes.filter((x) => x.anchor && whole(x.anchor)).sort((x, y) => (y.updated || '').localeCompare(x.updated || ''))[0] || null;
-  function openChat(n) {
-    const t = T[ui], keep = !chat.hidden && chat.querySelector('.ch-input');
-    const draft = keep ? keep.value : '';
+  function openChat(n, back = '') {
+    const t = T[ui], keep = !chat.hidden && chat.querySelector('.ch-input:not(:disabled)');
+    const draft = back || (keep ? keep.value : '');
     chatNote = n;
     const turns = n ? turnsOf(n) : [], waiting = turns.some((x) => x.pending);
     chat.innerHTML = `<div class="ch-head"><b>${esc(t.n_chat)}</b><button type="button" class="ch-new">${esc(t.n_chat_new)}</button><button type="button" class="ch-x" aria-label="×">×</button></div>` +
-      `<div class="ch-body">${turns.length ? turns.map((x, k) => turnHtml(x, k === turns.length - 1)).join('')
+      `<div class="ch-body">${turns.length ? turns.map((x, k) => turnHtml(x, k === turns.length - 1, k, !waiting)).join('')
         : `<div class="ch-hint">${esc(t.n_chat_hint)}</div>` + tryRow(t.n_starters, t.n_try)}</div>` +
-      `<div class="ch-foot"><textarea class="ch-input" rows="2" placeholder="${esc(turns.some((x) => x.a) ? t.n_more : t.n_chat_ph)}"${waiting ? ' disabled' : ''}></textarea></div>`;
+      `<div class="ch-foot">${composer('ch-input', turns.some((x) => x.a) ? t.n_more : t.n_chat_ph, waiting ? '' : draft, waiting)}</div>`;
     texify(chat);
     chat.hidden = false;
     chatBtn.classList.add('on');
     const body = chat.querySelector('.ch-body'), field = chat.querySelector('.ch-input');
     body.scrollTop = body.scrollHeight;
-    field.value = waiting ? '' : draft;
-    if (!waiting) field.focus();
+    if (!waiting) { field.focus(); field.setSelectionRange(field.value.length, field.value.length); }
   }
   function closeChat() { chat.hidden = true; chatBtn.classList.remove('on'); if (chat.contains(document.activeElement)) document.activeElement.blur(); }
   chatBtn.addEventListener('click', () => { if (!chat.hidden) closeChat(); else openChat(chatNote && notes.some((x) => x.id === chatNote.id) ? notes.find((x) => x.id === chatNote.id) : latestChat()); });
@@ -2146,18 +2192,30 @@
     else if (b.classList.contains('ch-new')) openChat(null);
     else if (b.classList.contains('np-ask')) fillAsk(chat.querySelector('.ch-input'), b.dataset.q);
     else if (b.classList.contains('np-cite') && b.dataset.to) showEvidence(b.dataset.to, null);
+    else if (b.classList.contains('np-send')) chatSend(chat.querySelector('.ch-input'));
+    else if (b.classList.contains('np-stop') && chatNote) stopAsk(chatNote);
+    else if (b.classList.contains('np-tdel') && chatNote) deleteTurn(chatNote, +b.dataset.turn);
   });
-  chat.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); closeChat(); return; }
-    if (e.key !== 'Enter' || e.shiftKey || e.isComposing || !e.target.matches('.ch-input')) return;
-    const q = e.target.value.trim();
+  function chatSend(field) {
+    const q = field.value.trim();
     if (!q) return;
-    e.preventDefault();
-    e.target.value = '';
+    field.value = '';
     const n = chatNote || { id: noteId(), kind: 'ask', text: '', thread: [],
       anchor: { unit: null, section: null, on: 'paper', lang, level, tokens: null, sents: null, quote: { exact: '' } } };
     chatNote = n;
     askNote(n, q);
+  }
+  chat.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeChat(); return; }
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing || !e.target.matches('.ch-input')) return;
+    e.preventDefault();
+    chatSend(e.target);
+  });
+  // the send button, while there are words to send
+  for (const box of [npop, chat]) box.addEventListener('input', (e) => {
+    if (!e.target.matches('.np-input, .ch-input')) return;
+    const b = e.target.parentElement.querySelector('.np-send');
+    if (b) b.disabled = !e.target.value.trim();
   });
 
   // a citation under the pointer: its paragraph beats in the page, as the ends of an argument link do

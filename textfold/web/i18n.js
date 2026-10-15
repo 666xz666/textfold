@@ -436,6 +436,23 @@ window.DR_I18N = (() => {
       ['क्रम', 'प्रकार के अनुसार', 'जोड़ने की तारीख़ के अनुसार', 'हाल में खोले गए के अनुसार'], 'आज', 'पिछले 7 दिन', 'पिछले 30 दिन', 'इससे पहले']),
   };
   for (const [code, words] of Object.entries(F)) Object.assign(S[code], words);
+  // a question's field and its turns: send it, stop it while the model answers, take a turn out of the conversation
+  const turn = (w) => ({ n_send: w[0], n_stop: w[1], n_turn_del: w[2], n_turn_del_q: w[3] });
+  const Q = {
+    en: turn(['Send', 'Stop', 'Delete this question', 'Delete this question and its answer?']),
+    zh: turn(['发送', '停止', '删除这一轮', '删除这个问题和它的回答？']),
+    'zh-Hant': turn(['傳送', '停止', '刪除這一輪', '刪除這個問題和它的回答？']),
+    ja: turn(['送信', '停止', 'この質問を削除', 'この質問と回答を削除しますか？']),
+    ko: turn(['보내기', '중지', '이 질문 삭제', '이 질문과 답을 삭제할까요?']),
+    es: turn(['Enviar', 'Detener', 'Eliminar esta pregunta', '¿Eliminar esta pregunta y su respuesta?']),
+    fr: turn(['Envoyer', 'Arrêter', 'Supprimer cette question', 'Supprimer cette question et sa réponse ?']),
+    de: turn(['Senden', 'Stoppen', 'Diese Frage löschen', 'Diese Frage und ihre Antwort löschen?']),
+    pt: turn(['Enviar', 'Parar', 'Excluir esta pergunta', 'Excluir esta pergunta e a resposta?']),
+    it: turn(['Invia', 'Interrompi', 'Elimina questa domanda', 'Eliminare questa domanda e la sua risposta?']),
+    ru: turn(['Отправить', 'Остановить', 'Удалить этот вопрос', 'Удалить этот вопрос и ответ на него?']),
+    hi: turn(['भेजें', 'रोकें', 'यह प्रश्न हटाएँ', 'यह प्रश्न और इसका उत्तर हटाएँ?']),
+  };
+  for (const [code, words] of Object.entries(Q)) Object.assign(S[code], words);
   S.en.up_dev = 'Run from the code, this copy does not update itself.';
   const NATIVE = { en: 'English', zh: '简体中文', 'zh-Hant': '繁體中文', ja: '日本語', ko: '한국어', es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português', it: 'Italiano', ru: 'Русский', hi: 'हिन्दी' };
   const HTML_LANG = { zh: 'zh-CN', 'zh-Hant': 'zh-TW' };
