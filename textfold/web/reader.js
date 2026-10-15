@@ -2665,7 +2665,8 @@ math { font-size: 1.05em; }
   //    on a paragraph shows where it is on its page; reading on carries the pages along; a click on a page goes to its
   //    paragraph ──
   const PDF_OK = (!!D.app && /^(\d{4}\.\d{4,5}|pmc\d+|ppr\d+|(biorxiv|medrxiv)-[0-9.]+|pdf-[0-9a-f]{16})$/.test(D.meta.id))   // (pdf.has_source)
-    || !!(D.pdf && D.pdfjs);   // a saved page that carries its PDF, and PDF.js to show it
+    || !!(D.pdf && D.pdfjs)   // a saved page that carries its PDF, and PDF.js to show it
+    || !!D.pdfAt;   // a gallery's page: the PDF and PDF.js beside it, on the same host
   const CMP_KEY = 'pf-compare';
   const cmpBtn = h('button', 'cmpbtn');
   cmpBtn.type = 'button';
@@ -2727,7 +2728,7 @@ math { font-size: 1.05em; }
     pane.addEventListener('drop', (e) => {
       e.preventDefault(); e.stopPropagation();
       const f = e.dataTransfer.files[0];
-      if (f) givePdf(pane, f);
+      if (f && D.app) givePdf(pane, f);   // (only the app can keep it)
     });
     loadPdf(pane);
   }
@@ -2742,6 +2743,13 @@ math { font-size: 1.05em; }
         lib = await import(js(D.pdfjs.lib));
         lib.GlobalWorkerOptions.workerSrc = js(D.pdfjs.worker);
         data = Uint8Array.from(atob(D.pdf), (c) => c.charCodeAt(0));
+      } else if (D.pdfAt) {   // a gallery's page: the file and PDF.js next to it
+        const at = (p) => new URL(p, location.href).href;
+        lib = await import(at(`${D.pdfAt.pdfjs}pdf.min.mjs`));
+        lib.GlobalWorkerOptions.workerSrc = at(`${D.pdfAt.pdfjs}pdf.worker.min.mjs`);
+        const r = await fetch(at(D.pdfAt.file));
+        if (!r.ok) throw Object.assign(new Error('no pdf'), { open: D.meta.abs_url });
+        data = new Uint8Array(await r.arrayBuffer());
       } else {
         lib = await import('/static/vendor/pdfjs/pdf.min.mjs');
         lib.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.min.mjs';
@@ -2778,6 +2786,7 @@ math { font-size: 1.05em; }
       p.append(a);
       msg.append(p);
     }
+    if (!D.app) return;   // a page that is a file keeps no PDF given to it
     const drop = h('div', 'pp-drop', esc(t.pdf_drop)), pick = h('button', 'pp-pick', esc(t.pdf_pick)), input = document.createElement('input');
     pick.type = 'button';
     input.type = 'file'; input.accept = 'application/pdf,.pdf'; input.hidden = true;

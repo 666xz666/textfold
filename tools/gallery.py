@@ -26,7 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from textfold import build, ladder, langs, store, translate  # noqa: E402
+from textfold import build, ladder, langs, pdf, store, translate  # noqa: E402
 from textfold.tokens import plain  # noqa: E402
 
 LIST = Path(__file__).with_suffix(".json")
@@ -159,6 +159,59 @@ def corrected(doc, fixes, want):
     return said
 
 
+SLIM_ABOVE, SIDE = 4_000_000, 1600
+
+
+def slim(src, dst):
+    """The PDF a visitor downloads to see the original pages. A large one gets its large pictures as JPEGs of at most
+    1600 pixels a side (GraphCast's 40 MB come to 10), through pikepdf when it is installed; its fonts and text stay
+    exactly as they were, since PDF.js draws them as in the app and they are what finds each paragraph on its page.
+    (Ghostscript makes it smaller, but rewrites the fonts, and PDF.js then leaves out their ligatures: "signi cant".)
+    Without pikepdf, the file as it is."""
+    try:
+        import pikepdf
+    except ImportError:
+        pikepdf = None
+    if pikepdf is None or src.stat().st_size <= SLIM_ABOVE:
+        shutil.copyfile(src, dst)
+        return
+    import io
+    from pikepdf import Name, PdfImage
+    doc = pikepdf.open(src)
+    images = [o for o in doc.objects if isinstance(o, pikepdf.Stream) and o.get("/Subtype") == "/Image"]
+    masks = {o.SMask.objgen for o in images if o.get("/SMask") is not None}
+    for raw in images:   # every picture, also those inside a figure's own drawing, not only the pages' own
+        if raw.objgen in masks or raw.get("/ImageMask") or raw.get("/Mask") is not None:
+            continue   # a mask stays as it is, and so does a picture cut out by a colour key
+        size = len(raw.read_raw_bytes())
+        if size < 100_000:
+            continue
+        try:
+            im = PdfImage(raw).as_pil_image()
+        except Exception:
+            continue
+        if im.mode not in ("RGB", "L"):
+            im = im.convert("RGB")
+        im.thumbnail((SIDE, SIDE))
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=80, optimize=True)
+        if buf.tell() >= size * 0.8:
+            continue
+        raw.write(buf.getvalue(), filter=Name.DCTDecode)
+        raw.Width, raw.Height, raw.BitsPerComponent = im.width, im.height, 8
+        raw.ColorSpace = Name.DeviceRGB if im.mode == "RGB" else Name.DeviceGray
+        for k in ("/DecodeParms", "/Decode", "/Intent"):
+            if k in raw:
+                del raw[k]
+    tmp = dst.with_suffix(".part")
+    doc.save(tmp, compress_streams=True, object_stream_mode=pikepdf.ObjectStreamMode.generate)
+    if tmp.stat().st_size < src.stat().st_size:
+        tmp.replace(dst)
+    else:
+        tmp.unlink()
+        shutil.copyfile(src, dst)
+
+
 def main():
     ap = argparse.ArgumentParser(prog="gallery")
     ap.add_argument("--make", metavar="MODEL", help="generate the papers and languages the list still lacks with this model")
@@ -210,12 +263,20 @@ def main():
         if a.review:
             (store.DATA / "review").mkdir(exist_ok=True)
             (store.DATA / "review" / f"{pid}.json").write_text(json.dumps(review(doc, want), ensure_ascii=False, indent=1))
-        (out / "index.html").write_text(build.page(doc, app=False, assets="../assets/"))
+        beside = None
+        if pdf.has_source(pid):   # its original pages next to the text: the PDF, fetched once into the gallery's folder
+            f = pdf.path(pid)
+            if f:
+                slim(f, out / "source.pdf")
+                beside = {"file": "source.pdf", "pdfjs": "../assets/pdfjs/"}
+            else:
+                print(f"  ~ {pid}: no PDF to be had, so no original pages beside it")
+        (out / "index.html").write_text(build.page(doc, app=False, assets="../assets/", pdf=beside))
         cards.append((e, p, meta, lic))
         print(f"  + {pid}: {p['title'][:60]}")
-    # the pages' fonts and KaTeX, beside them: a visitor's browser asks no other server for anything
+    # the pages' fonts, KaTeX and PDF.js, beside them: a visitor's browser asks no other server for anything
     shutil.rmtree(site / "assets", ignore_errors=True)
-    for part in ("fonts", "katex"):
+    for part in ("fonts", "katex", "pdfjs"):
         shutil.copytree(build.VENDOR / part, site / "assets" / part)
     for d in site.iterdir():   # a paper taken off the list leaves the site too
         if d.is_dir() and d.name != "assets" and d.name not in {c[0]["id"] for c in cards}:

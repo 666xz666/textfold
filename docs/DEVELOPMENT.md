@@ -53,7 +53,10 @@ A gallery for a free static host: `tools/gallery.json` lists one paper per field
 why it is worth reading in every gallery language (en, zh, de). `python3 tools/gallery.py --make <model>` generates
 what the list lacks in a folder of its own (`out/gallery/papers`; a paper already in the library starts from there,
 without its notes), and `python3 tools/gallery.py` writes `out/gallery/site/`: an index in the three languages and
-each paper's static reader, opened at the Topic level. Only papers whose license lets anyone share a derivative go in
+each paper's static reader, opened at the Topic level. A paper with a PDF (an arXiv paper) gets it beside its page, with
+PDF.js in `assets/`, so Original shows its typeset pages there as in the app; a PDF over 4 MB has its large pictures
+made smaller when pikepdf is installed (`pip install pikepdf`; fonts and text untouched), else it goes as it is. Only
+papers whose license lets anyone share a derivative go in
 (CC BY, BY-SA, BY-NC, BY-NC-SA, CC0); `"consent": true` adds a paper whose authors agree. Before a paper goes public its text is proofread:
 `--review` writes each paper's sentences and levels in every language to `out/gallery/review/`, and the corrections go
 in `out/gallery/fixes/<id>.json`, which the build puts through the same assembly as the model's replies (only the

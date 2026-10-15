@@ -84,18 +84,21 @@ def inline_images(doc, app=False):
                 b["html"] = b["html"].replace(f'src="{src}"', f'src="{uri}"')
 
 
-def payload(doc, app, katex=None, saved=None):
+def payload(doc, app, katex=None, saved=None, pdf=None):
     data = {k: doc[k] for k in ("meta", "atoms", "units", "chunks", "blocks", "bib", "edges", "alias")}
     data["app"] = app
     data["katex"] = katex   # where the reader finds KaTeX: a folder, "inside" the page, or nowhere (math stays as written)
+    if pdf:   # a gallery's page: its PDF and PDF.js beside it ({"file", "pdfjs"}, relative to the page)
+        data["pdfAt"] = pdf
     if saved:   # saved from the reader: its notes (kept apart from any other page's in the viewer's browser), its language
         data.update(saved)
     return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
 
-def page(doc, app=False, assets=None, saved=None):
+def page(doc, app=False, assets=None, saved=None, pdf=None):
     """assets: for a static page published beside a folder holding web/vendor's fonts/ and katex/ (a gallery). saved:
-    a page the reader saved for themself ({"notes", "saved", "lang"}: the notes chosen, an id of the file, its language)."""
+    a page the reader saved for themself ({"notes", "saved", "lang"}: the notes chosen, an id of the file, its language).
+    pdf: the paper's PDF beside a gallery's page, for the original pages next to the text ({"file", "pdfjs"})."""
     inline_images(doc, app)
     t = (WEB / "template.html").read_text()
     if app:
@@ -111,7 +114,7 @@ def page(doc, app=False, assets=None, saved=None):
             head += _katex_inside()
             katex = "inside"
     return (t.replace("{{TITLE}}", escape(doc["meta"]["title"])).replace("{{HEAD}}", head).replace("{{CLASS}}", cls)
-             .replace("{{SIDEBAR}}", side).replace("{{SCRIPTS}}", scripts).replace("{{DATA}}", payload(doc, app, katex, saved)))
+             .replace("{{SIDEBAR}}", side).replace("{{SCRIPTS}}", scripts).replace("{{DATA}}", payload(doc, app, katex, saved, pdf)))
 
 
 def export(pid):
