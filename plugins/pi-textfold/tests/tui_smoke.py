@@ -43,7 +43,7 @@ def glob_sorted(home):
 NODE_PREFIX = os.environ.get("TEXTFOLD_PI_NODE", "")
 
 cli = find_cli()
-args = ["--extension", EXT]
+args = ["--no-session", "--extension", EXT]   # a test run leaves no session behind
 if PROVIDER:
     args += ["--extension", PROVIDER]
 if MODEL:
@@ -135,6 +135,6 @@ report = {
     "fold_cleared": "TextFold ·" not in segs["end"],
 }
 for k, v in report.items(): print(f"{k}: {v}")
-folds = re.findall(r"folded: (Brief|Points|Outline|Gist) · \d+ of \d+ words", segs["brief"] + segs["gist"])
+folds = re.findall(r"(Brief|Points|Outline|Gist) · \d+ of \d+ words", segs["brief"] + segs["gist"])
 print("in-place fold lines:", folds[-2:] if folds else "NONE")
 sys.exit(0 if all(report.values()) else 1)

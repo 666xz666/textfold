@@ -60,7 +60,7 @@ export default function textfoldFold(pi: ExtensionAPI) {
 		if (context.messageType !== "assistant" || level === 1) return markdown;
 		const f = fold(markdown, level);
 		if (!worthFolding(markdown, f.text)) return markdown;
-		return `${f.text || "…"}\n\n*(folded: ${f.shown} of ${f.total} words · Alt+1 unfolds)*`;
+		return `${f.text || "…"}\n\n*${levelName(level)} · ${f.shown} of ${f.total} words · Alt+1 unfolds*`;
 	});
 
 	// The panel: setWidget re-renders unconditionally, so keys 1..5 reflect at once.

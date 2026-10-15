@@ -44,14 +44,14 @@ Choose the level of detail you need, and lower your cognitive load.
 
 ## Also for agent output
 
-Your agent writes more than you have time to read. A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) folds every reply the same way, one key per level. [More ↓](#in-claude-code)
+Your agent writes more than you have time to read. A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) folds every reply the same way, one key per level, and an extension does the same in Pi. [More ↓](#in-claude-code)
 
 <img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/textfold.gif" width="880" alt="A reply in Claude Code folding from the full text to two sentences a paragraph, then one, and back, one key at a time">
 
 ## One fold, three places
 
 - **Read.** Paste a link or drop a file; it opens as a map of its sections that you zoom into. [Get started ↓](#get-started)
-- **Fold your agent's replies.** One key per level in Claude Code, with no second model. [In Claude Code ↓](#in-claude-code)
+- **Fold your agent's replies.** One key per level in Claude Code and in Pi, with no second model. [In Claude Code ↓](#in-claude-code)
 - **Plug it into your workflow.** `python3 -m textfold get` hands your agent or script a document one level at a time, and an open format lets any program read and write folded text. [For agents ↓](#for-agents-and-scripts)
 
 ## What you get
@@ -207,16 +207,19 @@ More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plu
 
 </details>
 
+**In Pi.** An extension puts the same five levels on every reply in [Pi](https://pi.dev), with Alt+1 to Alt+5 or `/fold`. It folds with the mod's own engine, so a reply reads the same at each level in both. Install it from [plugins/pi-textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md).
+
 ## What's new
 
+- **October 15, 2026: Pi's replies fold too.** [An extension for Pi](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md) puts the five levels on every reply, with the same fold as in Claude Code. Thanks to [@jlamweil](https://github.com/jlamweil).
 - **October 14, 2026: an app for Mac and Windows.** Download TextFold for macOS (Apple silicon or Intel, signed and notarized by Apple) or Windows, with everything it needs inside. It finds Claude Code, Codex or Pi on your computer, and updates itself when you say so. [Download ↓](#get-started)
 - **October 14, 2026: your Zotero library.** **Zotero library**, under the drop zone, shows your library and its collections as Zotero does, and opens any item in a click: from arXiv when it is there, else from its own PDF. Thanks to [@adalach](https://github.com/adalach). [Works on your Zotero ↑](#works-on-your-zotero)
 - **October 14, 2026: arXiv pages, read more safely.** What could run script in a page is taken out before the reader draws it, and its figures stay as they were. Thanks to [@neil-patel77](https://github.com/neil-patel77).
-- **October 13, 2026: save a page as one file.** **Save**, at the top of the reader, keeps the page as one HTML file, with your notes and its original PDF if you like, or only your notes. [Save a page ↓](#save-a-page)
 
 <details>
 <summary>Earlier</summary>
 
+- **October 13, 2026: save a page as one file.** **Save**, at the top of the reader, keeps the page as one HTML file, with your notes and its original PDF if you like, or only your notes. [Save a page ↓](#save-a-page)
 - **October 13, 2026: Word, PowerPoint, Excel, e-books and more.** Drop a Word, PowerPoint or Excel file, a CSV, an EPUB or a saved web page, and it opens at once, formulas included, with nothing more to install.
 - **October 13, 2026: whole figures, and a guide.** A figure the PDF engine cut into pieces now comes out whole, cut from its page. A short guide opens on your first visit, and again from **How it works**.
 - **October 9, 2026: PaperFold is now TextFold.** The same reader, named for everything it folds: papers, web pages, PDFs, READMEs and your agent's replies. Links to the old repository lead here, and your settings move over by themselves.
@@ -237,6 +240,7 @@ More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plu
 <a href="https://github.com/adalach" title="@adalach"><img src="https://github.com/adalach.png?size=80" width="40" height="40" alt="@adalach" /></a>
 <a href="https://github.com/suhyungJang" title="@suhyungJang"><img src="https://github.com/suhyungJang.png?size=80" width="40" height="40" alt="@suhyungJang" /></a>
 <a href="https://github.com/sylvainHellin" title="@sylvainHellin"><img src="https://github.com/sylvainHellin.png?size=80" width="40" height="40" alt="@sylvainHellin" /></a>
+<a href="https://github.com/jlamweil" title="@jlamweil"><img src="https://github.com/jlamweil.png?size=80" width="40" height="40" alt="@jlamweil" /></a>
 
 Contributions are welcome: start with [CONTRIBUTING.md](https://github.com/chenxiachan/textfold/blob/main/CONTRIBUTING.md).
 

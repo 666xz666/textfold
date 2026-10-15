@@ -1,45 +1,41 @@
 # TextFold for Pi
 
-Your Pi agent writes more than you have time to read. TextFold folds every reply to the level you need, from every word to the answer in one sentence, with one key — no second model, no summary, nothing rewritten. It is the same fold as [TextFold for Claude Code](../textfold), ported to [Pi](https://pi.dev)'s extension API.
+Your agent writes more than you have time to read. TextFold folds every reply in [Pi](https://pi.dev) to the level you need, from every word to the answer in one sentence, with one key. It is the fold of [TextFold for Claude Code](../textfold/README.md), as a Pi extension, from [TextFold](../../README.md).
 
 | Key | Level | What you get |
 |:-:|---|---|
-| **Alt+1** | **Full** | every word Pi wrote |
+| **Alt+1** | **Full** | every word the model wrote |
 | **Alt+2** | **Brief** | each point, with the reason behind it |
 | **Alt+3** | **Points** | just the points, at a glance |
 | **Alt+4** | **Outline** | the map of a long reply: its sections, and what each one says |
 | **Alt+5** | **Gist** | the answer, in one sentence |
 
-`/fold` takes `1..5`, a level name (`brief`), `off`, or nothing to move to the next level. Press Alt+N mid-conversation — the fold panel under the editor follows at once.
+Hold Alt and type the digit, or type `/fold` and a level: `/fold 3`, `/fold points`, `/fold off`. `/fold` alone moves to the next level. A folded reply tells you its level and how much of it you are seeing, and Alt+1 brings back every word. Short replies stay whole: one under about 80 words, or one a fold would barely shorten, always shows as written.
 
-## Install
+**Where the fold shows.** Pi folds a reply as it draws it, at the level you chose. It does not draw a reply again when only the level changes, so a panel above the prompt shows the latest reply at the new level at once, as much of it as fits. Earlier replies take the new level the next time Pi draws them, after a resize for instance.
 
-Pi 1.2.0 or later, running on Node 22.15 or newer:
-
-```bash
-# try it for one session, from a checkout of this repo:
-pi -e ./plugins/pi-textfold
-
-# or install it:
-pi install ./plugins/pi-textfold
-```
-
-The unit tests run with Node and npm already shown: `npm install && npm test` inside `plugins/pi-textfold/`.
-
-## How the fold shows
-
-Two surfaces, by design:
-
-- **The fold panel** (a widget under the editor) always shows the latest settled reply at the level in force. `setWidget` re-renders on every press, so the keys never lag.
-- **In place in the transcript**, replies newer than a level change render folded. Older blocks keep their fold until Pi re-renders them (a window resize does it); pi-tui caches rendered Markdown by content and width, and there is no invalidation hook an extension can use, so a fold that had already been drawn is not redrawn when only the level changes. The panel carries the switch meanwhile. An upstream `invalidate` hook would close this.
+**Why Alt.** Pi hands every key to its extensions before the prompt sees it, so a bare digit would never reach what you type.
 
 ## Why you can trust a fold
 
-Nothing is paraphrased. The extension appends a short style section to the system prompt that asks Pi to lead with the point: the answer first in every reply, the key sentence first in every paragraph and list item. A fold keeps what Pi put first: the first sentence or two of each paragraph, the first sentence of each item, the headings, and at the last level the reply's first sentence. Short replies (under ~80 words, or ones a fold would barely shorten) stay whole. There is no second model and no summary — a fold costs nothing and takes no time. The session transcript the model sees is never edited.
+Nothing is paraphrased. TextFold adds a short section to the system prompt that asks the model to lead with the point: the answer first in every reply, and the sentence that states its point first in every paragraph and list item. A fold keeps what the model put first. There is no second model and no summary, so a fold costs nothing, takes no time, and never puts words in the model's mouth. The fold is only on the screen: what the model sees of the conversation is never changed.
 
-## Keys note
-Alt, not plain digits: Pi dispatches extension shortcuts before the editor receives any input, so registered `1`..`5` would swallow digits typed into the prompt. `/fold` is always available.
+## Install
 
-## The engine
+It needs Pi 1.2.0 or later, on Node 22.15 or later.
 
-`extension/fold.ts` is the fold engine of the Claude Code mod, byte for byte, so both harnesses fold identically; its behavior is covered by the tests ported with it (`tests/fold.test.ts`). `tests/tui_smoke.py` is a manual end-to-end harness (python, a pty and a working model) that drives the real TUI and checks the keys; see its header for how to run it.
+```bash
+git clone https://github.com/chenxiachan/textfold.git
+pi install ./textfold/plugins/pi-textfold
+```
+
+Pi keeps the path, so leave the clone where it is. To try it for one session without installing it, start Pi with `pi -e ./textfold/plugins/pi-textfold`.
+
+## Good to know
+
+- The section changes the order of what the model writes, not what it says or how much. Pi runs many models: check on your own work that yours leads with the point, and does its work as well as before.
+- `extension/fold.ts` is the Claude Code mod's own engine, and the section is the mod's own text. A test keeps both the same, so a reply folds the same way in Claude Code and in Pi.
+
+The tests run with `npm install && npm test` in this folder. `tests/tui_smoke.py` drives the real Pi with a model and checks the keys; its first lines say how to run it.
+
+TextFold for Pi was contributed by [Joseph Lam](https://github.com/jlamweil).
