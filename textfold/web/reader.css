@@ -742,6 +742,13 @@ html.compare footer.zoom, html.app.compare footer.zoom { left: calc(var(--rail, 
 .pp-n { font-variant-numeric: tabular-nums; }
 .pp-x { width: 28px; height: 28px; border: 0; border-radius: 7px; background: none; font: 400 20px/1 var(--sans); color: var(--muted); cursor: pointer; }
 .pp-x:hover { background: var(--line); color: var(--ink); }
+/* its width, at its right edge (reader.js, gripFor): as the sidebar's (app.css, .sb-resize) */
+.pp-grip { position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; cursor: col-resize; touch-action: none; z-index: 1; }
+.pp-grip::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: var(--accent); opacity: 0; transition: opacity .15s; }
+.pp-grip:hover::after, .pp-grip:focus-visible::after, html.pp-resizing .pp-grip::after { opacity: .55; }
+.pp-grip:focus-visible { outline: none; }
+html.pp-resizing, html.pp-resizing * { cursor: col-resize !important; user-select: none; }
+@media (max-width: 719px) { .pp-grip { display: none; } }
 .pp-scroll { flex: 1; min-height: 0; overflow: auto; padding: 2px 12px 28px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .pp-page { position: relative; flex: none; background: #fff; border-radius: 2px; cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 10px 26px -14px rgba(0, 0, 0, .3); }

@@ -2668,6 +2668,61 @@ math { font-size: 1.05em; }
     || !!(D.pdf && D.pdfjs)   // a saved page that carries its PDF, and PDF.js to show it
     || !!D.pdfAt;   // a gallery's page: the PDF and PDF.js beside it, on the same host
   const CMP_KEY = 'pf-compare';
+  // the pane's width: dragged at its right edge (or with the arrow keys there) and kept for next time, the reader's place
+  // held while the text reflows beside it; a double-click goes back to the default (46% of the window, at most 860 px)
+  const PDFW = 'textfold.pdfw';
+  const keptWidth = () => { try { return +localStorage.getItem(PDFW) || 0; } catch { return 0; } };
+  function setPdfWidth(w) {   // the pane from 280 px, the text beside it at least 420
+    const rail = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail')) || 0;
+    document.documentElement.style.setProperty('--pdfw', `${Math.round(Math.max(280, Math.min(w, innerWidth - rail - 420)))}px`);
+  }
+  function keepWidth(pane) { try { localStorage.setItem(PDFW, String(Math.round(pane.getBoundingClientRect().width))); } catch { /* private window */ } }
+  function gripFor(pane) {
+    const grip = h('div', 'pp-grip');
+    grip.setAttribute('role', 'separator');
+    grip.setAttribute('aria-orientation', 'vertical');
+    grip.tabIndex = 0;
+    grip.title = T[ui].sb_resize;
+    grip.setAttribute('aria-label', T[ui].sb_resize);
+    grip.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      grip.setPointerCapture(e.pointerId);
+      document.documentElement.classList.add('pp-resizing');
+      const keep = unitAtReading(), top = keep && keep.getBoundingClientRect().top, left = pane.getBoundingClientRect().left;
+      let x = null, frame = 0;
+      const apply = () => {
+        frame = 0;
+        setPdfWidth(x - left);
+        if (cmp && cmp.pages.length) sizePages();   // (the pages stretch until the drag ends, then are drawn again)
+        if (keep && keep.isConnected) scrollBy(0, keep.getBoundingClientRect().top - top);
+      };
+      const move = (ev) => { x = ev.clientX; if (!frame) frame = requestAnimationFrame(apply); };
+      const up = () => {
+        grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+        if (frame) { cancelAnimationFrame(frame); apply(); }
+        document.documentElement.classList.remove('pp-resizing');
+        keepWidth(pane);
+        reflowKeeping(keep);   // the reader's own layout at the new width, and the pages drawn sharp
+      };
+      grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+    });
+    grip.addEventListener('dblclick', () => {
+      const keep = unitAtReading();
+      try { localStorage.removeItem(PDFW); } catch { /* private window */ }
+      document.documentElement.style.removeProperty('--pdfw');
+      reflowKeeping(keep);
+    });
+    grip.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const keep = unitAtReading();
+      setPdfWidth(pane.getBoundingClientRect().width + (e.key === 'ArrowLeft' ? -24 : 24));
+      keepWidth(pane);
+      reflowKeeping(keep);
+    });
+    return grip;
+  }
   const cmpBtn = h('button', 'cmpbtn');
   cmpBtn.type = 'button';
   cmpBtn.hidden = !PDF_OK;
@@ -2712,7 +2767,8 @@ math { font-size: 1.05em; }
     const own = D.meta.id.startsWith('pdf-');   // a PDF read through the engine: the file itself, not one fetched for it
     title.textContent = own ? (D.meta.label || 'PDF') : src ? `${src} · PDF` : `arXiv · PDF ${D.meta.version || ''}`.trim();
     bar.append(title, count, x);
-    pane.append(bar, scroller);
+    pane.append(bar, scroller, gripFor(pane));
+    if (keptWidth()) setPdfWidth(keptWidth());
     document.body.append(pane);
     cmp = { pane, scroller, count, pages: [], words: [], grams: null, spans: new Map(), current: null, follow: null, epoch: 0 };
     x.addEventListener('click', closeCompare);
@@ -2812,6 +2868,7 @@ math { font-size: 1.05em; }
     cmp.pane.remove();
     cmp = null;
     document.documentElement.classList.remove('compare');
+    document.documentElement.style.removeProperty('--pdfw');
     try { localStorage.setItem(CMP_KEY, '0'); } catch { /* private window */ }
     cmpLabel();
     reflowKeeping(keep);
@@ -2996,6 +3053,7 @@ math { font-size: 1.05em; }
   let followTimer = null;
   addEventListener('scroll', () => { if (cmp) { clearTimeout(followTimer); followTimer = setTimeout(followNow, 140); } }, { passive: true });
   addEventListener('resize', () => {
+    if (cmp && keptWidth()) setPdfWidth(keptWidth());   // (a narrower window: the pane gives way, the text keeps its room)
     if (!cmp || !cmp.pages.length) return;
     clearTimeout(cmp.resizeTimer);
     cmp.resizeTimer = setTimeout(() => {
