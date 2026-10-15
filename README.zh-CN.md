@@ -175,12 +175,14 @@ TextFold 只是一个工具，它的许可证只管代码。分享文件时，�
 
 ## 在 Claude Code 和 Pi 里
 
-TextFold 把五个层级放到 Claude Code 的每条回答上。按 5 看一句话的答案，按 3 看每段的要点，按 1 看每一个字。不做任何改写，所以无论在哪一级，你读到的都是 Claude 的原话。
+TextFold 把五个层级放到 Claude Code 和 Pi 的每条回答上。按 5 看一句话的答案，按 3 看每段的要点，按 1 看每一个字（在 Pi 里要按住 Alt）。不做任何改写，所以无论在哪一级，你读到的都是模型的原话。
 
 <details>
-<summary><b>安装，以及每一级能看到什么</b></summary>
+<summary><b>在 Claude Code 里：安装，以及每一级能看到什么</b></summary>
 
 <br>
+
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/textfold.gif" width="880" alt="Claude Code 里的一条回答从全文折到每段两句，再折到一句，然后展开回来，每次按一个键">
 
 需要 Claude Code 2.1.287 或更新的版本，在终端里或桌面应用的 Code 标签页里都能用。
 
@@ -207,9 +209,25 @@ claude plugin install textfold@textfold
 
 </details>
 
-**在 Pi 里。** 一个扩展把同样的五个层级放到 [Pi](https://pi.dev) 的每条回答上，用 Alt+1 到 Alt+5 或 `/fold` 切换。它用的就是 mod 的折叠引擎，所以同一条回答在两边每一级读到的都一样。安装方法见 [plugins/pi-textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md)。
+<details>
+<summary><b>在 Pi 里：安装，看它怎么折叠</b></summary>
+
+<br>
 
 <img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/pi.gif" width="880" alt="Pi 里的一条回答逐级折叠，从全文一直折到一句话的答案，每级一个键">
+
+一个扩展把同样的五个层级放到 [Pi](https://pi.dev) 的每条回答上。需要 Pi 1.2.0 或更新的版本，Node 22.15 或更新。
+
+```bash
+git clone https://github.com/chenxiachan/textfold.git
+pi install ./textfold/plugins/pi-textfold
+```
+
+按住 Alt 再按数字，或者输入 `/fold` 加层级：`/fold 3`、`/fold points`、`/fold off`。每条回答都在原处折叠，之前的回答也一样；提示框上方那一行标出你正在读的层级。它用的就是 mod 的折叠引擎，所以同一条回答在 Claude Code 和 Pi 里每一级读到的都一样。
+
+详见 [plugins/pi-textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md)。由 [@jlamweil](https://github.com/jlamweil) 贡献。
+
+</details>
 
 ## 最新
 

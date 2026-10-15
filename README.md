@@ -175,12 +175,14 @@ TextFold is a tool, and its license covers its code. When you share a file, foll
 
 ## In Claude Code and Pi
 
-TextFold puts the five levels on every reply in Claude Code. Press 5 for the answer in one sentence, 3 for the point of every paragraph, 1 for every word. Nothing is paraphrased, so at every level you read exactly what Claude said.
+TextFold puts the five levels on every reply in Claude Code and in Pi. Press 5 for the answer in one sentence, 3 for the point of every paragraph, 1 for every word (in Pi, hold Alt). Nothing is paraphrased, so at every level you read exactly what the model said.
 
 <details>
-<summary><b>Install it, and see what each level gives you</b></summary>
+<summary><b>In Claude Code: install it, and see what each level gives you</b></summary>
 
 <br>
+
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/textfold.gif" width="880" alt="A reply in Claude Code folding from the full text to two sentences a paragraph, then one, and back, one key at a time">
 
 It needs Claude Code 2.1.287 or later, in the terminal or in the Code tab of the Desktop app.
 
@@ -207,9 +209,25 @@ More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plu
 
 </details>
 
-**In Pi.** An extension puts the same five levels on every reply in [Pi](https://pi.dev), with Alt+1 to Alt+5 or `/fold`. It folds with the mod's own engine, so a reply reads the same at each level in both. Install it from [plugins/pi-textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md).
+<details>
+<summary><b>In Pi: install it, and see it fold</b></summary>
+
+<br>
 
 <img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/pi.gif" width="880" alt="A reply in Pi folding a level at a time, from the full text down to its answer in one sentence, one key each">
+
+An extension puts the same five levels on every reply in [Pi](https://pi.dev). It needs Pi 1.2.0 or later, on Node 22.15 or later.
+
+```bash
+git clone https://github.com/chenxiachan/textfold.git
+pi install ./textfold/plugins/pi-textfold
+```
+
+Hold Alt and type the digit, or type `/fold` and a level: `/fold 3`, `/fold points`, `/fold off`. Every reply folds in place, the earlier ones too, and the row above the prompt marks the level you read at. It folds with the mod's own engine, so a reply reads the same at each level in Claude Code and in Pi.
+
+More in [plugins/pi-textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md). Contributed by [@jlamweil](https://github.com/jlamweil).
+
+</details>
 
 ## What's new
 
