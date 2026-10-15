@@ -28,6 +28,14 @@
     document.dispatchEvent(new Event('tf-lang'));   // (what else speaks it: the app's update)
   }
   let papers = BOOT.papers || [];
+  let folders = BOOT.folders || { folders: [], of: {} };   // the reader's folders, and which document is in which (folders.py)
+  let sbQuery = '';        // the sidebar's search, as typed
+  let editing = null;      // a folder's name being written: 'new', or the folder's id
+  let dragging = null;     // the document being dragged to a folder
+  let menu = null;         // a folder's menu, while it is open
+  const FOLDED = 'textfold.folded';   // the folders shut, kept for next time
+  const SORT = 'textfold.sort';       // the list's order: 'kind' (the default), 'added' (when it came in) or 'opened' (last)
+  const folded = new Set((store.get(FOLDED) || '').split(' ').filter(Boolean));
   let jobs = BOOT.jobs || [];
   let modelName = BOOT.model || '';       // the model generations use, as the settings name it
   const t = () => I18N.t(uiLang);
@@ -39,6 +47,10 @@
   const MARK = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect class="m1" x="2" y="3" width="16" height="2.4" rx="1.2"/><rect class="m2" x="2" y="8.8" width="11" height="2.4" rx="1.2"/><rect class="m3" x="2" y="14.6" width="5" height="2.4" rx="1.2"/></svg>';
   const BOOKS = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3.5h3v13H4z"/><path d="M8.5 3.5h3v13h-3z"/><path d="M13 4.2l2.8-.7 2.6 12.3-2.8.7z"/></svg>';
   const LIST = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3.5" width="15" height="13" rx="2.5"/><path d="M7.5 3.5v13"/></svg>';
+  const FOLDER = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M2.5 5.5a1.5 1.5 0 0 1 1.5-1.5h3.6l1.8 2H16a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 16H4a1.5 1.5 0 0 1-1.5-1.5z"/></svg>';
+  const FOLDER_NEW = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5.5a1.5 1.5 0 0 1 1.5-1.5h3.6l1.8 2H16a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 16H4a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M10 8.5v5M7.5 11h5"/></svg>';
+  const CLOCK = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg>';
+  const CHEV = '<svg class="sb-chev" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6l4 4-4 4"/></svg>';
   // a paper opens in the reader's language, else the one last read in, else its first
   const pick = (p) => [uiLang, store.get('dr-lang')].find((l) => l && p.langs.includes(l)) || p.langs[0] || 'en';
   const modelLabel = () => modelName;
@@ -64,7 +76,7 @@
       const langs = p.langs.map((l) => `<span${l === uiLang ? ' class="on"' : ''}>${SHORT[l] || l}</span>`).join('');
       const active = PAPER && PAPER.id === p.id;
       const unfinished = !j && !p.langs.length;   // stopped (or failed) before its first language: a click goes on with it
-      return `<div class="sb-row"><a class="sb-item${active ? ' active' : ''}${unfinished ? ' unfinished' : ''}" href="${unfinished ? '#' : `/p/${p.id}?lang=${pick(p)}`}"${unfinished ? ` data-resume="${p.id}"` : ''} title="${esc(p.title)}">
+      return `<div class="sb-row" data-pid="${p.id}" data-q="${esc(hay(p))}"><a class="sb-item${active ? ' active' : ''}${unfinished ? ' unfinished' : ''}" href="${unfinished ? '#' : `/p/${p.id}?lang=${pick(p)}`}"${unfinished ? ` data-resume="${p.id}"` : ''} title="${esc(p.title)}">
         <span class="sb-t">${esc(title)}</span><span class="sb-m"><span class="sb-id">${p.id}</span><span class="sb-langs">${langs}</span></span>
         ${j ? progress(j, T) : unfinished ? `<span class="sb-stage">${esc(T.unfinished)}</span>` : ''}</a>` +
         (j ? stopBtn(j, T) : `<button type="button" class="sb-del" data-del="${p.id}" title="${esc(T.del_paper)}" aria-label="${esc(T.del_paper)}">×</button>`) + '</div>';
@@ -72,12 +84,34 @@
     // papers, Wikipedia articles, GitHub READMEs and documents of one's own, each under its name when there is more than one kind
     // (a file read from a Zotero item is among the papers: Zotero says what it is)
     const kindOf = (p) => (p.zotero ? 'paper' : /^wiki-/.test(p.id) ? 'wiki' : /^gh-/.test(p.id) ? 'gh' : /^web-/.test(p.id) ? 'web' : /^(md|pdf|doc)-/.test(p.id) ? 'doc' : 'paper');
-    const groups = [['paper', T.papers], ['wiki', T.g_wiki], ['gh', 'GitHub'], ['web', T.g_web], ['doc', T.g_docs]]
-      .map(([k, name]) => [name, papers.filter((p) => kindOf(p) === k)]).filter(([, ps]) => ps.length);
-    const listed_ = groups.length > 1
+    // by kind, or by when each came in or was last opened (one never opened: when it came in), newest first, in
+    // folders too; by kind, in the server's order (the latest layer first)
+    const order = sortOrder(), when = (p) => (order === 'opened' ? p.opened || p.added : p.added) || p.updated;
+    const docs = order === 'kind' ? papers : [...papers].sort((a, b) => when(b) - when(a));
+    // the reader's folders first (one level; a document in one at most), then the documents in none
+    const fs = folders.folders, loose = docs.filter((p) => !folders.of[p.id]);
+    const today = new Date().setHours(0, 0, 0, 0);
+    const since = (p) => { const at = when(p) * 1000; return at >= today ? 0 : Date.now() - at < 7 * 864e5 ? 1 : Date.now() - at < 30 * 864e5 ? 2 : 3; };
+    const groups = (order !== 'kind' ? [[0, T.d_today], [1, T.d_week], [2, T.d_month], [3, T.d_older]].map(([k, name]) => [name, loose.filter((p) => since(p) === k)])
+      : [['paper', T.papers], ['wiki', T.g_wiki], ['gh', 'GitHub'], ['web', T.g_web], ['doc', T.g_docs]].map(([k, name]) => [name, loose.filter((p) => kindOf(p) === k)]))
+      .filter(([, ps]) => ps.length);
+    const named = (value) => `<input class="sb-fname-in" value="${esc(value)}" placeholder="${esc(T.f_name)}" aria-label="${esc(T.f_name)}" maxlength="80" spellcheck="false">`;
+    const folder = (f) => {
+      const ps = docs.filter((p) => folders.of[p.id] === f.id), shut = folded.has(f.id);
+      const head = editing === f.id ? named(f.name)
+        : `<button type="button" class="sb-fhead" aria-expanded="${!shut}">${CHEV}${FOLDER}<span class="sb-fname">${esc(f.name)}</span><span class="sb-fn">${ps.length}</span></button>` +
+          `<button type="button" class="sb-fmenu" aria-label="${esc(T.f_actions)}" title="${esc(T.f_actions)}">⋯</button>`;
+      return `<div class="sb-folder${shut ? ' shut' : ''}" data-folder="${f.id}"><div class="sb-frow">${head}</div>` +
+        `<div class="sb-fitems">${ps.map(item).join('') || `<div class="sb-fempty">${esc(T.f_empty)}</div>`}</div></div>`;
+    };
+    const kinds = groups.length > 1 || fs.length
       ? groups.map(([name, ps]) => `<div class="sb-group">${esc(name)}</div>${ps.map(item).join('')}`).join('')
-      : papers.map(item).join('');
-    const pend = (j) => `<div class="sb-row"><div class="sb-item pending"><span class="sb-t">${esc(jobName(j, T))}</span>` +
+      : loose.map(item).join('');
+    const listed_ = papers.length || fs.length || editing
+      ? (editing === 'new' ? `<div class="sb-folder"><div class="sb-frow">${named('')}</div></div>` : '') + fs.map(folder).join('') +
+        (fs.length ? `<div class="sb-out">${esc(T.f_out)}</div>` : '') + `<div class="sb-loose">${kinds}</div><div class="sb-nomatch" hidden>${esc(T.sb_nomatch)}</div>`
+      : '';
+    const pend = (j) => `<div class="sb-row" data-q="${esc(fold(`${jobName(j, T)} ${j.pid}`))}"><div class="sb-item pending"><span class="sb-t">${esc(jobName(j, T))}</span>` +
       `<span class="sb-m"><span class="sb-id">${j.pid}</span></span>${progress(j, T)}</div>${stopBtn(j, T)}</div>`;
     const html = `
       <div class="sb-head"><a class="sb-brand" href="/">${MARK}<span>TextFold</span></a>
@@ -90,17 +124,27 @@
         ${window.TFTutorial && PAPER ? `<button type="button" class="rail-btn rail-help" title="${esc(T.tut_open)}">?</button>` : ''}
       </div>
       <a class="sb-new" href="/">＋ ${esc(T.new_paper)}</a>
-      ${groups.length > 1 ? '' : `<div class="sb-label">${esc(groups.length ? groups[0][0] : T.papers)}</div>`}
+      <div class="sb-find"><input type="search" class="sb-q" value="${esc(sbQuery)}" placeholder="${esc(T.sb_search)}" aria-label="${esc(T.sb_search)}" autocomplete="off" spellcheck="false">` +
+        `<button type="button" class="sb-sort${order !== 'kind' ? ' on' : ''}" aria-haspopup="menu" title="${esc(T[`sort_${order}`])}" aria-label="${esc(`${T.sort_label}: ${T[`sort_${order}`]}`)}">${CLOCK}</button>` +
+        `<button type="button" class="sb-newf" title="${esc(T.f_new)}" aria-label="${esc(T.f_new)}">${FOLDER_NEW}</button></div>
+      ${groups.length > 1 || fs.length ? '' : `<div class="sb-label">${esc(groups.length ? groups[0][0] : T.papers)}</div>`}
       <nav class="sb-list">${pending.map(pend).join('')}${listed_ || (pending.length ? '' : `<div class="sb-empty">${esc(T.empty)}</div>`)}</nav>
       <div class="sb-foot"><button type="button" class="sb-zotero">${BOOKS}${esc(T.z_lib)}</button><button type="button" class="sb-settings">⚙ ${esc(T.settings)}</button>${window.TFTutorial && PAPER ? `<button type="button" class="sb-help">? ${esc(T.tut_open)}</button>` : ''}<div class="sb-model">${esc(modelLabel())}</div></div>
       <div class="sb-resize" role="separator" aria-orientation="vertical" tabindex="0" title="${esc(T.sb_resize)}" aria-label="${esc(T.sb_resize)}"></div>`;
     // polled every second while something generates: drawn again only when it changed, and where it was scrolled to
     const busy = jobs.some(live);
+    if (dragging) return;   // (drawn again after the drop: the row being dragged stays where the drag began)
     if (html === lastSidebar) { side.querySelector('.rail-open').classList.toggle('busy', busy); return; }
     const scrolled = side.querySelector('.sb-list') ? side.querySelector('.sb-list').scrollTop : 0;
+    const act = document.activeElement, typing = act && side.contains(act) && act.matches('.sb-q, .sb-fname-in')
+      ? { sel: act.matches('.sb-q') ? '.sb-q' : '.sb-fname-in', value: act.value, a: act.selectionStart, b: act.selectionEnd } : null;
+    closeMenu();
     side.innerHTML = html;
     lastSidebar = html;
     side.querySelector('.sb-list').scrollTop = scrolled;
+    const field = typing && side.querySelector(typing.sel);
+    if (field) { field.value = typing.value; field.focus(); try { field.setSelectionRange(typing.a, typing.b); } catch { /* (a search field) */ } }
+    applySearch();
     side.querySelector('.sb-toggle').onclick = () => setCollapsed(true);
     side.querySelector('.rail-open').onclick = () => setCollapsed(false);
     side.querySelectorAll('.sb-settings, .rail-settings').forEach((b) => { b.onclick = openSettings; });
@@ -184,6 +228,194 @@
     e.preventDefault();
     setWidth((sbw || side.getBoundingClientRect().width) + (e.key === 'ArrowLeft' ? -16 : 16));
     store.set(SBW, String(sbw));
+  });
+
+  // ── the library's search and folders ────────────────────────────────
+  // a search narrows the list as it is typed: every word, in a title (any language's), an author or an id, accents aside
+  function fold(s) { return String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase(); }
+  function hay(p) { return fold([p.title, ...Object.values(p.titles || {}), ...(p.authors || []), p.id].join(' ')); }
+  function applySearch() {
+    const list = side.querySelector('.sb-list');
+    if (!list) return;
+    const words = fold(sbQuery).split(/\s+/).filter(Boolean), on = words.length > 0;
+    let any = false;
+    list.querySelectorAll('.sb-row').forEach((r) => { const ok = !on || words.every((w) => (r.dataset.q || '').includes(w)); r.hidden = !ok; any = any || ok; });
+    list.querySelectorAll('.sb-folder[data-folder]').forEach((f) => {
+      const n = f.querySelectorAll('.sb-row:not([hidden])').length;
+      f.hidden = on && !n;
+      f.classList.toggle('found', on && n > 0);   // (open while it shows what was found)
+    });
+    list.querySelectorAll('.sb-group').forEach((g) => {   // a kind's heading, while one of its own shows
+      let n = g.nextElementSibling, shows = false;
+      for (; n && !n.classList.contains('sb-group'); n = n.nextElementSibling) if (n.matches('.sb-row:not([hidden])')) shows = true;
+      g.hidden = on && !shows;
+    });
+    list.classList.toggle('searching', on);
+    const none = list.querySelector('.sb-nomatch');
+    if (none) none.hidden = !on || any;
+  }
+  function openSearch() {
+    if (side.classList.contains('collapsed')) setCollapsed(false);
+    const q = side.querySelector('.sb-q');
+    if (q) { q.focus(); q.select(); }
+  }
+  // ⌘K (Ctrl+K), or / outside a field: the search
+  addEventListener('keydown', (e) => {
+    const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable]');
+    const k = e.key === 'k' && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey;
+    if (!k && !(e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey)) return;
+    if (document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    openSearch();
+  });
+  side.addEventListener('input', (e) => {
+    if (!e.target.matches('.sb-q')) return;
+    sbQuery = e.target.value;
+    applySearch();
+  });
+  side.addEventListener('keydown', (e) => {
+    if (e.target.matches('.sb-q')) {
+      if (e.key === 'Escape') {   // the words out, then the field
+        e.preventDefault(); e.stopPropagation();
+        if (e.target.value) { e.target.value = ''; sbQuery = ''; applySearch(); } else e.target.blur();
+      } else if (e.key === 'Enter' || e.key === 'ArrowDown') {   // the first found: opened, or the arrows go on from it
+        const first = side.querySelector('.sb-list .sb-row:not([hidden]) .sb-item');
+        if (!first) return;
+        e.preventDefault();
+        if (e.key === 'Enter') first.click(); else first.focus();
+      }
+    } else if (e.target.matches('.sb-fname-in')) {
+      if (e.key === 'Enter') { e.preventDefault(); saveName(e.target.value); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); editing = null; renderSidebar(); }
+    } else if (e.target.matches('.sb-list .sb-item') && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      const all = [...side.querySelectorAll('.sb-list .sb-row:not([hidden]) .sb-item')].filter((a) => a.offsetParent);
+      const n = all.indexOf(e.target) + (e.key === 'ArrowDown' ? 1 : -1);
+      e.preventDefault();
+      if (n >= 0 && n < all.length) all[n].focus(); else if (n < 0) side.querySelector('.sb-q').focus();
+    }
+  });
+  side.addEventListener('focusout', (e) => {   // a name left: kept when it has one
+    if (e.target.matches('.sb-fname-in') && editing !== null) saveName(e.target.value);
+  });
+  function editName(id) {
+    editing = id;
+    renderSidebar();
+    const f = side.querySelector('.sb-fname-in');
+    if (f) { f.focus(); f.select(); }
+  }
+  async function saveName(value) {
+    const id = editing, name = value.trim();
+    editing = null;
+    if (name && id) {
+      try { folders = await api('/api/folders', id === 'new' ? { op: 'new', name } : { op: 'rename', id, name }); }
+      catch (err) { alert(err.message); }
+    }
+    renderSidebar();
+  }
+  async function moveTo(pid, folder) {
+    try { folders = await api('/api/folders', { op: 'move', papers: [pid], folder }); }
+    catch (err) { alert(err.message); }
+    renderSidebar();
+  }
+  async function deleteFolder(id) {
+    const T = t(), f = folders.folders.find((x) => x.id === id);
+    if (!f || !confirm(T.f_del_confirm.replace('{name}', f.name))) return;
+    try { folders = await api('/api/folders', { op: 'delete', id }); }
+    catch (err) { alert(err.message); }
+    renderSidebar();
+  }
+  function sortOrder() { const o = store.get(SORT); return ['added', 'opened'].includes(o) ? o : 'kind'; }
+  // the list's order, picked in a small menu by its clock
+  function sortMenu(btn) {
+    const T = t(), now = sortOrder();
+    showMenu(btn, ['kind', 'added', 'opened'].map((o) =>
+      `<button type="button" role="menuitemradio" aria-checked="${o === now}" data-sort="${o}"><i aria-hidden="true">${o === now ? '✓' : ''}</i>${esc(T[`sort_${o}`])}</button>`).join(''),
+    (a) => { store.set(SORT, a.dataset.sort); renderSidebar(); });
+  }
+  // a folder's actions, in a small menu by its ⋯
+  function closeMenu() { if (menu) { menu.remove(); menu = null; } }
+  function folderMenu(btn, id) {
+    const T = t();
+    showMenu(btn, `<button type="button" role="menuitem" data-act="rename">${esc(T.f_rename)}</button>` +
+      `<button type="button" role="menuitem" class="danger" data-act="delete">${esc(T.f_delete)}</button>`,
+    (a) => { if (a.dataset.act === 'rename') editName(id); else deleteFolder(id); });
+  }
+  function showMenu(btn, items, pick) {   // under its button, at the sidebar's right; a pick closes it
+    closeMenu();
+    menu = document.createElement('div');
+    menu.className = 'sb-menu';
+    menu.setAttribute('role', 'menu');
+    menu.innerHTML = items;
+    side.append(menu);
+    const r = btn.getBoundingClientRect(), s = side.getBoundingClientRect();
+    menu.style.top = `${r.bottom - s.top + 4}px`;
+    menu.style.right = `${Math.max(8, s.right - r.right)}px`;
+    menu.onclick = (e) => {
+      const a = e.target.closest('button');
+      if (!a) return;
+      closeMenu();
+      pick(a);
+    };
+    menu.onkeydown = (e) => {
+      const all = [...menu.querySelectorAll('button')], n = all.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.stopPropagation(); closeMenu(); btn.focus(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); all[(n + (e.key === 'ArrowDown' ? 1 : all.length - 1)) % all.length].focus(); }
+    };
+    (menu.querySelector('[aria-checked="true"]') || menu.querySelector('button')).focus();
+  }
+  document.addEventListener('click', (e) => { if (menu && !menu.contains(e.target) && !e.target.closest('.sb-fmenu, .sb-sort')) closeMenu(); });
+  side.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.matches('.sb-newf')) editName('new');
+    else if (b.matches('.sb-sort')) { e.stopPropagation(); if (menu) closeMenu(); else sortMenu(b); }
+    else if (b.matches('.sb-fhead')) {   // shut, or open again
+      const id = b.closest('.sb-folder').dataset.folder;
+      if (folded.has(id)) folded.delete(id); else folded.add(id);
+      store.set(FOLDED, [...folded].join(' '));
+      renderSidebar();
+    } else if (b.matches('.sb-fmenu')) {
+      e.stopPropagation();
+      if (menu) closeMenu(); else folderMenu(b, b.closest('.sb-folder').dataset.folder);
+    }
+  });
+  // a document dragged into a folder (onto its name, or into it), or out of any (onto the rest of the list)
+  const dropOn = (e) => e.target.closest && (e.target.closest('.sb-folder[data-folder]') || e.target.closest('.sb-out, .sb-loose'));
+  side.addEventListener('dragstart', (e) => {
+    const row = e.target.closest && e.target.closest('.sb-row[data-pid]');
+    if (!row) return;
+    dragging = row.dataset.pid;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/x-textfold-paper', dragging);
+    side.classList.add('dragging');
+    side.classList.toggle('from-folder', !!folders.of[dragging]);
+  });
+  side.addEventListener('dragend', () => {
+    dragging = null;
+    side.classList.remove('dragging', 'from-folder');
+    side.querySelectorAll('.drop').forEach((x) => x.classList.remove('drop'));
+  });
+  side.addEventListener('dragover', (e) => {
+    const at = dragging && dropOn(e);
+    side.querySelectorAll('.drop').forEach((x) => { if (x !== at) x.classList.remove('drop'); });
+    if (!at) return;
+    const to = at.matches('.sb-folder') ? at.dataset.folder : null;
+    if ((folders.of[dragging] || null) === to) return;   // (where it is already)
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    at.classList.add('drop');
+  });
+  side.addEventListener('dragleave', (e) => {
+    const at = dropOn(e);
+    if (at && !at.contains(e.relatedTarget)) at.classList.remove('drop');
+  });
+  side.addEventListener('drop', (e) => {
+    const at = dragging && dropOn(e);
+    if (!at) return;
+    e.preventDefault();
+    const pid = dragging, to = at.matches('.sb-folder') ? at.dataset.folder : null;
+    dragging = null;
+    if ((folders.of[pid] || null) !== to) moveTo(pid, to);
   });
 
   // ── jobs ─────────────────────────────────────────────────────────────
@@ -425,6 +657,7 @@
     };
     api('/api/models').then((d) => { modelName = d.selectedName || ''; renderSidebar(); }).catch(() => {});
     api('/api/papers').then((p) => { papers = p; renderSidebar(); }).catch(() => {});
+    api('/api/folders').then((f) => { folders = f; renderSidebar(); }).catch(() => {});
     api('/api/jobs').then((j) => {
       jobs = j;
       renderSidebar();

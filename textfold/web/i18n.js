@@ -393,6 +393,49 @@ window.DR_I18N = (() => {
       'TextFold {v} इंस्टॉल हो गया है।', 'नया क्या है', 'GitHub पर स्टार दें']),
   };
   for (const [code, words] of Object.entries(U)) Object.assign(S[code], words);
+  // the library in the sidebar: its search, the reader's folders (folders.py), its order by date
+  const lib = (w) => ({ sb_search: w[0], sb_nomatch: w[1], f_new: w[2], f_name: w[3], f_rename: w[4], f_delete: w[5], f_del_confirm: w[6],
+    f_empty: w[7], f_actions: w[8], f_out: w[9], sort_label: w[10][0], sort_kind: w[10][1], sort_added: w[10][2], sort_opened: w[10][3],
+    d_today: w[11], d_week: w[12], d_month: w[13], d_older: w[14] });
+  const F = {
+    en: lib(['Search titles, authors, ids…', 'Nothing matches.', 'New folder', 'Folder name', 'Rename', 'Delete folder',
+      'Delete the folder “{name}”? The documents in it stay in the library.', 'Drag documents here.', 'Folder actions', 'Not in a folder',
+      ['Order', 'By kind', 'By date added', 'By last opened'], 'Today', 'Past 7 days', 'Past 30 days', 'Earlier']),
+    zh: lib(['搜索标题、作者、编号…', '没有匹配的文档。', '新建文件夹', '文件夹名称', '重命名', '删除文件夹',
+      '删除文件夹“{name}”？里面的文档会留在文献库里。', '把文档拖到这里。', '文件夹操作', '不放在文件夹里',
+      ['排序', '按类型', '按添加时间', '按最近打开'], '今天', '最近 7 天', '最近 30 天', '更早']),
+    'zh-Hant': lib(['搜尋標題、作者、編號…', '沒有符合的文件。', '新增資料夾', '資料夾名稱', '重新命名', '刪除資料夾',
+      '刪除資料夾「{name}」？裡面的文件會留在文獻庫裡。', '把文件拖到這裡。', '資料夾操作', '不放在資料夾裡',
+      ['排序', '依類型', '依加入時間', '依最近開啟'], '今天', '最近 7 天', '最近 30 天', '更早']),
+    ja: lib(['タイトル・著者・ID で検索…', '一致する文書はありません。', '新しいフォルダ', 'フォルダ名', '名前を変更', 'フォルダを削除',
+      'フォルダ「{name}」を削除しますか？中の文書はライブラリに残ります。', 'ここに文書をドラッグします。', 'フォルダの操作', 'フォルダに入れない',
+      ['並べ替え', '種類別', '追加日順', '最近開いた順'], '今日', '過去 7 日間', '過去 30 日間', 'それ以前']),
+    ko: lib(['제목, 저자, ID 검색…', '일치하는 문서가 없습니다.', '새 폴더', '폴더 이름', '이름 바꾸기', '폴더 삭제',
+      '‘{name}’ 폴더를 삭제할까요? 안에 있는 문서는 라이브러리에 남습니다.', '문서를 여기로 끌어 오세요.', '폴더 작업', '폴더에서 빼기',
+      ['정렬', '종류별', '추가한 날짜순', '최근 연 순서'], '오늘', '지난 7일', '지난 30일', '그 이전']),
+    es: lib(['Buscar títulos, autores, identificadores…', 'Nada coincide.', 'Nueva carpeta', 'Nombre de la carpeta', 'Renombrar', 'Eliminar carpeta',
+      '¿Eliminar la carpeta «{name}»? Los documentos que contiene se quedan en la biblioteca.', 'Arrastra documentos aquí.', 'Acciones de la carpeta', 'Fuera de las carpetas',
+      ['Orden', 'Por tipo', 'Por fecha de incorporación', 'Por última apertura'], 'Hoy', 'Últimos 7 días', 'Últimos 30 días', 'Antes']),
+    fr: lib(['Rechercher titres, auteurs, identifiants…', 'Aucun résultat.', 'Nouveau dossier', 'Nom du dossier', 'Renommer', 'Supprimer le dossier',
+      'Supprimer le dossier « {name} » ? Les documents qu’il contient restent dans la bibliothèque.', 'Glissez des documents ici.', 'Actions du dossier', 'Hors des dossiers',
+      ['Ordre', 'Par type', 'Par date d’ajout', 'Par dernière ouverture'], 'Aujourd’hui', '7 derniers jours', '30 derniers jours', 'Plus ancien']),
+    de: lib(['Titel, Autoren, IDs suchen…', 'Nichts gefunden.', 'Neuer Ordner', 'Ordnername', 'Umbenennen', 'Ordner löschen',
+      'Den Ordner „{name}“ löschen? Die Dokumente darin bleiben in der Bibliothek.', 'Dokumente hierher ziehen.', 'Ordneraktionen', 'Ohne Ordner',
+      ['Reihenfolge', 'Nach Art', 'Nach Hinzufügedatum', 'Zuletzt geöffnet'], 'Heute', 'Letzte 7 Tage', 'Letzte 30 Tage', 'Älter']),
+    pt: lib(['Buscar títulos, autores, identificadores…', 'Nada encontrado.', 'Nova pasta', 'Nome da pasta', 'Renomear', 'Excluir pasta',
+      'Excluir a pasta “{name}”? Os documentos nela continuam na biblioteca.', 'Arraste documentos para cá.', 'Ações da pasta', 'Fora das pastas',
+      ['Ordem', 'Por tipo', 'Por data de inclusão', 'Por última abertura'], 'Hoje', 'Últimos 7 dias', 'Últimos 30 dias', 'Antes']),
+    it: lib(['Cerca titoli, autori, identificativi…', 'Nessun risultato.', 'Nuova cartella', 'Nome della cartella', 'Rinomina', 'Elimina cartella',
+      'Eliminare la cartella «{name}»? I documenti al suo interno restano nella libreria.', 'Trascina qui i documenti.', 'Azioni della cartella', 'Fuori dalle cartelle',
+      ['Ordine', 'Per tipo', 'Per data di aggiunta', 'Per ultima apertura'], 'Oggi', 'Ultimi 7 giorni', 'Ultimi 30 giorni', 'Prima']),
+    ru: lib(['Поиск по названиям, авторам, идентификаторам…', 'Ничего не найдено.', 'Новая папка', 'Название папки', 'Переименовать', 'Удалить папку',
+      'Удалить папку «{name}»? Документы из неё останутся в библиотеке.', 'Перетащите сюда документы.', 'Действия с папкой', 'Вне папок',
+      ['Порядок', 'По типу', 'По дате добавления', 'По последнему открытию'], 'Сегодня', 'Последние 7 дней', 'Последние 30 дней', 'Раньше']),
+    hi: lib(['शीर्षक, लेखक, आईडी खोजें…', 'कुछ नहीं मिला।', 'नया फ़ोल्डर', 'फ़ोल्डर का नाम', 'नाम बदलें', 'फ़ोल्डर हटाएँ',
+      'फ़ोल्डर “{name}” हटाएँ? इसके दस्तावेज़ लाइब्रेरी में बने रहेंगे।', 'दस्तावेज़ यहाँ खींचें।', 'फ़ोल्डर के विकल्प', 'किसी फ़ोल्डर में नहीं',
+      ['क्रम', 'प्रकार के अनुसार', 'जोड़ने की तारीख़ के अनुसार', 'हाल में खोले गए के अनुसार'], 'आज', 'पिछले 7 दिन', 'पिछले 30 दिन', 'इससे पहले']),
+  };
+  for (const [code, words] of Object.entries(F)) Object.assign(S[code], words);
   S.en.up_dev = 'Run from the code, this copy does not update itself.';
   const NATIVE = { en: 'English', zh: '简体中文', 'zh-Hant': '繁體中文', ja: '日本語', ko: '한국어', es: 'Español', fr: 'Français', de: 'Deutsch', pt: 'Português', it: 'Italiano', ru: 'Русский', hi: 'हिन्दी' };
   const HTML_LANG = { zh: 'zh-CN', 'zh-Hant': 'zh-TW' };

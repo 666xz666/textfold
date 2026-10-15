@@ -2,7 +2,7 @@
 
   GET  /                      landing: paste a link, pick a language, the list of papers
   GET  /p/<id>?lang=xx        a paper in the reader
-  GET  /api/papers            the papers on disk
+  GET  /api/papers            the papers on disk, each with when it came in and was last opened (library.py)
   GET  /api/jobs              generation jobs (queued, running, recently finished)
   POST /api/jobs/stop         {id}: stop a job: a queued one is dropped; a running one ends once the model calls under way
                               return (what they wrote is kept in the cache, so starting it again goes on from there)
@@ -26,6 +26,8 @@
                               with PDF.js, for the side-by-side view
   POST /api/ask               {paper, id, question}: the model answers a note's question; the answer is stored in it
   POST /api/papers/delete     {paper}: move a paper to papers/.trash (not while it is being generated)
+  GET  /api/folders           the reader's folders and which document is in which (library.py)
+  POST /api/folders           {op: new | rename | delete | move, ...}: one change; the folders after it
   GET  /api/bridge             the ChatGPT bridge (127.0.0.1:10531): running and its models, or what starting it needs
   POST /api/bridge/start       start it detached (bridges.py)
   POST /api/openrouter/start   {back}: the OpenRouter consent URL (OAuth PKCE); GET /oauth/openrouter is its return
@@ -57,7 +59,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-from . import agents, bridges, build, engine, fetch, langs, llm, local, models, notes, office, pdf, pdfdoc, pdftext, pipeline, providers, store, zotero
+from . import agents, bridges, build, engine, fetch, langs, library, llm, local, models, notes, office, pdf, pdfdoc, pdftext, pipeline, providers, store, zotero
 
 STATIC = {"app.js": "text/javascript", "app.css": "text/css", "reader.js": "text/javascript",
           "reader.css": "text/css", "i18n.js": "text/javascript", "tutorial.js": "text/javascript"}
@@ -406,10 +408,15 @@ def reader_page(pid):
     return hit[1]
 
 
+def listed():
+    """The papers for the list: those on disk, with when each came in and was last opened."""
+    return library.stamp(store.papers())
+
+
 def landing_page(jobs):
     s = models.load_settings()
     chosen = models.default_model(s)
-    boot = {"papers": store.papers(), "jobs": jobs.list(), "model": models.label(chosen, s) if chosen else "",
+    boot = {"papers": listed(), "folders": library.folders(), "jobs": jobs.list(), "model": models.label(chosen, s) if chosen else "",
             "bridge": bridges.bridge_status(), "langs": [[code, v[1]] for code, v in langs.LANGS.items()]}
     t = (build.WEB / "app.html").read_text()
     return t.replace("{{HEAD}}", build.fonts_head(build.APP_ASSETS)).replace("{{BOOT}}", json.dumps(boot, ensure_ascii=False).replace("</", "<\\/"))
@@ -469,6 +476,7 @@ def make_handler(jobs):
                         self.send_header("Location", "/")
                         self.end_headers()
                         return
+                    library.opened(m.group(1))
                     return self.send(200, reader_page(m.group(1)), "text/html; charset=utf-8")
                 if u.path.startswith("/static/") and u.path[8:] in STATIC:
                     return self.send(200, (build.WEB / u.path[8:]).read_bytes(), STATIC[u.path[8:]] + "; charset=utf-8")
@@ -477,7 +485,9 @@ def make_handler(jobs):
                     if f:
                         return self.send(200, f.read_bytes(), VENDOR_TYPES[f.suffix], cache="max-age=86400")
                 if u.path == "/api/papers":
-                    return self.json(store.papers())
+                    return self.json(listed())
+                if u.path == "/api/folders":
+                    return self.json(library.folders())
                 if u.path == "/api/jobs":
                     return self.json(jobs.list())
                 if u.path in ("/api/models", "/api/settings"):
@@ -650,8 +660,14 @@ def make_handler(jobs):
                     if any(j["pid"] == pid and j["status"] in ("queued", "running") for j in jobs.list()):
                         return self.json({"error": "busy"}, 409)
                     store.trash(pid)
+                    library.forget(pid)
                     PAGES.pop(pid, None)
-                    return self.json(store.papers())
+                    return self.json(listed())
+                if u.path == "/api/folders":
+                    try:
+                        return self.json(library.change(body))
+                    except ValueError as e:
+                        return self.json({"error": str(e)}, 400)
                 if u.path == "/api/ask":
                     pid = str(body.get("paper", ""))
                     if not store.valid_id(pid) or not (store.pdir(pid) / "meta.json").exists():
