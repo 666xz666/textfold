@@ -178,7 +178,9 @@ The answer cites up to five paragraphs; a cite opens its paragraph in place.
 In the app the mark (in the bar and in the sidebar's rail) leads home; the rail's second button opens the list of
 papers. A paper is deleted from the list after a prompt that says what goes with it: its folder (layers, model
 replies, notes) moves to `papers/.trash/<id>-<time>/`, from where it can be moved back. A paper being generated
-cannot be deleted. The format, the contract for every export, is `docs/notes-format.md`; the server keeps notes in
+cannot be deleted. The list is searched (⌘K or /), ordered by kind, by when each document came in or by when it was
+last opened, and kept in folders, one level deep, a document in one at most: dragged there, or moved from the menu a
+right click opens on it. Folders and dates are in `library.json` beside `papers/` (`library.py`). The format, the contract for every export, is `docs/notes-format.md`; the server keeps notes in
 `papers/<id>/notes.json`, a static page in the browser.
 
 Links: the author's cross-references (parsed) and argument links (one model call: supports / builds on / qualifies /
@@ -255,7 +257,11 @@ is read with English levels over its own text. Making the levels in the document
 A PDF dropped on the landing is read in the browser first (pdf.js, `refsOf` in app.js): an arXiv id from its margin
 stamp, a DOI from its metadata or its first page (only the first: the second is often the references). `POST /api/pdfs`
 takes the file with what was found (`X-Refs`): a paper that resolves is generated from its online version, the file
-kept as its `source.pdf` once it is fetched; an arXiv paper without HTML falls back to the file. Anything else goes to
+kept as its `source.pdf` once it is fetched; an arXiv paper without HTML falls back to the file (or, with none, to
+arXiv's PDF). While the engine is not installed, a PDF that has its words in it is read by TextFold itself
+(`pdftext.py`): pdf-inspector's Markdown, page by page, into the engine's blocks, and each figure found by its caption
+(the drawings and pictures above or below it, up to the prose around them) and cut from its page with pypdfium2
+(`engine.crop_here`). A scanned PDF, and every PDF once the engine is there, goes to
 the PDF engine (`engine.py`): MinerU 4, pinned, in `<app data>/engine` (a PaperFold install in its old place is used
 there), installed from the landing, the settings or `python3 -m textfold engine install`. Its command line only (`mineru-kit
 parse --format zip`), never the `mineru` document library. Fast is MinerU's flash tier (seconds, no model; formulas as
@@ -337,6 +343,7 @@ textfold/wiki.py     Wikipedia articles, any language edition (wiki-<lang>-<page
 textfold/github.py   a GitHub repository's README (gh-<owner>--<repo>)
 textfold/webpage.py  any other web page: its article (trafilatura), hidden text removed first (web-<host>-<hash>)
 textfold/engine.py   the PDF engine: MinerU in a Python of its own under the app data folder; install, removal, conversion
+textfold/pdftext.py  a PDF with its own text, read without the engine (pdf-inspector); figures found by their captions, cut with pypdfium2
 textfold/pdfdoc.py   a converted PDF as a document: MinerU's structured output into Markdown and HTML (pdf-<file hash>;
                      another file, doc-<file hash>)
 textfold/office.py   Word, PowerPoint, Excel, CSV, EPUB and saved web pages read without the engine, in its shape
@@ -355,6 +362,7 @@ textfold/providers.py API providers: ThoughtDAG's env registry and presets, /mod
 textfold/models.py   one catalog of agent and API models; settings; resolving a model id
 textfold/llm.py      the call (cached) for every kind of model; llm_openai.py: OpenAI-compatible endpoints
 textfold/build.py    reader pages: app mode (served) and static mode (one file)
+textfold/library.py  the sidebar's library: folders, when each document came in and was last opened (library.json)
 textfold/notes.py    the reader's notes (docs/notes-format.md) and questions answered by the model
 textfold/fold.py     the TextFold format (docs/format.md) and a document at one level as Markdown (python3 -m textfold get)
 textfold/web/   reader.js (render + FLIP morph), app.js (sidebar, landing, settings, jobs), i18n.js, CSS, templates
