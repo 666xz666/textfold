@@ -44,14 +44,14 @@ Choose the level of detail you need, and lower your cognitive load.
 
 ## Also for agent output
 
-Your agent writes more than you have time to read. A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) folds every reply the same way, one key per level, and an extension does the same in Pi. [More ↓](#in-claude-code)
+Your agent writes more than you have time to read. A [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) folds every reply the same way, one key per level, and an extension does the same in Pi. [More ↓](#in-claude-code-and-pi)
 
 <img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/textfold.gif" width="880" alt="A reply in Claude Code folding from the full text to two sentences a paragraph, then one, and back, one key at a time">
 
 ## One fold, three places
 
 - **Read.** Paste a link or drop a file; it opens as a map of its sections that you zoom into. [Get started ↓](#get-started)
-- **Fold your agent's replies.** One key per level in Claude Code and in Pi, with no second model. [In Claude Code ↓](#in-claude-code)
+- **Fold your agent's replies.** One key per level in Claude Code and in Pi, with no second model. [In Claude Code and Pi ↓](#in-claude-code-and-pi)
 - **Plug it into your workflow.** `python3 -m textfold get` hands your agent or script a document one level at a time, and an open format lets any program read and write folded text. [For agents ↓](#for-agents-and-scripts)
 
 ## What you get
@@ -173,7 +173,7 @@ python3 -m textfold export 2512.23916
 
 TextFold is a tool, and its license covers its code. When you share a file, follow the terms of the original text, shown under its title.
 
-## In Claude Code
+## In Claude Code and Pi
 
 TextFold puts the five levels on every reply in Claude Code. Press 5 for the answer in one sentence, 3 for the point of every paragraph, 1 for every word. Nothing is paraphrased, so at every level you read exactly what Claude said.
 
@@ -209,6 +209,8 @@ More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plu
 
 **In Pi.** An extension puts the same five levels on every reply in [Pi](https://pi.dev), with Alt+1 to Alt+5 or `/fold`. It folds with the mod's own engine, so a reply reads the same at each level in both. Install it from [plugins/pi-textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md).
 
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/pi.gif" width="880" alt="A reply in Pi folding a level at a time, from the full text down to its answer in one sentence, one key each">
+
 ## What's new
 
 - **October 15, 2026: Pi's replies fold too.** [An extension for Pi](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md) puts the five levels on every reply, with the same fold as in Claude Code. Thanks to [@jlamweil](https://github.com/jlamweil).
@@ -227,7 +229,7 @@ More in [plugins/textfold](https://github.com/chenxiachan/textfold/blob/main/plu
 - **October 9, 2026: for agents.** `python3 -m textfold get <link> --level topic` prints a document's map, and `--section` unfolds the part that matters. [More ↓](#for-agents-and-scripts)
 - **October 8, 2026: any GitHub README.** Paste a repository's link and read its README at five levels, with its logo, badges and GIFs as on GitHub.
 - **October 8, 2026: read beside the original.** **Original**, at the top of a paper, opens its PDF at the left and shows each paragraph on its page as you read. A new paper opens as soon as it can be read, while its levels are written.
-- **October 7, 2026: your agent's replies fold too.** [The Claude Code mod](#in-claude-code) puts the five levels on every reply. Press 5 for the answer in one sentence, 1 for every word.
+- **October 7, 2026: your agent's replies fold too.** [The Claude Code mod](#in-claude-code-and-pi) puts the five levels on every reply. Press 5 for the answer in one sentence, 1 for every word.
 - **October 6, 2026: more than arXiv.** PubMed Central, bioRxiv, medRxiv, Wikipedia in any language, and your own Markdown files.
 
 </details>

@@ -44,14 +44,14 @@
 
 ## 也可以用在 Agent 输出上
 
-Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) 用同样的方式折叠每条回答，一个键一个层级；Pi 里也有一个扩展做同样的事。[了解更多 ↓](#在-claude-code-里)
+Agent 写的，总比你有空读的多。一个 [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) 用同样的方式折叠每条回答，一个键一个层级；Pi 里也有一个扩展做同样的事。[了解更多 ↓](#在-claude-code-和-pi-里)
 
 <img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/textfold.gif" width="880" alt="Claude Code 里的一条回答从全文折到每段两句，再折到一句，然后展开回来，每次按一个键">
 
 ## 一种折叠，三个地方
 
 - **读。** 粘贴链接或拖入文件，打开就是一张章节地图，再往里缩放。[开始使用 ↓](#开始使用)
-- **折叠 agent 的回答。** 在 Claude Code 和 Pi 里一个键一个层级，不用第二个模型。[在 Claude Code 里 ↓](#在-claude-code-里)
+- **折叠 agent 的回答。** 在 Claude Code 和 Pi 里一个键一个层级，不用第二个模型。[在 Claude Code 和 Pi 里 ↓](#在-claude-code-和-pi-里)
 - **接入你的工作流。** `python3 -m textfold get` 把文档一层一层地交给你的 agent 或脚本；开放的格式让任何程序都能读写折叠后的文字。[给 agent 用 ↓](#给-agent-和脚本用)
 
 ## 你会得到
@@ -173,7 +173,7 @@ python3 -m textfold export 2512.23916
 
 TextFold 只是一个工具，它的许可证只管代码。分享文件时，请遵守原文的许可条款，它标在每篇的标题下方。
 
-## 在 Claude Code 里
+## 在 Claude Code 和 Pi 里
 
 TextFold 把五个层级放到 Claude Code 的每条回答上。按 5 看一句话的答案，按 3 看每段的要点，按 1 看每一个字。不做任何改写，所以无论在哪一级，你读到的都是 Claude 的原话。
 
@@ -209,6 +209,8 @@ claude plugin install textfold@textfold
 
 **在 Pi 里。** 一个扩展把同样的五个层级放到 [Pi](https://pi.dev) 的每条回答上，用 Alt+1 到 Alt+5 或 `/fold` 切换。它用的就是 mod 的折叠引擎，所以同一条回答在两边每一级读到的都一样。安装方法见 [plugins/pi-textfold](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md)。
 
+<img src="https://raw.githubusercontent.com/chenxiachan/textfold/main/docs/assets/pi.gif" width="880" alt="Pi 里的一条回答逐级折叠，从全文一直折到一句话的答案，每级一个键">
+
 ## 最新
 
 - **2026 年 10 月 15 日：Pi 的回答也能折叠了。** [Pi 扩展](https://github.com/chenxiachan/textfold/blob/main/plugins/pi-textfold/README.md) 把五个层级放到每条回答上，折法和 Claude Code 里一样。感谢 [@jlamweil](https://github.com/jlamweil)。
@@ -227,7 +229,7 @@ claude plugin install textfold@textfold
 - **2026 年 10 月 9 日：给 agent 用。** `python3 -m textfold get <链接> --level topic` 输出一份文档的地图，`--section` 再展开需要的那一节。[了解更多 ↓](#给-agent-和脚本用)
 - **2026 年 10 月 8 日：读任何 GitHub README。** 粘贴仓库链接，就能在五个层级上读它的 README，logo、徽章和动图都和 GitHub 上一样。
 - **2026 年 10 月 8 日：对照原文读。** 论文页顶部的 **原文** 会在左边打开它的 PDF，读到哪一段，就标出它在原页上的位置。新论文解析完就能打开，缩放层级在后台生成。
-- **2026 年 10 月 7 日：Agent 的回答也能折叠了。** [Claude Code mod](#在-claude-code-里) 把五个层级放到每条回答上。按 5 看一句话的答案，按 1 看每一个字。
+- **2026 年 10 月 7 日：Agent 的回答也能折叠了。** [Claude Code mod](#在-claude-code-和-pi-里) 把五个层级放到每条回答上。按 5 看一句话的答案，按 1 看每一个字。
 - **2026 年 10 月 6 日：不只读 arXiv。** PubMed Central、bioRxiv、medRxiv、任何语言的维基百科，以及你自己的 Markdown 文件。
 
 </details>

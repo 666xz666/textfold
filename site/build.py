@@ -198,7 +198,7 @@ Models and agents now write more than people can read. TextFold keeps the whole 
 - [README]({REPO}/blob/main/README.md): what it reads, connecting a model, the reader's keys, saving a page, Zotero
 - [The TextFold format]({REPO}/blob/main/docs/format.md): a folded document as JSON
 - [For agents and scripts]({REPO}#for-agents-and-scripts)
-- [In Claude Code]({REPO}#in-claude-code)
+- [In Claude Code and Pi]({REPO}#in-claude-code-and-pi)
 - [Release notes]({REPO}/releases)
 
 ## Optional
