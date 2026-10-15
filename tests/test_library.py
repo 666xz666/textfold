@@ -43,6 +43,15 @@ class Library(unittest.TestCase):
         self.assertEqual(library.change({"op": "rename", "id": b["id"], "name": "Group"})["folders"][1]["name"], "Group")
         self.assertEqual(json.loads(library.path().read_text())["folders"][1]["name"], "Group")
 
+    def test_a_new_folder_with_the_document_it_was_made_for(self):   # (the menu a document's right click opens)
+        a = library.change({"op": "new", "name": "A"})["folders"][0]
+        library.change({"op": "move", "papers": ["2512.24601"], "folder": a["id"]})
+        got = library.change({"op": "new", "name": "B", "papers": ["2512.24601"]})
+        self.assertEqual(got["of"], {"2512.24601": got["folders"][1]["id"]})
+        with self.assertRaises(ValueError):
+            library.change({"op": "new", "name": "C", "papers": ["../etc"]})
+        self.assertEqual(len(library.folders()["folders"]), 2)
+
     def test_a_folder_deleted_leaves_its_documents(self):
         a = library.change({"op": "new", "name": "Old"})["folders"][0]
         library.change({"op": "move", "papers": ["2512.24601"], "folder": a["id"]})

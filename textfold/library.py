@@ -66,15 +66,18 @@ def _name(s):
 
 
 def change(body):
-    """One change to the folders, the folders after it: {op: "new", name} · {op: "rename", id, name} ·
-    {op: "delete", id} · {op: "move", papers: [ids], folder: id or null (out of any)}. ValueError for one that cannot
-    be made."""
+    """One change to the folders, the folders after it: {op: "new", name, papers?: [ids] moved into it} ·
+    {op: "rename", id, name} · {op: "delete", id} · {op: "move", papers: [ids], folder: id or null (out of any)}.
+    ValueError for one that cannot be made."""
     op = body.get("op")
     with _lock:
         d = load()
         ids = {f["id"] for f in d["folders"]}
         if op == "new":
-            d["folders"].append({"id": f"f-{secrets.token_hex(4)}", "name": _name(body.get("name"))})
+            f = {"id": f"f-{secrets.token_hex(4)}", "name": _name(body.get("name"))}
+            pids = _papers(body.get("papers", []))
+            d["folders"].append(f)
+            d["of"].update(dict.fromkeys(pids, f["id"]))
         elif op in ("rename", "delete"):
             f = next((f for f in d["folders"] if f["id"] == body.get("id")), None)
             if f is None:
@@ -88,10 +91,7 @@ def change(body):
             to = body.get("folder") or None
             if to is not None and to not in ids:
                 raise ValueError("no such folder")
-            pids = body.get("papers")
-            if not isinstance(pids, list) or not all(isinstance(p, str) and store.valid_id(p) for p in pids):
-                raise ValueError("papers: a list of document ids")
-            for p in pids:
+            for p in _papers(body.get("papers")):
                 if to:
                     d["of"][p] = to
                 else:
@@ -100,6 +100,12 @@ def change(body):
             raise ValueError("op: new, rename, delete or move")
         _save(d)
         return {"folders": d["folders"], "of": d["of"]}
+
+
+def _papers(pids):
+    if not isinstance(pids, list) or not all(isinstance(p, str) and store.valid_id(p) for p in pids):
+        raise ValueError("papers: a list of document ids")
+    return pids
 
 
 def _came_in(pid):

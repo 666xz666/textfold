@@ -98,6 +98,15 @@
 .sb-menu button { text-align: left; border: 0; background: none; font: 500 13px var(--sans); color: var(--ink); padding: 7px 10px; border-radius: 7px; cursor: pointer; }
 .sb-menu button:hover, .sb-menu button:focus-visible { background: var(--surface); outline: none; }
 .sb-menu .danger { color: var(--r-limitation); }
+/* a document's: the folders it can go into (its own ticked), a new one, deleting it */
+.sb-menu { max-width: min(280px, calc(100% - 16px)); max-height: min(70vh, 460px); overflow-y: auto; }
+.sb-menu button:has(svg) { display: flex; align-items: center; gap: 8px; }
+#sidebar .sb-menu svg { width: 16px; height: 16px; color: var(--muted); }
+.sb-mname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-menu [aria-checked="true"]::after { content: '✓'; color: var(--accent); font-weight: 600; }
+.sb-mlabel { padding: 6px 10px 3px; font: 600 11.5px var(--sans); color: var(--muted); }
+.sb-msep { height: 1px; margin: 4px 6px; background: var(--line-2); }
+.sb-item.menu-on:not(.active) { background: var(--surface); }
 .sb-foot { border-top: 1px solid var(--line-2); padding: 10px 12px 14px; }
 .sb-settings, .sb-help, .sb-zotero { width: 100%; text-align: left; border: 0; background: none; font: 550 13px var(--sans); color: var(--ink-2); padding: 6px 4px; border-radius: 7px; cursor: pointer; }
 .sb-settings:hover, .sb-help:hover, .sb-zotero:hover { background: var(--surface); }

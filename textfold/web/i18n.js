@@ -452,6 +452,22 @@ window.DR_I18N = (() => {
     hi: ['प्रकार', 'जोड़े गए', 'खोले गए'],
   };
   for (const [code, [a, b, c]] of Object.entries(BY)) Object.assign(S[code], { by_kind: a, by_added: b, by_opened: c });
+  // a document's menu, at a right click on it: the folders it can go into, and out of its own
+  const MV = {
+    en: ['Move to folder', 'Take out of the folder'],
+    zh: ['移到文件夹', '移出文件夹'],
+    'zh-Hant': ['移到資料夾', '移出資料夾'],
+    ja: ['フォルダへ移動', 'フォルダから出す'],
+    ko: ['폴더로 이동', '폴더에서 빼기'],
+    es: ['Mover a una carpeta', 'Sacar de la carpeta'],
+    fr: ['Déplacer vers un dossier', 'Sortir du dossier'],
+    de: ['In einen Ordner verschieben', 'Aus dem Ordner nehmen'],
+    pt: ['Mover para uma pasta', 'Tirar da pasta'],
+    it: ['Sposta in una cartella', 'Togli dalla cartella'],
+    ru: ['Переместить в папку', 'Убрать из папки'],
+    hi: ['फ़ोल्डर में ले जाएँ', 'फ़ोल्डर से निकालें'],
+  };
+  for (const [code, [a, b]] of Object.entries(MV)) Object.assign(S[code], { f_move_to: a, f_take_out: b });
   // a question's field and its turns: send it, stop it while the model answers, take a turn out of the conversation
   const turn = (w) => ({ n_send: w[0], n_stop: w[1], n_turn_del: w[2], n_turn_del_q: w[3] });
   const Q = {

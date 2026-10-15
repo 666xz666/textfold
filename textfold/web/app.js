@@ -32,7 +32,9 @@
   let sbQuery = '';        // the sidebar's search, as typed
   let editing = null;      // a folder's name being written: 'new', or the folder's id
   let dragging = null;     // the document being dragged to a folder
-  let menu = null;         // a folder's menu, while it is open
+  let moving = null;       // the document a new folder is being named for (its menu's New folder…)
+  let menu = null;         // a folder's or a document's menu, while it is open
+  let stale = false;       // the list as polled while a menu was open: drawn when it closes
   const FOLDED = 'textfold.folded';   // the folders shut, kept for next time
   const SORT = 'textfold.sort';       // the list's order: 'kind' (the default), 'added' (when it came in) or 'opened' (last)
   const folded = new Set((store.get(FOLDED) || '').split(' ').filter(Boolean));
@@ -71,6 +73,7 @@
   const jobName = (j, T) => (j.kind === 'install' ? T.engine : j.title || j.pid);
   let lastSidebar = '';
   function renderSidebar() {
+    stale = false;
     const T = t();
     const listed = new Set(papers.map((p) => p.id));
     const pending = jobs.filter((j) => !listed.has(j.pid) && live(j));
@@ -291,7 +294,7 @@
       }
     } else if (e.target.matches('.sb-fname-in')) {
       if (e.key === 'Enter') { e.preventDefault(); saveName(e.target.value); }
-      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); editing = null; renderSidebar(); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); editing = null; moving = null; renderSidebar(); }
     } else if (e.target.matches('.sb-list .sb-item') && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       const all = [...side.querySelectorAll('.sb-list .sb-row:not([hidden]) .sb-item')].filter((a) => a.offsetParent);
       const n = all.indexOf(e.target) + (e.key === 'ArrowDown' ? 1 : -1);
@@ -302,17 +305,17 @@
   side.addEventListener('focusout', (e) => {   // a name left: kept when it has one
     if (e.target.matches('.sb-fname-in') && editing !== null) saveName(e.target.value);
   });
-  function editName(id) {
-    editing = id;
+  function editName(id, pid = null) {
+    editing = id; moving = pid;
     renderSidebar();
     const f = side.querySelector('.sb-fname-in');
     if (f) { f.focus(); f.select(); }
   }
   async function saveName(value) {
-    const id = editing, name = value.trim();
-    editing = null;
+    const id = editing, name = value.trim(), papers = moving ? [moving] : [];
+    editing = null; moving = null;
     if (name && id) {
-      try { folders = await api('/api/folders', id === 'new' ? { op: 'new', name } : { op: 'rename', id, name }); }
+      try { folders = await api('/api/folders', id === 'new' ? { op: 'new', name, papers } : { op: 'rename', id, name }); }
       catch (err) { alert(err.message); }
     }
     renderSidebar();
@@ -330,24 +333,52 @@
     renderSidebar();
   }
   function sortOrder() { const o = store.get(SORT); return ['added', 'opened'].includes(o) ? o : 'kind'; }
-  // a folder's actions, in a small menu by its ⋯
-  function closeMenu() { if (menu) { menu.remove(); menu = null; } }
-  function folderMenu(btn, id) {
+  // a folder's actions, in a small menu by its ⋯ (or at a right click on its name)
+  function closeMenu() {
+    if (!menu) return;
+    menu.remove(); menu = null;
+    side.querySelectorAll('.menu-on').forEach((x) => x.classList.remove('menu-on'));
+    if (stale) renderSidebar();
+  }
+  function folderMenu(btn, id, at) {
     const T = t();
     showMenu(btn, `<button type="button" role="menuitem" data-act="rename">${esc(T.f_rename)}</button>` +
       `<button type="button" role="menuitem" class="danger" data-act="delete">${esc(T.f_delete)}</button>`,
-    (a) => { if (a.dataset.act === 'rename') editName(id); else deleteFolder(id); });
+    (a) => { if (a.dataset.act === 'rename') editName(id); else deleteFolder(id); }, at);
   }
-  function showMenu(btn, items, pick) {   // under its button, at the sidebar's right; a pick closes it
+  // a document's, at a right click on it: into a folder (however far down the list it is), out of its own, into a new
+  // one named there, or deleted
+  function docMenu(btn, pid, at) {
+    const T = t(), here = folders.of[pid] || null;
+    const fs = folders.folders.map((f) => `<button type="button" role="menuitemradio" aria-checked="${f.id === here}" data-to="${f.id}">` +
+      `${FOLDER}<span class="sb-mname">${esc(f.name)}</span></button>`).join('');
+    showMenu(btn, (fs ? `<div class="sb-mlabel">${esc(T.f_move_to)}</div>${fs}` : '') +
+      (here ? `<button type="button" role="menuitem" data-to="">${esc(T.f_take_out)}</button>` : '') +
+      `<button type="button" role="menuitem" data-act="new">${FOLDER_NEW}<span class="sb-mname">${esc(T.f_new)}…</span></button>` +
+      `<div class="sb-msep" role="separator"></div><button type="button" role="menuitem" class="danger" data-act="delete">${esc(T.del_paper)}</button>`,
+    (a) => {
+      if (a.dataset.act === 'new') editName('new', pid);
+      else if (a.dataset.act === 'delete') deletePaper(pid);
+      else if ((a.dataset.to || null) !== here) moveTo(pid, a.dataset.to || null);
+    }, at);
+  }
+  // under its button at the sidebar's right, or where the right click was (kept inside the sidebar); a pick closes it
+  function showMenu(btn, items, pick, at) {
     closeMenu();
     menu = document.createElement('div');
     menu.className = 'sb-menu';
     menu.setAttribute('role', 'menu');
     menu.innerHTML = items;
     side.append(menu);
+    btn.classList.add('menu-on');   // (the row it is for stays marked while it is open)
     const r = btn.getBoundingClientRect(), s = side.getBoundingClientRect();
-    menu.style.top = `${r.bottom - s.top + 4}px`;
-    menu.style.right = `${Math.max(8, s.right - r.right)}px`;
+    if (at) {
+      menu.style.left = `${Math.max(8, Math.min(at.x - s.left, s.width - menu.offsetWidth - 8))}px`;
+      menu.style.top = `${Math.max(8, Math.min(at.y - s.top, s.height - menu.offsetHeight - 8))}px`;
+    } else {
+      menu.style.top = `${Math.min(r.bottom - s.top + 4, s.height - menu.offsetHeight - 8)}px`;
+      menu.style.right = `${Math.max(8, s.right - r.right)}px`;
+    }
     menu.onclick = (e) => {
       const a = e.target.closest('button');
       if (!a) return;
@@ -356,12 +387,21 @@
     };
     menu.onkeydown = (e) => {
       const all = [...menu.querySelectorAll('button')], n = all.indexOf(document.activeElement);
-      if (e.key === 'Escape') { e.stopPropagation(); closeMenu(); btn.focus(); }
+      if (e.key === 'Escape') { e.stopPropagation(); closeMenu(); if (btn.isConnected) btn.focus(); }
       else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); all[(n + (e.key === 'ArrowDown' ? 1 : all.length - 1)) % all.length].focus(); }
     };
     (menu.querySelector('[aria-checked="true"]') || menu.querySelector('button')).focus();
   }
   document.addEventListener('click', (e) => { if (menu && !menu.contains(e.target) && !e.target.closest('.sb-fmenu')) closeMenu(); });
+  side.addEventListener('contextmenu', (e) => {
+    const row = e.target.closest('.sb-row[data-pid]'), head = !row && e.target.closest('.sb-folder[data-folder] > .sb-frow');
+    if (!row && !(head && head.querySelector('.sb-fmenu'))) { closeMenu(); return; }   // (a name being written: the field's own)
+    e.preventDefault();
+    const at = e.clientX || e.clientY ? { x: e.clientX, y: e.clientY } : null;   // (none from the keyboard: by the row)
+    if (row) docMenu(row.querySelector('.sb-item'), row.dataset.pid, at);
+    else folderMenu(head.querySelector('.sb-fmenu'), head.parentElement.dataset.folder, at);
+  });
+  document.addEventListener('contextmenu', (e) => { if (menu && !side.contains(e.target)) closeMenu(); });
   side.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
@@ -379,6 +419,23 @@
   });
   // a document dragged into a folder (onto its name, or into it), or out of any (onto the rest of the list)
   const dropOn = (e) => e.target.closest && (e.target.closest('.sb-folder[data-folder]') || e.target.closest('.sb-out, .sb-loose'));
+  // held near the list's top or bottom (or over the search above it), the list scrolls, the faster the nearer its edge:
+  // a document far down reaches the folders at the top
+  const EDGE = 48;
+  let edgeStep = 0, edgeAt = 0, edgeRaf = 0;
+  function edgeScroll(e) {
+    const list = side.querySelector('.sb-list'), r = list.getBoundingClientRect();
+    const up = r.top + EDGE - e.clientY, down = e.clientY - (r.bottom - EDGE);
+    edgeStep = up > 0 ? -Math.ceil(14 * Math.min(1, up / EDGE)) : down > 0 ? Math.ceil(14 * Math.min(1, down / EDGE)) : 0;
+    edgeAt = performance.now();
+    if (!edgeStep || edgeRaf) return;
+    const step = () => {   // (until the drag ends, leaves the sidebar or stops near the edge)
+      if (!dragging || !edgeStep || performance.now() - edgeAt > 700) { edgeRaf = 0; return; }
+      list.scrollTop += edgeStep;
+      edgeRaf = requestAnimationFrame(step);
+    };
+    edgeRaf = requestAnimationFrame(step);
+  }
   side.addEventListener('dragstart', (e) => {
     const row = e.target.closest && e.target.closest('.sb-row[data-pid]');
     if (!row) return;
@@ -389,11 +446,12 @@
     side.classList.toggle('from-folder', !!folders.of[dragging]);
   });
   side.addEventListener('dragend', () => {
-    dragging = null;
+    dragging = null; edgeStep = 0;
     side.classList.remove('dragging', 'from-folder');
     side.querySelectorAll('.drop').forEach((x) => x.classList.remove('drop'));
   });
   side.addEventListener('dragover', (e) => {
+    if (dragging) edgeScroll(e);
     const at = dragging && dropOn(e);
     side.querySelectorAll('.drop').forEach((x) => { if (x !== at) x.classList.remove('drop'); });
     if (!at) return;
@@ -404,6 +462,7 @@
     at.classList.add('drop');
   });
   side.addEventListener('dragleave', (e) => {
+    if (!side.contains(e.relatedTarget)) edgeStep = 0;
     const at = dropOn(e);
     if (at && !at.contains(e.relatedTarget)) at.classList.remove('drop');
   });
@@ -431,7 +490,7 @@
         if (before.get(j.id) !== j.status && (j.status === 'done' || j.status === 'error' || j.status === 'stopped')) finished = true;
       }
       if (finished) papers = await api('/api/papers');
-      renderSidebar();
+      if (menu) stale = true; else renderSidebar();   // (a menu stays open while a job goes on)
     } catch { /* the server restarted; try again */ }
     if (jobs.some(live) || watchers.size) polling = setTimeout(poll, 1200);
   }
