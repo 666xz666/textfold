@@ -38,6 +38,7 @@
   const folded = new Set((store.get(FOLDED) || '').split(' ').filter(Boolean));
   let jobs = BOOT.jobs || [];
   let modelName = BOOT.model || '';       // the model generations use, as the settings name it
+  let askName = BOOT.askName || '';       // the one questions are answered with, when it is another
   const t = () => I18N.t(uiLang);
   // an item picked in the Zotero library: on the landing it is read there; from a paper's page it goes there to be (?zotero=)
   let pickItem = (item, title) => { location.href = `/?zotero=${encodeURIComponent(item)}&t=${encodeURIComponent(title)}`; };
@@ -52,7 +53,11 @@
   const CHEV = '<svg class="sb-chev" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6l4 4-4 4"/></svg>';
   // a paper opens in the reader's language, else the one last read in, else its first
   const pick = (p) => [uiLang, store.get('dr-lang')].find((l) => l && p.langs.includes(l)) || p.langs[0] || 'en';
-  const modelLabel = () => modelName;
+  const modelLabel = () => {   // and the one for questions, when it is another (its agent's name said once: Claude Code · Sonnet · answers: Opus)
+    if (!askName) return modelName;
+    const head = modelName.split(' · ')[0], short = askName.startsWith(`${head} · `) ? askName.slice(head.length + 3) : askName;
+    return `${modelName} · ${t().sb_ask_with.replace('{m}', short)}`;
+  };
   const live = (j) => j.status === 'queued' || j.status === 'running';
   function jobFor(pid) { return jobs.find((j) => j.pid === pid && live(j)); }
   function pct(j) { return j.total ? Math.round((100 * j.done) / j.total) : (j.stage === 'done' ? 100 : 6); }
@@ -648,7 +653,7 @@
         submit(PAPER.id, lang, force, update).catch(update.fail);
       },
     };
-    api('/api/models').then((d) => { modelName = d.selectedName || ''; renderSidebar(); }).catch(() => {});
+    api('/api/models').then((d) => { modelName = d.selectedName || ''; askName = d.askName || ''; renderSidebar(); }).catch(() => {});
     api('/api/papers').then((p) => { papers = p; renderSidebar(); }).catch(() => {});
     api('/api/folders').then((f) => { folders = f; renderSidebar(); }).catch(() => {});
     api('/api/jobs').then((j) => {
@@ -717,6 +722,7 @@
       bridgeStarting = false;
       const d = await api('/api/models');
       modelName = d.selectedName || '';
+      askName = d.askName || '';
       renderSidebar(); renderLanding();
     };
   }
@@ -999,10 +1005,18 @@
         if (!g) groups.push(g = { key: m.group, agent: m.kind === 'agent', items: [] });
         g.items.push(m);
       }
-      const opts = groups.map((g) => `<optgroup label="${esc(groupName(g.key))}${g.agent ? ' · agent' : ''}">${g.items.map((m) =>
-        `<option value="${esc(m.id)}"${m.id === data.selected ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>`).join('');
-      const res = test ? `<div class="st-test ${test.ok ? 'ok' : 'bad'}"><i class="st-dot${test.ok ? '' : ' bad'}"></i>${test.ok ? `${esc(t.test_ok)} · ${test.seconds}s` : esc(test.error || '')}</div>` : '';
-      return `<div class="st-list st-pad"><div class="st-row"><select name="model" class="st-model" aria-label="${esc(t.st_model)}">${opts}</select><button type="button" class="st-btn st-testbtn">${esc(t.test)}</button></div>${res}</div>`;
+      const opts = (chosen) => groups.map((g) => `<optgroup label="${esc(groupName(g.key))}${g.agent ? ' · agent' : ''}">${g.items.map((m) =>
+        `<option value="${esc(m.id)}"${m.id === chosen ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>`).join('');
+      const res = test ? `<span class="st-test ${test.ok ? 'ok' : 'bad'}"><i class="st-dot${test.ok ? '' : ' bad'}"></i>${test.ok ? `${esc(t.test_ok)} · ${test.seconds}s` : esc(test.error || '')}</span>` : '';
+      // questions: the levels' model unless another is chosen; its reasoning, where it has levels of it (Auto: the default)
+      const asked = data.models.find((m) => m.id === (data.askModel || data.selected)), efforts = (asked && asked.efforts) || [];
+      const effort = efforts.length ? `<select class="st-effort" aria-label="${esc(t.st_effort)}" title="${esc(t.st_effort)}"><option value="">${esc(t.eff_auto)}</option>${efforts.map((e) =>
+        `<option value="${esc(e)}"${e === data.askEffort ? ' selected' : ''}>${esc(t[`eff_${e}`] || e)}</option>`).join('')}</select>` : '';
+      return `<div class="st-list">` +
+        `<div class="st-item st-mrow"><div class="st-main"><label for="st-gen"><b>${esc(t.st_gen)}</b></label><span class="st-meta">${esc(t.st_gen_d)}</span>${res}</div>` +
+        `<select name="model" id="st-gen" class="st-model">${opts(data.selected)}</select><button type="button" class="st-btn st-testbtn">${esc(t.test)}</button></div>` +
+        `<div class="st-item st-mrow"><div class="st-main"><label for="st-ask"><b>${esc(t.st_ask)}</b></label><span class="st-meta">${esc(t.st_ask_d)}</span></div>` +
+        `<select id="st-ask" class="st-askmodel"><option value="">${esc(t.st_same)}</option>${opts(data.askModel)}</select>${effort}</div></div>`;
     }
 
     function agentSection() {
@@ -1071,7 +1085,7 @@
           <div class="st-item"><label class="st-main" for="st-ui"><b>${esc(t.language)}</b></label><select class="st-ui" id="st-ui">${I18N.CODES.map((c) => `<option value="${c}"${c === uiLang ? ' selected' : ''}>${esc(I18N.NATIVE[c])}</option>`).join('')}</select></div>
           ${app ? `<div class="st-item st-app"><div class="st-main"><b>TextFold ${esc(app)}</b><span class="st-meta">${esc(t.up_note)} <a href="https://github.com/chenxiachan/textfold" target="_blank" rel="noopener">★ ${esc(t.up_star)}</a></span><span class="st-upd-msg" aria-live="polite"></span></div><button type="button" class="st-btn st-upd">${esc(t.up_check)}</button></div>` : ''}
         </div></section>
-        <section><h3>${esc(t.st_model)}</h3>${modelSection()}</section>
+        <section><h3>${esc(t.st_models_h)}</h3>${modelSection()}</section>
         <section><h3>${esc(t.st_agents)}</h3>${agentSection()}</section>
         <section><h3>${esc(t.st_providers)}</h3>${providerSection()}</section>
         <section class="st-engine"></section>
@@ -1115,7 +1129,7 @@
         renderEngine();
       }, 1500);
     }
-    const update = (d) => { data = d; modelName = d.models.length ? (d.selectedName || '') : ''; renderSidebar(); if (landing) renderLanding(); render(); };
+    const update = (d) => { data = d; modelName = d.models.length ? (d.selectedName || '') : ''; askName = d.askName || ''; renderSidebar(); if (landing) renderLanding(); render(); };
 
     function wire() {
       dlg.querySelectorAll('.st-close').forEach((b) => { b.onclick = () => dlg.close(); });
@@ -1131,6 +1145,9 @@
       q('.st-ui').onchange = (e) => { setUiLang(e.target.value); render(); };
       const sel = q('.st-model');
       if (sel) sel.onchange = async () => { test = null; update(await api('/api/models/select', { model: sel.value })); };
+      const askSel = q('.st-askmodel'), effSel = q('.st-effort');
+      if (askSel) askSel.onchange = async () => update(await api('/api/models/select', { task: 'ask', model: askSel.value || null, effort: null }));
+      if (effSel) effSel.onchange = async () => update(await api('/api/models/select', { task: 'ask', model: data.askModel || null, effort: effSel.value || null }));
       const tb = q('.st-testbtn');
       if (tb) tb.onclick = async () => { tb.disabled = true; tb.textContent = '…'; test = await api('/api/settings/test', { model: data.selected }); render(); };
       q('.st-scan').onclick = async () => { data.scanning = true; render(); update(await api('/api/agents/scan', {})); };

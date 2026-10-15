@@ -27,7 +27,8 @@ ANTHROPIC_PRESET = {"id": "anthropic", "name": "Anthropic", "base": "https://api
 
 
 def load_settings():
-    s = {"model": None, "efforts": {}, "providers": [], "use_thoughtdag_env": False, "pdf_tier": "fast", "zotero": {}}
+    s = {"model": None, "ask_model": None, "ask_effort": None, "efforts": {}, "providers": [], "use_thoughtdag_env": False,
+         "pdf_tier": "fast", "zotero": {}}
     old_home = next((h for h in OLD_HOMES if (h / "settings.json").exists()), None)
     if not SETTINGS.exists() and old_home:   # from before the name TextFold: copied, kept
         SETTINGS.parent.mkdir(parents=True, exist_ok=True)
@@ -137,6 +138,26 @@ def for_task(spec, task, s=None):
         return spec
     level = DEFAULT_THINKING[task]
     return {**spec, "effort": None if level == "default" else level}
+
+
+def ask_choice(s=None, cat=None):
+    """What questions are answered with, as the settings say: (a model of their own or None for the levels' model, a
+    reasoning level or None for the questions' default). One no longer there counts as none."""
+    s = s or load_settings()
+    cat = cat if cat is not None else catalog(s)[0]
+    own = next((m for m in cat if m["id"] == s.get("ask_model")), None)
+    used = own or next((m for m in cat if m["id"] == default_model(s, cat)), None)
+    effort = s.get("ask_effort") if used and s.get("ask_effort") in (used.get("efforts") or []) else None
+    return (own["id"] if own else None), effort
+
+
+def ask_spec(s=None):
+    """The model a question is answered with, and how hard it reasons: the settings' own for questions (a stronger
+    model, more reasoning), else the one the levels are written with, at the questions' default (DEFAULT_THINKING)."""
+    s = s or load_settings()
+    model_id, effort = ask_choice(s)
+    spec = resolve(model_id, s)
+    return {**spec, "effort": effort} if effort else for_task(spec, "ask", s)
 
 
 def label(model_id, s=None):

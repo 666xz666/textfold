@@ -10,7 +10,8 @@
                               link, a PMC or PPR id, a DOI (Europe PMC, epmc.py), or a stored document's id
   POST /api/import            {name, text}: store a Markdown file as a paper (local.py); its id, to generate
   GET  /api/models            every model this computer can reach: local agents and API providers
-  POST /api/models/select     {model, effort}: the model generations use
+  POST /api/models/select     {model, effort}: the model generations use; {task: "ask", model, effort}: the one questions
+                              are answered with (none: the same) and its reasoning level (none: the default)
   POST /api/agents/scan       look for agents again (also done at startup)
   POST /api/providers/probe   {base, api_key | key, preset}: a provider's /models
   POST /api/providers/save    {key?, preset, name, base, api_key?, models}  ·  POST /api/providers/remove {key}
@@ -81,8 +82,11 @@ def models_payload():
     s = models.load_settings()
     cat, provs = models.catalog(s)
     selected = models.default_model(s, cat)
+    ask, ask_effort = models.ask_choice(s, cat)
+    name = lambda mid: next((m["name"] for m in cat if m["id"] == mid), mid)
     return {
-        "models": cat, "selected": selected, "selectedName": next((m["name"] for m in cat if m["id"] == selected), selected),
+        "models": cat, "selected": selected, "selectedName": name(selected),
+        "askModel": ask, "askEffort": ask_effort, "askName": name(ask) if ask and ask != selected else "",
         "efforts": s.get("efforts") or {}, "bridge": bridges.bridge_status(),
         "agents": [{k: a[k] for k in ("runtime", "label", "binary", "path", "version", "runnable", "error")} | {"models": len(a["models"])}
                    for a in agents.STATE["agents"]],
@@ -417,7 +421,9 @@ def listed():
 def landing_page(jobs):
     s = models.load_settings()
     chosen = models.default_model(s)
+    ask = models.ask_choice(s)[0]
     boot = {"papers": listed(), "folders": library.folders(), "jobs": jobs.list(), "model": models.label(chosen, s) if chosen else "",
+            "askName": models.label(ask, s) if ask and ask != chosen else "",
             "bridge": bridges.bridge_status(), "langs": [[code, v[1]] for code, v in langs.LANGS.items()]}
     t = (build.WEB / "app.html").read_text()
     return t.replace("{{HEAD}}", build.fonts_head(build.APP_ASSETS)).replace("{{BOOT}}", json.dumps(boot, ensure_ascii=False).replace("</", "<\\/"))
@@ -681,7 +687,7 @@ def make_handler(jobs):
                         return self.json({"error": "no such paper"}, 404)
                     try:
                         return self.json(notes.ask(pid, str(body.get("id", "")), str(body.get("question", "")).strip()[:2000],
-                                                   models.for_task(models.resolve(None), "ask"), ui=str(body.get("ui") or ""),
+                                                   models.ask_spec(), ui=str(body.get("ui") or ""),
                                                    req=str(body.get("req") or "")[:40] or None))
                     except notes.Stopped:
                         return self.json({"error": "stopped"}, 409)
@@ -689,6 +695,11 @@ def make_handler(jobs):
                         return self.json({"error": str(e)}, 400)
                     except Exception as e:  # the model failed: the note keeps its question, the reader can ask again
                         return self.json({"error": str(e)[:600]}, 502)
+                if u.path == "/api/models/select" and body.get("task") == "ask":
+                    s["ask_model"] = body.get("model") or None
+                    s["ask_effort"] = body.get("effort") or None
+                    models.save_settings(s)
+                    return self.json(models_payload())
                 if u.path == "/api/models/select":
                     s["model"] = body.get("model") or None
                     if "effort" in body and s["model"]:
