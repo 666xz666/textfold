@@ -3,6 +3,8 @@
     python3 tools/gallery.py --make pi/deepseek/deepseek-v4-flash    generates what the list still lacks, then builds
     python3 tools/gallery.py                                         builds out/gallery/site: index.html, <id>/index.html
 
+It needs pikepdf besides the reader's own requirements: pip install -r tools/requirements-gallery.txt
+
 The list is tools/gallery.json: one paper per field, in order, each with its field and a line on why it is worth
 reading, in every language of the gallery, and a "title" where the model's translation of the title reads badly.
 The gallery keeps its papers apart from the reader's own (out/gallery/papers); a paper already in the reader's
@@ -164,17 +166,18 @@ SLIM_ABOVE, SIDE = 4_000_000, 1600
 
 def slim(src, dst):
     """The PDF a visitor downloads to see the original pages. A large one gets its large pictures as JPEGs of at most
-    1600 pixels a side (GraphCast's 40 MB come to 10), through pikepdf when it is installed; its fonts and text stay
-    exactly as they were, since PDF.js draws them as in the app and they are what finds each paragraph on its page.
-    (Ghostscript makes it smaller, but rewrites the fonts, and PDF.js then leaves out their ligatures: "signi cant".)
-    Without pikepdf, the file as it is."""
+    1600 pixels a side (GraphCast's 40 MB come to 10), through pikepdf; its fonts and text stay exactly as they were,
+    since PDF.js draws them as in the app and they are what finds each paragraph on its page. (Ghostscript makes it
+    smaller, but rewrites the fonts, and PDF.js then leaves out their ligatures: "signi cant".) Without pikepdf a large
+    PDF stops the build: put online whole, it would cost every visitor its full size, and the gallery's history for good."""
+    if src.stat().st_size <= SLIM_ABOVE:
+        shutil.copyfile(src, dst)
+        return
     try:
         import pikepdf
     except ImportError:
-        pikepdf = None
-    if pikepdf is None or src.stat().st_size <= SLIM_ABOVE:
-        shutil.copyfile(src, dst)
-        return
+        sys.exit(f"{src.name} is {src.stat().st_size / 1e6:.0f} MB, and pikepdf is not installed to make it smaller: "
+                 "pip install -r tools/requirements-gallery.txt")
     import io
     from pikepdf import Name, PdfImage
     doc = pikepdf.open(src)

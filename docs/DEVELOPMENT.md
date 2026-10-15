@@ -55,7 +55,8 @@ what the list lacks in a folder of its own (`out/gallery/papers`; a paper alread
 without its notes), and `python3 tools/gallery.py` writes `out/gallery/site/`: an index in the three languages and
 each paper's static reader, opened at the Topic level. A paper with a PDF (an arXiv paper) gets it beside its page, with
 PDF.js in `assets/`, so Original shows its typeset pages there as in the app; a PDF over 4 MB has its large pictures
-made smaller when pikepdf is installed (`pip install pikepdf`; fonts and text untouched), else it goes as it is. Only
+made smaller with pikepdf (`pip install -r tools/requirements-gallery.txt`; fonts and text untouched), and without it
+the build stops rather than put the whole PDF online. Only
 papers whose license lets anyone share a derivative go in
 (CC BY, BY-SA, BY-NC, BY-NC-SA, CC0); `"consent": true` adds a paper whose authors agree. Before a paper goes public its text is proofread:
 `--review` writes each paper's sentences and levels in every language to `out/gallery/review/`, and the corrections go
