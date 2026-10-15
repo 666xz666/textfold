@@ -162,6 +162,12 @@ class Read(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pdftext.read(bad)
 
+    def test_without_pdf_inspector_the_engine_reads_it(self):
+        import sys
+        from unittest import mock
+        with mock.patch.dict(sys.modules, {"pdf_inspector": None}):   # (an import of it fails, as where it is not built)
+            self.assertIsNone(pdftext.read("paper.pdf"))
+
 
 if __name__ == "__main__":
     unittest.main()

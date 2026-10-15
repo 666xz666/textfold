@@ -188,7 +188,10 @@ def read(file):
     """A PDF's pages as ([(page index, markdown)], its own title) when they have their words in them; None when the
     engine is needed (a scan, pictures of pages, a broken font encoding). ValueError("bad-file") when it is no PDF
     pdf-inspector can open."""
-    import pdf_inspector
+    try:
+        import pdf_inspector
+    except ImportError:   # not installed (no build of it for this system): the engine reads the PDF, as before
+        return None
     try:
         kind = pdf_inspector.detect_pdf(str(file))
         if kind.pdf_type != "text_based" or kind.pages_needing_ocr or kind.has_encoding_issues:
