@@ -470,42 +470,34 @@ window.DR_I18N = (() => {
   };
   for (const [code, words] of Object.entries(Q)) Object.assign(S[code], words);
   // the settings' models: one writes the levels (many calls: a fast one does), one answers questions (the same, unless
-  // another is chosen), with how hard it reasons
+  // another is chosen), with how hard it reasons; a test of either that failed
   const EFF = ['auto', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
-  const mods = (w) => ({ st_models_h: w[0], st_gen: w[1], st_gen_d: w[2], st_ask: w[3], st_ask_d: w[4], st_same: w[5], st_effort: w[6],
-    sb_ask_with: w[7], ...Object.fromEntries(EFF.map((e, i) => [`eff_${e}`, w[8][i]])) });
+  const mods = (w) => ({ st_models_h: w[0], st_gen: w[1], test_bad: w[2], st_ask: w[3], st_same: w[4], st_effort: w[5], sb_ask_with: w[6],
+    ...Object.fromEntries(EFF.map((e, i) => [`eff_${e}`, w[7][i]])) });
   const M = {
-    en: mods(['Models', 'Writing the levels', 'Many calls for each document: a fast model does well.', 'Answering questions',
-      'One call for each question: worth a stronger model.', 'Same as for the levels', 'Reasoning', 'answers: {m}',
+    en: mods(['Models', 'Writing the levels', 'Failed', 'Answering questions', 'Same as for the levels', 'Reasoning', 'answers: {m}',
       ['Auto', 'Off', 'Minimal', 'Low', 'Medium', 'High', 'Very high', 'Max', 'Ultra']]),
-    zh: mods(['模型', '生成层级', '每篇要调用很多次，快的模型就够了。', '回答问题', '每个问题调用一次，值得用更强的模型。', '与生成相同', '推理强度', '回答用 {m}',
+    zh: mods(['模型', '生成层级', '失败', '回答问题', '与生成相同', '推理强度', '回答用 {m}',
       ['自动', '关闭', '极低', '低', '中', '高', '很高', '极高', '超高']]),
-    'zh-Hant': mods(['模型', '生成層級', '每篇要呼叫很多次，快的模型就夠了。', '回答問題', '每個問題呼叫一次，值得用更強的模型。', '與生成相同', '推理強度', '回答用 {m}',
+    'zh-Hant': mods(['模型', '生成層級', '失敗', '回答問題', '與生成相同', '推理強度', '回答用 {m}',
       ['自動', '關閉', '極低', '低', '中', '高', '很高', '極高', '超高']]),
-    ja: mods(['モデル', 'レベルの生成', '1 つの文書で何度も呼び出すので、速いモデルで十分です。', '質問への回答', '質問ごとに 1 回なので、より強いモデルが向いています。',
+    ja: mods(['モデル', 'レベルの生成', '失敗', '質問への回答',
       '生成と同じ', '推論の強さ', '回答: {m}', ['自動', 'オフ', '最小', '低', '中', '高', 'とても高い', '最大', 'ウルトラ']]),
-    ko: mods(['모델', '단계 생성', '문서마다 여러 번 호출하므로 빠른 모델이면 충분합니다.', '질문 답변', '질문마다 한 번 호출하므로 더 강한 모델이 좋습니다.',
+    ko: mods(['모델', '단계 생성', '실패', '질문 답변',
       '생성과 같음', '추론 강도', '답변: {m}', ['자동', '끄기', '최소', '낮음', '중간', '높음', '매우 높음', '최대', '울트라']]),
-    es: mods(['Modelos', 'Escribir los niveles', 'Muchas llamadas por documento: basta un modelo rápido.', 'Responder preguntas',
-      'Una llamada por pregunta: vale la pena un modelo más potente.', 'El mismo que para los niveles', 'Razonamiento', 'respuestas: {m}',
+    es: mods(['Modelos', 'Escribir los niveles', 'Falló', 'Responder preguntas', 'El mismo que para los niveles', 'Razonamiento', 'respuestas: {m}',
       ['Automático', 'Desactivado', 'Mínimo', 'Bajo', 'Medio', 'Alto', 'Muy alto', 'Máximo', 'Ultra']]),
-    fr: mods(['Modèles', 'Écrire les niveaux', 'Beaucoup d’appels par document : un modèle rapide suffit.', 'Répondre aux questions',
-      'Un appel par question : un modèle plus fort en vaut la peine.', 'Le même que pour les niveaux', 'Raisonnement', 'réponses : {m}',
+    fr: mods(['Modèles', 'Écrire les niveaux', 'Échec', 'Répondre aux questions', 'Le même que pour les niveaux', 'Raisonnement', 'réponses : {m}',
       ['Auto', 'Désactivé', 'Minimal', 'Faible', 'Moyen', 'Élevé', 'Très élevé', 'Maximal', 'Ultra']]),
-    de: mods(['Modelle', 'Ebenen schreiben', 'Viele Aufrufe pro Dokument: Ein schnelles Modell genügt.', 'Fragen beantworten',
-      'Ein Aufruf pro Frage: Ein stärkeres Modell lohnt sich.', 'Wie für die Ebenen', 'Denkaufwand', 'Antworten: {m}',
+    de: mods(['Modelle', 'Ebenen schreiben', 'Fehlgeschlagen', 'Fragen beantworten', 'Wie für die Ebenen', 'Denkaufwand', 'Antworten: {m}',
       ['Automatisch', 'Aus', 'Minimal', 'Niedrig', 'Mittel', 'Hoch', 'Sehr hoch', 'Maximal', 'Ultra']]),
-    pt: mods(['Modelos', 'Escrever os níveis', 'Muitas chamadas por documento: basta um modelo rápido.', 'Responder perguntas',
-      'Uma chamada por pergunta: vale um modelo mais forte.', 'O mesmo dos níveis', 'Raciocínio', 'respostas: {m}',
+    pt: mods(['Modelos', 'Escrever os níveis', 'Falhou', 'Responder perguntas', 'O mesmo dos níveis', 'Raciocínio', 'respostas: {m}',
       ['Automático', 'Desligado', 'Mínimo', 'Baixo', 'Médio', 'Alto', 'Muito alto', 'Máximo', 'Ultra']]),
-    it: mods(['Modelli', 'Scrivere i livelli', 'Molte chiamate per documento: basta un modello veloce.', 'Rispondere alle domande',
-      'Una chiamata per domanda: vale un modello più forte.', 'Lo stesso dei livelli', 'Ragionamento', 'risposte: {m}',
+    it: mods(['Modelli', 'Scrivere i livelli', 'Non riuscito', 'Rispondere alle domande', 'Lo stesso dei livelli', 'Ragionamento', 'risposte: {m}',
       ['Automatico', 'Disattivato', 'Minimo', 'Basso', 'Medio', 'Alto', 'Molto alto', 'Massimo', 'Ultra']]),
-    ru: mods(['Модели', 'Создание уровней', 'Много вызовов на документ: хватит быстрой модели.', 'Ответы на вопросы',
-      'Один вызов на вопрос: стоит взять модель посильнее.', 'Та же, что для уровней', 'Глубина рассуждений', 'ответы: {m}',
+    ru: mods(['Модели', 'Создание уровней', 'Ошибка', 'Ответы на вопросы', 'Та же, что для уровней', 'Глубина рассуждений', 'ответы: {m}',
       ['Авто', 'Выкл.', 'Минимальная', 'Низкая', 'Средняя', 'Высокая', 'Очень высокая', 'Максимальная', 'Ультра']]),
-    hi: mods(['मॉडल', 'स्तर लिखना', 'हर दस्तावेज़ पर कई बार बुलाया जाता है: तेज़ मॉडल काफ़ी है।', 'सवालों के जवाब',
-      'हर सवाल पर एक बार: ज़्यादा सक्षम मॉडल ठीक रहता है।', 'स्तरों वाला ही', 'तर्क की गहराई', 'जवाब: {m}',
+    hi: mods(['मॉडल', 'स्तर लिखना', 'विफल', 'सवालों के जवाब', 'स्तरों वाला ही', 'तर्क की गहराई', 'जवाब: {m}',
       ['स्वचालित', 'बंद', 'न्यूनतम', 'कम', 'मध्यम', 'ऊँचा', 'बहुत ऊँचा', 'अधिकतम', 'अल्ट्रा']]),
   };
   for (const [code, words] of Object.entries(M)) Object.assign(S[code], words);

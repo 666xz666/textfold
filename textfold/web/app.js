@@ -989,7 +989,7 @@
     let data = await api('/api/models');
     const app = window.desktop && window.desktop.checkForUpdates ? await window.desktop.version() : null;   // in the app: its version
     let form = null;          // the provider being added or edited: {key?, preset, name, base, api_key, found, picked}
-    let test = null;          // the last connection test
+    const tests = {};         // the last connection test of each model: the levels' (gen), the questions' (ask)
     let bridgeStarting = false;
     const dlg = h('dialog', 'settings prefs'); document.body.append(dlg);
     const T = () => t();
@@ -1007,16 +1007,20 @@
       }
       const opts = (chosen) => groups.map((g) => `<optgroup label="${esc(groupName(g.key))}${g.agent ? ' · agent' : ''}">${g.items.map((m) =>
         `<option value="${esc(m.id)}"${m.id === chosen ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>`).join('');
-      const res = test ? `<span class="st-test ${test.ok ? 'ok' : 'bad'}"><i class="st-dot${test.ok ? '' : ' bad'}"></i>${test.ok ? `${esc(t.test_ok)} · ${test.seconds}s` : esc(test.error || '')}</span>` : '';
       // questions: the levels' model unless another is chosen; its reasoning, where it has levels of it (Auto: the default)
       const asked = data.models.find((m) => m.id === (data.askModel || data.selected)), efforts = (asked && asked.efforts) || [];
       const effort = efforts.length ? `<select class="st-effort" aria-label="${esc(t.st_effort)}" title="${esc(t.st_effort)}"><option value="">${esc(t.eff_auto)}</option>${efforts.map((e) =>
         `<option value="${esc(e)}"${e === data.askEffort ? ' selected' : ''}>${esc(t[`eff_${e}`] || e)}</option>`).join('')}</select>` : '';
-      return `<div class="st-list">` +
-        `<div class="st-item st-mrow"><div class="st-main"><label for="st-gen"><b>${esc(t.st_gen)}</b></label><span class="st-meta">${esc(t.st_gen_d)}</span>${res}</div>` +
-        `<select name="model" id="st-gen" class="st-model">${opts(data.selected)}</select><button type="button" class="st-btn st-testbtn">${esc(t.test)}</button></div>` +
-        `<div class="st-item st-mrow"><div class="st-main"><label for="st-ask"><b>${esc(t.st_ask)}</b></label><span class="st-meta">${esc(t.st_ask_d)}</span></div>` +
-        `<select id="st-ask" class="st-askmodel"><option value="">${esc(t.st_same)}</option>${opts(data.askModel)}</select>${effort}</div></div>`;
+      const testBtn = (k) => {
+        const r = tests[k];
+        return `<button type="button" class="st-btn st-testbtn${r ? (r.ok ? ' ok' : ' bad') : ''}" data-test="${k}">${r ? (r.ok ? `✓ ${r.seconds} s` : `✕ ${esc(t.test_bad)}`) : esc(t.test)}</button>`;
+      };
+      const failed = ['gen', 'ask'].filter((k) => tests[k] && !tests[k].ok)
+        .map((k) => `<p class="st-models-err">${esc(k === 'gen' ? t.st_gen : t.st_ask)}: ${esc(tests[k].error || '')}</p>`).join('');
+      return `<div class="st-models">` +
+        `<label for="st-gen">${esc(t.st_gen)}</label><select name="model" id="st-gen" class="st-model wide">${opts(data.selected)}</select>${testBtn('gen')}` +
+        `<label for="st-ask">${esc(t.st_ask)}</label><select id="st-ask" class="st-askmodel${effort ? '' : ' wide'}"><option value="">${esc(t.st_same)}</option>${opts(data.askModel)}</select>${effort}${testBtn('ask')}` +
+        `</div>${failed}`;
     }
 
     function agentSection() {
@@ -1144,12 +1148,18 @@
       };
       q('.st-ui').onchange = (e) => { setUiLang(e.target.value); render(); };
       const sel = q('.st-model');
-      if (sel) sel.onchange = async () => { test = null; update(await api('/api/models/select', { model: sel.value })); };
+      if (sel) sel.onchange = async () => { delete tests.gen; if (!data.askModel) delete tests.ask; update(await api('/api/models/select', { model: sel.value })); };
       const askSel = q('.st-askmodel'), effSel = q('.st-effort');
-      if (askSel) askSel.onchange = async () => update(await api('/api/models/select', { task: 'ask', model: askSel.value || null, effort: null }));
-      if (effSel) effSel.onchange = async () => update(await api('/api/models/select', { task: 'ask', model: data.askModel || null, effort: effSel.value || null }));
-      const tb = q('.st-testbtn');
-      if (tb) tb.onclick = async () => { tb.disabled = true; tb.textContent = '…'; test = await api('/api/settings/test', { model: data.selected }); render(); };
+      if (askSel) askSel.onchange = async () => { delete tests.ask; update(await api('/api/models/select', { task: 'ask', model: askSel.value || null, effort: null })); };
+      if (effSel) effSel.onchange = async () => { delete tests.ask; update(await api('/api/models/select', { task: 'ask', model: data.askModel || null, effort: effSel.value || null })); };
+      dlg.querySelectorAll('.st-testbtn').forEach((tb) => {
+        tb.onclick = async () => {
+          const k = tb.dataset.test;
+          tb.disabled = true; tb.textContent = '…';
+          tests[k] = await api('/api/settings/test', k === 'ask' ? { task: 'ask' } : { model: data.selected }).catch((e) => ({ ok: false, error: e.message }));
+          render();
+        };
+      });
       q('.st-scan').onclick = async () => { data.scanning = true; render(); update(await api('/api/agents/scan', {})); };
       const td = q('.st-td');
       if (td) td.onchange = async () => update(await api('/api/settings', { use_thoughtdag_env: td.checked }));

@@ -15,7 +15,7 @@
   POST /api/agents/scan       look for agents again (also done at startup)
   POST /api/providers/probe   {base, api_key | key, preset}: a provider's /models
   POST /api/providers/save    {key?, preset, name, base, api_key?, models}  ·  POST /api/providers/remove {key}
-  POST /api/settings          {use_thoughtdag_env}  ·  POST /api/settings/test {model?}: one tiny call
+  POST /api/settings          {use_thoughtdag_env}  ·  POST /api/settings/test {model?} or {task: "ask"}: one tiny call
   GET  /api/notes/<id>        the reader's notes on a paper (docs/notes-format.md)
   POST /api/files             a file dropped on the landing, its bytes (X-Name, X-Lang): a PDF (X-Refs: the papers it
                               names), or a Word, PowerPoint, Excel, EPUB, HTML file or picture: through the PDF engine
@@ -758,7 +758,7 @@ def make_handler(jobs):
                 if u.path == "/api/settings/test":
                     schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
                     try:
-                        spec = models.resolve(body.get("model"))
+                        spec = models.ask_spec() if body.get("task") == "ask" else models.resolve(body.get("model"))   # (questions: their model, reasoning as set)
                         t0 = time.time()
                         with tempfile.TemporaryDirectory() as tmp:
                             rec, _ = llm.call('Return JSON {"ok": true}.', schema, spec, Path(tmp), force=True, timeout=180)
