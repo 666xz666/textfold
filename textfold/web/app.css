@@ -49,14 +49,18 @@
 .sb-empty { padding: 10px 9px; font-size: 13px; color: var(--faint); }
 /* the library's search, its order (by kind, by when added or last opened) and the reader's folders (app.js): a folder's documents under it, a little in;
    dragged, a document lights the folder it would go into, or, out of one, the place for those in none */
-.sb-find { display: flex; align-items: center; gap: 2px; margin: 2px 10px 8px 12px; }
+.sb-find { display: flex; align-items: center; gap: 2px; margin: 2px 10px 6px 12px; }
+.sb-order { display: flex; gap: 2px; margin: 0 12px 8px; padding: 2px; border-radius: 9px; background: var(--surface); }
+.sb-order button { flex: 1 1 auto; min-width: 0; padding: 4px 6px; border: 0; border-radius: 7px; background: none; font: 550 12px var(--sans); color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.sb-order button:hover { color: var(--ink); }
+.sb-order button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(30, 22, 8, .1), 0 0 0 1px var(--line-2); }
 .sb-q { flex: 1; min-width: 0; height: 32px; padding: 0 8px 0 30px; font: 13px var(--sans); color: var(--ink); border: 1px solid var(--line-2); border-radius: 9px;
   outline: none; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke='%238A847C' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='8.5' cy='8.5' r='5'/%3E%3Cpath d='M12.3 12.3L16 16'/%3E%3C/g%3E%3C/svg%3E") no-repeat 10px center / 14px; }
 .sb-q::placeholder { color: var(--faint); }
 .sb-q:focus { border-color: var(--accent); background-color: var(--card); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
-.sb-sort, .sb-newf { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; }
-.sb-sort:hover, .sb-newf:hover { background: var(--surface); color: var(--ink); }
-.sb-sort.on { color: var(--accent); background: var(--accent-soft); }
+.sb-newf { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; }
+.sb-newf:hover { background: var(--surface); color: var(--ink); }
 #sidebar .sb-find svg { width: 17px; height: 17px; }
 .sb-list [hidden] { display: none !important; }
 .sb-nomatch { padding: 10px 9px; font-size: 13px; color: var(--faint); }
@@ -94,7 +98,6 @@
 .sb-menu button { text-align: left; border: 0; background: none; font: 500 13px var(--sans); color: var(--ink); padding: 7px 10px; border-radius: 7px; cursor: pointer; }
 .sb-menu button:hover, .sb-menu button:focus-visible { background: var(--surface); outline: none; }
 .sb-menu .danger { color: var(--r-limitation); }
-.sb-menu button i { display: inline-block; width: 18px; font-style: normal; color: var(--accent); }
 .sb-foot { border-top: 1px solid var(--line-2); padding: 10px 12px 14px; }
 .sb-settings, .sb-help, .sb-zotero { width: 100%; text-align: left; border: 0; background: none; font: 550 13px var(--sans); color: var(--ink-2); padding: 6px 4px; border-radius: 7px; cursor: pointer; }
 .sb-settings:hover, .sb-help:hover, .sb-zotero:hover { background: var(--surface); }

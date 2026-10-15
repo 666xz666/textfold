@@ -49,7 +49,6 @@
   const LIST = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3.5" width="15" height="13" rx="2.5"/><path d="M7.5 3.5v13"/></svg>';
   const FOLDER = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M2.5 5.5a1.5 1.5 0 0 1 1.5-1.5h3.6l1.8 2H16a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 16H4a1.5 1.5 0 0 1-1.5-1.5z"/></svg>';
   const FOLDER_NEW = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5.5a1.5 1.5 0 0 1 1.5-1.5h3.6l1.8 2H16a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 16H4a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M10 8.5v5M7.5 11h5"/></svg>';
-  const CLOCK = '<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg>';
   const CHEV = '<svg class="sb-chev" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6l4 4-4 4"/></svg>';
   // a paper opens in the reader's language, else the one last read in, else its first
   const pick = (p) => [uiLang, store.get('dr-lang')].find((l) => l && p.langs.includes(l)) || p.langs[0] || 'en';
@@ -124,8 +123,9 @@
         ${window.TFTutorial && PAPER ? `<button type="button" class="rail-btn rail-help" title="${esc(T.tut_open)}">?</button>` : ''}
       </div>
       <div class="sb-find"><input type="search" class="sb-q" value="${esc(sbQuery)}" placeholder="${esc(T.sb_search)}" aria-label="${esc(T.sb_search)}" autocomplete="off" spellcheck="false">` +
-        `<button type="button" class="sb-sort${order !== 'kind' ? ' on' : ''}" aria-haspopup="menu" title="${esc(T[`sort_${order}`])}" aria-label="${esc(`${T.sort_label}: ${T[`sort_${order}`]}`)}">${CLOCK}</button>` +
         `<button type="button" class="sb-newf" title="${esc(T.f_new)}" aria-label="${esc(T.f_new)}">${FOLDER_NEW}</button></div>
+      <div class="sb-order" role="radiogroup" aria-label="${esc(T.sort_label)}">${['kind', 'added', 'opened'].map((o) =>
+        `<button type="button" role="radio" aria-checked="${o === order}" data-sort="${o}" title="${esc(T[`sort_${o}`])}">${esc(T[`by_${o}`])}</button>`).join('')}</div>
       ${groups.length > 1 || fs.length ? '' : `<div class="sb-label">${esc(groups.length ? groups[0][0] : T.papers)}</div>`}
       <nav class="sb-list">${pending.map(pend).join('')}${listed_ || (pending.length ? '' : `<div class="sb-empty">${esc(T.empty)}</div>`)}</nav>
       <div class="sb-foot"><button type="button" class="sb-zotero">${BOOKS}${esc(T.z_lib)}</button><button type="button" class="sb-settings">⚙ ${esc(T.settings)}</button>${window.TFTutorial && PAPER ? `<button type="button" class="sb-help">? ${esc(T.tut_open)}</button>` : ''}<div class="sb-model">${esc(modelLabel())}</div></div>
@@ -190,7 +190,8 @@
   // over a paper the sidebar folds to a rail and opens over the page; on the landing it stays open beside the form
   if (PAPER) {
     side.classList.add('collapsed');
-    document.addEventListener('click', (e) => { if (!side.classList.contains('collapsed') && !side.contains(e.target)) setCollapsed(true); });
+    // (by where the click was when it happened: what it hit may be drawn anew by then, a folder shut, an order picked)
+    document.addEventListener('click', (e) => { if (!side.classList.contains('collapsed') && !e.composedPath().includes(side)) setCollapsed(true); });
   } else if (store.get('dr-sidebar') === '1' || innerWidth < 720) setCollapsed(true);
   else document.documentElement.classList.add('sb-open');
 
@@ -324,13 +325,6 @@
     renderSidebar();
   }
   function sortOrder() { const o = store.get(SORT); return ['added', 'opened'].includes(o) ? o : 'kind'; }
-  // the list's order, picked in a small menu by its clock
-  function sortMenu(btn) {
-    const T = t(), now = sortOrder();
-    showMenu(btn, ['kind', 'added', 'opened'].map((o) =>
-      `<button type="button" role="menuitemradio" aria-checked="${o === now}" data-sort="${o}"><i aria-hidden="true">${o === now ? '✓' : ''}</i>${esc(T[`sort_${o}`])}</button>`).join(''),
-    (a) => { store.set(SORT, a.dataset.sort); renderSidebar(); });
-  }
   // a folder's actions, in a small menu by its ⋯
   function closeMenu() { if (menu) { menu.remove(); menu = null; } }
   function folderMenu(btn, id) {
@@ -362,12 +356,12 @@
     };
     (menu.querySelector('[aria-checked="true"]') || menu.querySelector('button')).focus();
   }
-  document.addEventListener('click', (e) => { if (menu && !menu.contains(e.target) && !e.target.closest('.sb-fmenu, .sb-sort')) closeMenu(); });
+  document.addEventListener('click', (e) => { if (menu && !menu.contains(e.target) && !e.target.closest('.sb-fmenu')) closeMenu(); });
   side.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
     if (b.matches('.sb-newf')) editName('new');
-    else if (b.matches('.sb-sort')) { e.stopPropagation(); if (menu) closeMenu(); else sortMenu(b); }
+    else if (b.matches('.sb-order [data-sort]')) { store.set(SORT, b.dataset.sort); renderSidebar(); }
     else if (b.matches('.sb-fhead')) {   // shut, or open again
       const id = b.closest('.sb-folder').dataset.folder;
       if (folded.has(id)) folded.delete(id); else folded.add(id);

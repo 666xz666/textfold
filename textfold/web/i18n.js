@@ -436,6 +436,22 @@ window.DR_I18N = (() => {
       ['क्रम', 'प्रकार के अनुसार', 'जोड़ने की तारीख़ के अनुसार', 'हाल में खोले गए के अनुसार'], 'आज', 'पिछले 7 दिन', 'पिछले 30 दिन', 'इससे पहले']),
   };
   for (const [code, words] of Object.entries(F)) Object.assign(S[code], words);
+  // the same three, short, side by side under the search
+  const BY = {
+    en: ['Kind', 'Added', 'Opened'],
+    zh: ['类型', '添加时间', '最近打开'],
+    'zh-Hant': ['類型', '加入時間', '最近開啟'],
+    ja: ['種類', '追加日', '最近開いた'],
+    ko: ['종류', '추가일', '최근 열람'],
+    es: ['Tipo', 'Añadidos', 'Abiertos'],
+    fr: ['Type', 'Ajout', 'Ouverture'],
+    de: ['Art', 'Hinzugefügt', 'Geöffnet'],
+    pt: ['Tipo', 'Inclusão', 'Abertura'],
+    it: ['Tipo', 'Aggiunta', 'Apertura'],
+    ru: ['Тип', 'Добавлены', 'Открыты'],
+    hi: ['प्रकार', 'जोड़े गए', 'खोले गए'],
+  };
+  for (const [code, [a, b, c]] of Object.entries(BY)) Object.assign(S[code], { by_kind: a, by_added: b, by_opened: c });
   // a question's field and its turns: send it, stop it while the model answers, take a turn out of the conversation
   const turn = (w) => ({ n_send: w[0], n_stop: w[1], n_turn_del: w[2], n_turn_del_q: w[3] });
   const Q = {
