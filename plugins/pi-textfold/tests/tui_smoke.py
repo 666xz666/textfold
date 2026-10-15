@@ -1,7 +1,7 @@
 """
 Manual end-to-end smoke test for the TextFold-for-Pi extension: drives the real
-Pi TUI over a pty, sends a prompt, waits for the reply, presses Alt+2 / Alt+5 /
-Alt+1 and checks what the screen shows. Needs a working pi setup (1.2.0+ on
+Pi TUI over a pty, asks two questions, waits for each reply, presses Alt+3 / Alt+5 /
+Alt+1 and checks that both replies fold in place, the earlier one too, and unfold. Needs a working pi setup (1.2.0+ on
 Node 22.15+) with a default model, or the optional provider variables below.
 
 Optional environment:
@@ -11,7 +11,7 @@ Optional environment:
                        it is never needed when pi already has a login
   TEXTFOLD_PI_MODEL    the model to use, as `provider/model`
 
-Run:  python3 tui_smoke.py        (exit 0 = all four screens correct)
+Run:  python3 tui_smoke.py        (exit 0 = every check passed)
 """
 import os, pty, select, time, subprocess, re, signal, fcntl, struct, termios, sys
 
@@ -58,6 +58,8 @@ if pid == 0:
     os.execvpe("bash", ["bash", "-c",
         f'{NODE_PREFIX}exec node {repr(cli)} ' +
         " ".join(repr(a) for a in args)], env)
+# Tall enough that both replies stay on screen: Pi runs full screen and draws only what is in view
+fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 80, 100, 0, 0))
 
 buf = b""
 def read_for(sec):
@@ -75,9 +77,6 @@ def read_for(sec):
             end = time.time() + 2
     return buf
 
-def resize(fd, rows):
-    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, 100, 0, 0))
-
 def send(data, wait=1.0):
     os.write(fd, data)
     read_for(wait)
@@ -89,28 +88,28 @@ def mark(name):
 read_for(10); time.sleep(2); read_for(1)
 mark("startup")
 
-send(b"Write three short paragraphs about why reading less but keeping structure is good.\r", 3)
-quiet = 0
-for i in range(150):
-    n = len(buf)
-    read_for(1.5)
-    if len(buf) == n:
-        quiet += 1
-        if quiet >= 6: break
-    else:
-        quiet = 0
+def ask(prompt):
+    send(prompt, 3)
+    quiet = 0
+    for i in range(150):
+        n = len(buf)
+        read_for(1.5)
+        if len(buf) == n:
+            quiet += 1
+            if quiet >= 6: break
+        else:
+            quiet = 0
+
+# two replies, so the level also reaches one that is no longer the newest
+ask(b"Write three short paragraphs about why reading less but keeping structure is good.\r")
+ask(b"Now write three short paragraphs about why headings help a reader find their way back.\r")
 mark("reply")
 
-# Alt+2 (Brief): the fold panel appears at once; a resize repaints in place
-send(b"\x1b2", 3); mark("brief")
-resize(fd, 42); read_for(2); resize(fd, 40); read_for(2)
-# Alt+5 (Gist)
+# Alt+3 (Points), Alt+5 (Gist): every reply on the screen is drawn again, folded in place
+send(b"\x1b3", 3); mark("points")
 send(b"\x1b5", 3); mark("gist")
-resize(fd, 42); read_for(2); resize(fd, 40); read_for(2)
-# Alt+1 (unfold): the panel goes away
+# Alt+1 (unfold): every reply as written again
 send(b"\x1b1", 3); mark("full")
-resize(fd, 42); read_for(2); resize(fd, 40); read_for(2)
-mark("end")
 
 try:
     os.kill(pid, signal.SIGKILL); os.waitpid(pid, 0)
@@ -130,11 +129,14 @@ for i, k in enumerate(keys):
 startup = clean(buf)[:2000]
 report = {
     "startup_ok": "Warning:" not in startup and "extension error" not in startup.lower(),
-    "brief_widget": "TextFold · Brief" in segs["brief"],
-    "gist_widget": "TextFold · Gist" in segs["gist"],
-    "fold_cleared": "TextFold ·" not in segs["end"],
+    # the level row above the prompt: the five levels and their keys
+    "level_row": all(f"{n} {name}" in segs["startup"] for n, name in enumerate(["Full", "Brief", "Points", "Outline", "Gist"], 1)),
+    # each reply drawn again with its fold line, the earlier one as well as the newest
+    "points_in_place": len(re.findall(r"Points · \d+ of \d+ words", segs["points"])) >= 2,
+    "gist_in_place": len(re.findall(r"Gist · \d+ of \d+ words", segs["gist"])) >= 2,
+    "unfolded": "unfolds" not in segs["full"],
 }
 for k, v in report.items(): print(f"{k}: {v}")
-folds = re.findall(r"(Brief|Points|Outline|Gist) · \d+ of \d+ words", segs["brief"] + segs["gist"])
-print("in-place fold lines:", folds[-2:] if folds else "NONE")
+folds = re.findall(r"(Brief|Points|Outline|Gist) · \d+ of \d+ words", segs["points"] + segs["gist"])
+print("in-place fold lines:", folds if folds else "NONE")
 sys.exit(0 if all(report.values()) else 1)

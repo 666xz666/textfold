@@ -11,11 +11,11 @@
  * keeps a prefix of what Pi wrote; the fold changes the order of what the agent
  * says, not what it says or how much.
  */
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-import type { KeyId } from "@earendil-works/pi-tui";
+import type { KeyId, TUI } from "@earendil-works/pi-tui";
 import { fold, LEVELS, worthFolding } from "./fold";
-import { foldPanelLines, parseLevelArg, PANEL_KEY, type Level, type PanelCtx } from "./panel";
+import { KEY, levelRow, parseLevelArg, type Level } from "./level";
 
 // Identical to the Claude Code mod's prompt section, so replies fold the same way
 // on every harness. It asks for the point first at every scale.
@@ -27,10 +27,8 @@ The person reading this session can fold your replies with one key: to each para
 This changes the order of what you write, not its content or its length.`;
 
 export default function textfoldFold(pi: ExtensionAPI) {
-	// The level every loadout-rendered reply shows at, and the panel with. Full at start.
+	// The level every reply is read at: 1 Full (as written) to 5 Gist. Full at start.
 	let level: Level = 1;
-	// The latest settled assistant reply: the panel always shows this fold.
-	let lastAssistant = "";
 
 	// The style section, appended as a structured prompt section so the session
 	// records a delta instead of a replaced prompt.
@@ -42,20 +40,7 @@ export default function textfoldFold(pi: ExtensionAPI) {
 		return {};
 	});
 
-	// The latest assistant reply, for the panel.
-	pi.on("message_end", (event, ctx) => {
-		const m = event.message as { role?: string; content?: Array<{ type?: string; text?: string }> };
-		if (m?.role !== "assistant" || !Array.isArray(m.content)) return;
-		const text = m.content.filter((b) => b?.type === "text" && b.text).map((b) => b.text).join("\n\n");
-		if (text) {
-			lastAssistant = text;
-			renderPanel(ctx as unknown as PanelCtx | undefined);
-		}
-	});
-
-	// In-place fold, display only: applied before Pi renders each assistant block.
-	// A fresh or re-invalidated message folds at the level in force when it renders;
-	// older blocks keep theirs until Pi re-renders them (a width change at least).
+	// Each reply folded as Pi draws it, on the screen only: what the model sees is never changed.
 	pi.registerMarkdownTransformer((markdown, context) => {
 		if (context.messageType !== "assistant" || level === 1) return markdown;
 		const f = fold(markdown, level);
@@ -63,16 +48,29 @@ export default function textfoldFold(pi: ExtensionAPI) {
 		return `${f.text || "…"}\n\n*${levelName(level)} · ${f.shown} of ${f.total} words · Alt+1 unfolds*`;
 	});
 
-	// The panel: setWidget re-renders unconditionally, so keys 1..5 reflect at once.
-	const renderPanel = (ctx?: PanelCtx) => {
-		ctx?.ui.setWidget(PANEL_KEY, foldPanelLines(lastAssistant, level));
-	};
+	// The row above the prompt names the five levels and marks the one read at. Pi hands its screen to the
+	// row's factory, which the extension keeps: a new level has to be drawn on all of it.
+	let screen: TUI | undefined;
+	const install = (ctx: ExtensionContext) =>
+		ctx.ui.setWidget(
+			KEY,
+			(tui, theme) => {
+				screen = tui;
+				const paint = { label: (s: string) => theme.fg("muted", s), current: (s: string) => theme.bold(theme.fg("accent", s)), other: (s: string) => theme.fg("dim", s) };
+				return { render: (width: number) => [` ${levelRow(level, width - 1, paint)}`], invalidate: () => {} };
+			},
+			{ placement: "aboveEditor" },
+		);
+	pi.on("session_start", (_event, ctx) => install(ctx));
 
-	const apply = (next: Level, ctx?: PanelCtx) => {
+	// A new level folds every reply in place at once, the earlier ones too. Pi keeps each reply as it drew it
+	// until its text or the screen's width changes, so what it kept is dropped and the whole screen drawn again.
+	const apply = (next: Level, ctx: ExtensionContext) => {
 		if (next === level) return;
 		level = next;
-		ctx?.ui.notify(`Fold: ${levelName(next)}`, "info");
-		renderPanel(ctx);
+		if (!screen) install(ctx);
+		screen?.invalidate();
+		screen?.requestRender(true);
 	};
 
 	// Alt+1..Alt+5. Not plain digits: Pi dispatches extension shortcuts before the
@@ -81,20 +79,19 @@ export default function textfoldFold(pi: ExtensionAPI) {
 		const key = `alt+${n}` as KeyId;
 		pi.registerShortcut(key, {
 			description: `Fold replies to ${levelName(n)}`,
-			handler: async (ctx) => apply(n, ctx as unknown as PanelCtx),
+			handler: async (ctx) => apply(n, ctx),
 		});
 	}
 
 	pi.registerCommand("fold", {
 		description: "Fold replies: 1..5, a level name, off, or nothing for the next level",
 		handler: async (arg: string | undefined, ctx) => {
-			const panel = ctx as unknown as PanelCtx | undefined;
 			const got = parseLevelArg(arg ?? "", level);
 			if (got.error) {
-				panel?.ui.notify(got.error, "warning");
+				ctx.ui.notify(got.error, "warning");
 				return;
 			}
-			if (got.level) apply(got.level, panel);
+			if (got.level) apply(got.level, ctx);
 		},
 	});
 }

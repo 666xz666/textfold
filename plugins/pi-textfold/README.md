@@ -2,6 +2,8 @@
 
 Your agent writes more than you have time to read. TextFold folds every reply in [Pi](https://pi.dev) to the level you need, from every word to the answer in one sentence, with one key. It is the fold of [TextFold for Claude Code](../textfold/README.md), as a Pi extension, from [TextFold](../../README.md).
 
+<img src="../../docs/assets/pi.gif" width="880" alt="A reply in Pi folding a level at a time, from the full text down to its answer in one sentence, one key each">
+
 | Key | Level | What you get |
 |:-:|---|---|
 | **Alt+1** | **Full** | every word the model wrote |
@@ -12,7 +14,7 @@ Your agent writes more than you have time to read. TextFold folds every reply in
 
 Hold Alt and type the digit, or type `/fold` and a level: `/fold 3`, `/fold points`, `/fold off`. `/fold` alone moves to the next level. A folded reply tells you its level and how much of it you are seeing, and Alt+1 brings back every word. Short replies stay whole: one under about 80 words, or one a fold would barely shorten, always shows as written.
 
-**Where the fold shows.** Pi folds a reply as it draws it, at the level you chose. It does not draw a reply again when only the level changes, so a panel above the prompt shows the latest reply at the new level at once, as much of it as fits. Earlier replies take the new level the next time Pi draws them, after a resize for instance.
+**Every reply at once.** A new level folds every reply in place, the earlier ones too, and the row above the prompt shows the five levels, the one you read at marked. Pi keeps each reply as it drew it, so the extension has the whole conversation drawn again when the level changes.
 
 **Why Alt.** Pi hands every key to its extensions before the prompt sees it, so a bare digit would never reach what you type.
 
