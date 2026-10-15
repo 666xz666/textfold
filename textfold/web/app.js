@@ -273,8 +273,20 @@
     : msg === 'bad-file' ? t().file_bad : msg === 'no-file' ? t().no_file : msg === 'not-running' ? t().z_off : msg === 'api-off' ? t().z_api_off
     : msg === 'web-notext' ? t().web_notext : msg === 'web-pdf' ? t().web_pdf : msg === 'web-blocked' ? t().web_blocked : msg);
 
-  // the corner where the page says what is under way, one above the other: a generation, the app's update
+  // the corner where the page says what is under way, one above the other: a generation, the app's update. Each toast
+  // is a small card: a sign at the left, what happens beside it, then its line, its progress or its buttons below.
   const toasts = h('div', 'toasts'); document.body.append(toasts);
+  const SIGN = {
+    done: '<path d="M5.5 10.5l3 3 6-6.5"/>',
+    down: '<path d="M10 4.5v8.5M6.5 9.5l3.5 3.5 3.5-3.5M5.5 16h9"/>',
+    restart: '<path d="M15.5 10a5.5 5.5 0 1 1-1.7-4M14.5 3.5v3h-3"/>',
+    warn: '<path d="M10 6.5V11M10 13.8v.2"/><circle cx="10" cy="10" r="7"/>',
+    out: '<path d="M8.5 5.5h-3v9h9v-3M11.5 4.5h4v4M15.5 4.5l-6 6"/>',
+    x: '<path d="M6 6l8 8M14 6l-8 8"/>',
+  };
+  const svg = (k) => `<svg viewBox="0 0 20 20" aria-hidden="true">${SIGN[k]}</svg>`;
+  const sign = (k, tone) => `<span class="g-ico${tone ? ` ${tone}` : ''}">${k === 'mark' ? MARK : svg(k)}</span>`;
+  const shut = (label) => `<button type="button" class="g-x" aria-label="${esc(label)}" title="${esc(label)}">${svg('x')}</button>`;
 
   // ── the app's own updates (desktop/main.js): a newer release, downloaded and installed when the reader says ──
   if (window.desktop && window.desktop.onUpdate) {
@@ -288,16 +300,15 @@
       const T = t(), v = (x) => esc(x.replace('{v}', (s && s.version) || ''));
       box.hidden = !s || s.dismissed || !['updated', 'available', 'downloading', 'ready', 'failed', ...Object.keys(SAID)].includes(s.kind);
       if (box.hidden) return;
-      const x = `<button type="button" class="g-x" aria-label="${esc(T.close)}">×</button>`;
+      const x = shut(T.close);
       const go = (label, primary) => `<span class="g-acts"><button type="button" class="g-go${primary ? ' primary' : ''}">${esc(label)}</button></span>`;
-      const link = (href, label, primary) => `<a class="g-go${primary ? ' primary' : ''}" href="${esc(href)}" target="_blank" rel="noopener">${label}</a>`;
-      box.innerHTML = SAID[s.kind] ? `<b>${esc(T[SAID[s.kind]])}</b>${x}`
-        : s.kind === 'updated' ? `<b>${v(T.up_done)}</b>${x}<span class="g-acts">${link(s.notes, esc(T.up_whatsnew))}${link(s.repo, `★ ${esc(T.up_star)}`, true)}</span>`
-          + `<span class="g-note">${esc(T.up_star_why)}</span>`
-        : s.kind === 'available' ? `<b>${v(T.up_new)}</b>${x}${go(T.up_get, true)}`
-        : s.kind === 'downloading' ? `<b>${esc(T.up_getting.replace('{p}', s.percent || 0))}</b><span class="sb-prog"><i style="width:${Math.max(3, s.percent || 0)}%"></i></span>`
-        : s.kind === 'ready' ? `<b>${v(T.up_ready)}</b>${x}${go(T.up_restart, true)}`
-        : `<b>${esc(T.up_failed)}</b>${x}${go(T.up_retry)}`;
+      const link = (href, label) => `<span class="g-acts"><a class="g-go" href="${esc(href)}" target="_blank" rel="noopener">${esc(label)}${svg('out')}</a></span>`;
+      box.innerHTML = SAID[s.kind] ? `${sign(s.kind === 'latest' ? 'done' : 'warn', s.kind === 'latest' ? 'ok' : 'warn')}<b>${esc(T[SAID[s.kind]])}</b>${x}`
+        : s.kind === 'updated' ? `${sign('done', 'ok')}<b>${v(T.up_done)}</b>${x}${link(s.notes, T.up_whatsnew)}`
+        : s.kind === 'available' ? `${sign('down')}<b>${v(T.up_new)}</b>${x}${go(T.up_get, true)}`
+        : s.kind === 'downloading' ? `${sign('down')}<b>${esc(T.up_getting.replace('{p}', s.percent || 0))}</b><span class="sb-prog"><i style="width:${Math.max(3, s.percent || 0)}%"></i></span>`
+        : s.kind === 'ready' ? `${sign('restart')}<b>${v(T.up_ready)}</b>${x}${go(T.up_restart, true)}`
+        : `${sign('warn', 'warn')}<b>${esc(T.up_failed)}</b>${x}${go(T.up_retry)}`;
       if (s.transient) fade = setTimeout(() => { box.hidden = true; }, 6000);
       const close = box.querySelector('.g-x');
       if (close) close.onclick = () => { box.hidden = true; if (!s.transient) D.dismissUpdate(); };
@@ -315,7 +326,11 @@
     // a Markdown file dropped on a paper's page: stored, then generated from the landing (?start=)
     let over = 0;
     const hasFile = (e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes('Files');
-    const say = (msg, ms) => { toast.hidden = false; toast.textContent = msg; if (ms) setTimeout(() => { toast.hidden = true; }, ms); };
+    const say = (msg, ms) => {   // (ms: a message that goes by itself, which says what went wrong)
+      toast.hidden = false;
+      toast.innerHTML = `${ms ? sign('warn', 'warn') : sign(msg === t().drop_md ? 'down' : 'mark')}<b>${esc(msg)}</b>`;
+      if (ms) setTimeout(() => { toast.hidden = true; }, ms);
+    };
     document.addEventListener('dragenter', (e) => { if (hasFile(e)) { over++; say(t().drop_md); } });
     document.addEventListener('dragleave', () => { if (--over <= 0) { over = 0; if (toast.textContent === t().drop_md) toast.hidden = true; } });
     document.addEventListener('dragover', (e) => { if (hasFile(e)) e.preventDefault(); });
@@ -345,15 +360,15 @@
     function toastFor(lang, note) {
       const T = t(), name = I18N.NATIVE[lang];
       toast.hidden = false;
-      toast.innerHTML = `<b>${esc(T.generating)} · ${esc(name)}</b><span class="g-stage">${esc(T.stages.queued)}</span>` +
+      toast.innerHTML = `${sign('mark')}<b>${esc(T.generating)} · ${esc(name)}</b><span class="g-stage">${esc(T.stages.queued)}</span>` +
         `<span class="sb-prog"><i style="width:4%"></i></span>${note ? `<span class="g-note">${esc(note)}</span>` : ''}`;
-      const closable = (head, line) => {
-        toast.innerHTML = `<b>${esc(head)} · ${esc(name)}</b><span class="g-stage">${esc(line)}</span><button type="button" class="g-x" aria-label="${esc(t().close)}">×</button>`;
+      const closable = (head, line, bad) => {
+        toast.innerHTML = `${bad ? sign('warn', 'warn') : sign('mark')}<b>${esc(head)} · ${esc(name)}</b>${shut(t().close)}${line ? `<span class="g-stage">${esc(line)}</span>` : ''}`;
         toast.querySelector('.g-x').onclick = () => { toast.hidden = true; };
       };
       const update = (j) => {
         const T2 = t();
-        if (j.status === 'error') { closable(T2.failed, errText(j.error)); return; }
+        if (j.status === 'error') { closable(T2.failed, errText(j.error), true); return; }
         if (j.status === 'stopped') { closable(T2.stopped, ''); return; }
         if (!toast.querySelector('.g-stop')) {
           toast.insertAdjacentHTML('beforeend', `<button type="button" class="g-stop">${esc(T2.stop)}</button>`);
@@ -364,7 +379,7 @@
         toast.querySelector('.sb-prog i').style.width = `${pct(j)}%`;
         if (j.status === 'done') reopen(j.lang);
       };
-      update.fail = (e) => closable(t().failed, errText(e.message));
+      update.fail = (e) => closable(t().failed, errText(e.message), true);
       return update;
     }
     function reopen(lang) {
@@ -744,14 +759,14 @@
     let form = null;          // the provider being added or edited: {key?, preset, name, base, api_key, found, picked}
     let test = null;          // the last connection test
     let bridgeStarting = false;
-    const dlg = h('dialog', 'settings'); document.body.append(dlg);
+    const dlg = h('dialog', 'settings prefs'); document.body.append(dlg);
     const T = () => t();
     const host = (u) => { try { return new URL(u).host; } catch { return u; } };
     const groupName = (g) => (data.agents.find((a) => a.runtime === g) || {}).label || (data.providers.find((p) => p.key === g) || {}).name || g;
 
     function modelSection() {
       const t = T();
-      if (!data.models.length) return `<p class="st-note">${esc(t.st_none)}</p>`;
+      if (!data.models.length) return `<div class="st-list"><p class="st-empty">${esc(t.st_none)}</p></div>`;
       const groups = [];
       for (const m of data.models) {
         let g = groups.find((x) => x.key === m.group);
@@ -760,32 +775,33 @@
       }
       const opts = groups.map((g) => `<optgroup label="${esc(groupName(g.key))}${g.agent ? ' · agent' : ''}">${g.items.map((m) =>
         `<option value="${esc(m.id)}"${m.id === data.selected ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>`).join('');
-      const res = test ? `<div class="st-test ${test.ok ? 'ok' : 'bad'}">${test.ok ? `✓ ${esc(t.test_ok)} · ${test.seconds}s` : `✕ ${esc(test.error || '')}`}</div>` : '';
-      return `<div class="st-row"><select name="model" class="st-model">${opts}</select><button type="button" class="st-testbtn">${esc(t.test)}</button></div>${res}`;
+      const res = test ? `<div class="st-test ${test.ok ? 'ok' : 'bad'}"><i class="st-dot${test.ok ? '' : ' bad'}"></i>${test.ok ? `${esc(t.test_ok)} · ${test.seconds}s` : esc(test.error || '')}</div>` : '';
+      return `<div class="st-list st-pad"><div class="st-row"><select name="model" class="st-model" aria-label="${esc(t.st_model)}">${opts}</select><button type="button" class="st-btn st-testbtn">${esc(t.test)}</button></div>${res}</div>`;
     }
 
     function agentSection() {
       const t = T();
       const found = data.agents.filter((a) => a.path);
       const missing = data.agents.filter((a) => !a.path && !a.error);
-      const rows = found.map((a) => `<div class="st-agent ${a.runnable ? 'ok' : 'warn'}"><i></i><b>${esc(a.label)}</b><span>${esc(a.version || '')}</span>
-        <em>${a.runnable ? esc(t.st_models.replace('{n}', a.models)) : esc(t.st_unsupported)}</em><code title="${esc(a.path)}">${esc(a.binary)}</code></div>`).join('');
-      return `${rows}${missing.length ? `<p class="st-note">${esc(t.st_notfound)}: ${missing.map((a) => esc(a.label)).join(', ')}</p>` : ''}
-        <div class="st-row end"><button type="button" class="st-scan"${data.scanning ? ' disabled' : ''}>${esc(data.scanning ? t.st_scanning : t.st_rescan)}</button></div>`;
+      const rows = found.map((a) => `<div class="st-item"><i class="st-dot${a.runnable ? '' : ' warn'}"></i><div class="st-main"><b>${esc(a.label)}</b>
+        <span class="st-meta">${a.version ? `${esc(a.version)} · ` : ''}<code title="${esc(a.path)}">${esc(a.binary)}</code></span></div>
+        <span class="st-aside">${a.runnable ? esc(t.st_models.replace('{n}', a.models)) : esc(t.st_unsupported)}</span></div>`).join('');
+      return `<div class="st-list">${rows}<div class="st-item st-foot-line"><span class="st-main st-meta">${missing.length ? `${esc(t.st_notfound)}: ${missing.map((a) => esc(a.label)).join(', ')}` : ''}</span>
+        <button type="button" class="st-btn st-scan"${data.scanning ? ' disabled' : ''}>${esc(data.scanning ? t.st_scanning : t.st_rescan)}</button></div></div>`;
     }
 
     function providerSection() {
       const t = T();
       const src = (p) => p.source === 'thoughtdag' ? t.st_from_td : p.source === 'env' ? t.st_from_env : p.source === 'bridge' ? t.st_auto : t.st_added;
-      const rows = data.providers.map((p) => `<div class="st-prov"><b>${esc(p.name)}</b><span class="st-src ${p.source}">${esc(src(p))}</span>
-        <span class="st-host">${esc(host(p.base))}</span><em>${esc(t.st_models.replace('{n}', p.models.length))}</em>
-        ${p.source === 'ui' ? `<button type="button" class="linkbtn st-edit" data-key="${esc(p.key)}">${esc(t.st_edit)}</button><button type="button" class="linkbtn st-del" data-key="${esc(p.key)}">${esc(t.st_remove)}</button>` : ''}</div>`).join('');
+      const rows = data.providers.map((p) => `<div class="st-item"><div class="st-main"><b>${esc(p.name)}<span class="st-src ${p.source}">${esc(src(p))}</span></b>
+        <span class="st-meta">${esc(host(p.base))}</span></div><span class="st-aside">${esc(t.st_models.replace('{n}', p.models.length))}</span>
+        ${p.source === 'ui' ? `<span class="st-acts"><button type="button" class="st-btn st-edit" data-key="${esc(p.key)}">${esc(t.st_edit)}</button><button type="button" class="st-btn danger st-del" data-key="${esc(p.key)}">${esc(t.st_remove)}</button></span>` : ''}</div>`).join('');
       const td = '';   // (ThoughtDAG's .env is no longer read: its providers were copied into these settings once, v0.8.3)
       const br = data.bridge || {};
-      const bridgeRow = br.running || data.providers.some((p) => p.preset === 'chatgpt-bridge') ? '' : `<div class="st-prov st-bridgerow"><b>${esc(t.bridge_name)}</b>
-        <span class="st-host">127.0.0.1:10531</span><em>${esc(bridgeStarting ? t.bridge_starting : t.bridge_off)}</em>
-        ${br.node && !bridgeStarting ? `<button type="button" class="linkbtn st-bridgego">${esc(t.bridge_start)}</button>` : ''}</div>`;
-      return `${rows}${bridgeRow}${td}${form ? providerForm() : `<div class="st-row end"><button type="button" class="st-add">＋ ${esc(t.st_add)}</button></div>`}`;
+      const bridgeRow = br.running || data.providers.some((p) => p.preset === 'chatgpt-bridge') ? '' : `<div class="st-item"><i class="st-dot off"></i><div class="st-main"><b>${esc(t.bridge_name)}</b>
+        <span class="st-meta">127.0.0.1:10531 · ${esc(bridgeStarting ? t.bridge_starting : t.bridge_off)}</span></div>
+        ${br.node && !bridgeStarting ? `<button type="button" class="st-btn st-bridgego">${esc(t.bridge_start)}</button>` : ''}</div>`;
+      return `<div class="st-list">${rows}${bridgeRow}${td}${form ? providerForm() : `<button type="button" class="st-addrow st-add"><span aria-hidden="true">＋</span>${esc(t.st_add)}</button>`}</div>`;
     }
 
     function providerForm() {
@@ -813,25 +829,33 @@
         <label>${esc(t.st_preset)}<select class="pf-preset">${opts}</select></label>${oauth}${minted}${bridge}
         ${form.preset === 'custom' ? `<label>${esc(t.st_name)}<input class="pf-name" value="${esc(form.name || '')}"></label>` : ''}
         <label>${esc(t.base_url)}<input class="pf-base" value="${esc(form.base || '')}" placeholder="https://…/v1"></label>
-        ${preset.nokey || form.minted ? '' : `<label>${esc(t.api_key)}${preset.keyUrl ? ` · <a href="${preset.keyUrl}" target="_blank" rel="noopener">${esc(host(preset.keyUrl))}</a>` : ''}<input class="pf-key" type="password" placeholder="${esc(form.key ? t.st_key_kept : 'sk-…')}"></label>`}
-        <div class="st-row"><button type="button" class="pf-fetch">${esc(t.st_fetch)}</button><span class="pf-err"></span></div>
+        ${preset.nokey || form.minted ? '' : `<label><span>${esc(t.api_key)}${preset.keyUrl ? ` · <a href="${preset.keyUrl}" target="_blank" rel="noopener">${esc(host(preset.keyUrl))}</a>` : ''}</span><input class="pf-key" type="password" placeholder="${esc(form.key ? t.st_key_kept : 'sk-…')}"></label>`}
+        <div class="st-row"><button type="button" class="st-btn pf-fetch">${esc(t.st_fetch)}</button><span class="pf-err"></span></div>
         ${list}
-        <div class="st-row end"><button type="button" class="pf-cancel">${esc(t.cancel)}</button><button type="button" class="primary pf-save"${form.found && form.found.length ? '' : ' disabled'}>${esc(t.st_save_provider)}</button></div></div>`;
+        <div class="st-row end"><button type="button" class="st-btn pf-cancel">${esc(t.cancel)}</button><button type="button" class="primary pf-save"${form.found && form.found.length ? '' : ' disabled'}>${esc(t.st_save_provider)}</button></div></div>`;
     }
 
+    let formShown = false;
     function render() {
-      const t = T();
-      dlg.innerHTML = `<div class="st"><h2>${esc(t.settings)}</h2>
-        <section class="st-uilang"><h3>${esc(t.language)}</h3><select class="st-ui">${I18N.CODES.map((c) => `<option value="${c}"${c === uiLang ? ' selected' : ''}>${esc(I18N.NATIVE[c])}</option>`).join('')}</select></section>
-        ${app ? `<section class="st-app"><div class="st-uilang"><h3>TextFold ${esc(app)}</h3><span class="st-upd-msg"></span><button type="button" class="st-upd">${esc(t.up_check)}</button></div><p class="st-note">${esc(t.up_note)} <a href="https://github.com/chenxiachan/textfold" target="_blank" rel="noopener">★ ${esc(t.up_star)}</a></p></section>` : ''}
+      const t = T(), body = q('.stp-body'), y = body ? body.scrollTop : 0;   // (drawn again on each change: the place is kept)
+      dlg.innerHTML = `<div class="stp" tabindex="-1" autofocus>
+        <header class="stp-head"><h2>${esc(t.settings)}</h2><button type="button" class="stp-x st-close" aria-label="${esc(t.close)}" title="${esc(t.close)}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 6l8 8M14 6l-8 8"/></svg></button></header>
+        <div class="stp-body">
+        <section><div class="st-list">
+          <div class="st-item"><label class="st-main" for="st-ui"><b>${esc(t.language)}</b></label><select class="st-ui" id="st-ui">${I18N.CODES.map((c) => `<option value="${c}"${c === uiLang ? ' selected' : ''}>${esc(I18N.NATIVE[c])}</option>`).join('')}</select></div>
+          ${app ? `<div class="st-item st-app"><div class="st-main"><b>TextFold ${esc(app)}</b><span class="st-meta">${esc(t.up_note)} <a href="https://github.com/chenxiachan/textfold" target="_blank" rel="noopener">★ ${esc(t.up_star)}</a></span><span class="st-upd-msg" aria-live="polite"></span></div><button type="button" class="st-btn st-upd">${esc(t.up_check)}</button></div>` : ''}
+        </div></section>
         <section><h3>${esc(t.st_model)}</h3>${modelSection()}</section>
         <section><h3>${esc(t.st_agents)}</h3>${agentSection()}</section>
         <section><h3>${esc(t.st_providers)}</h3>${providerSection()}</section>
         <section class="st-engine"></section>
-        <p class="st-note">${esc(t.key_note)}</p>
-        <div class="st-btns"><span></span><button type="button" class="primary st-close">${esc(t.st_close)}</button></div></div>`;
+        </div>
+        <footer class="stp-foot"><p>${esc(t.key_note)}</p><button type="button" class="primary st-close">${esc(t.st_close)}</button></footer></div>`;
       wire();
       renderEngine();
+      q('.stp-body').scrollTop = y;   // (after the engine's part, which makes the sections their full height)
+      if (form && !formShown) q('.st-form').scrollIntoView({ block: 'nearest' });   // adding or editing a provider: the form in view
+      formShown = !!form;
     }
     const q = (sel) => dlg.querySelector(sel);
     // the PDF engine's own part of the dialog, drawn again on its own while it installs
@@ -840,14 +864,14 @@
       const box = q('.st-engine');
       if (!box) return;
       const t = T(), e = data.engine || {}, job = jobs.find((j) => j.kind === 'install' && live(j));
-      const state = job ? `<div class="st-agent ok"><i></i><b>${esc(t.engine)}</b><span>${esc(stageOf(job, t))}</span></div>`
-        : e.installed ? `<div class="st-agent ok"><i></i><b>MinerU ${esc(e.version)}</b><span>${esc(t.engine_on.replace('{size}', gb(e.bytes)))}</span><code title="${esc(e.path)}">${esc(e.path.split('/').slice(-3).join('/'))}</code></div>`
-        : `<p class="st-note">${esc(t.engine_off)}</p>`;
-      const tier = `<div class="st-row"><label class="st-tier">${esc(t.tier)}<select class="st-tiersel">${['fast', 'accurate'].map((k) =>
-        `<option value="${k}"${(data.pdfTier || 'fast') === k ? ' selected' : ''}>${esc(t['tier_' + k])}</option>`).join('')}</select></label></div>`;
-      const act = job ? '' : e.installed ? `<button type="button" class="linkbtn st-engine-rm">${esc(t.engine_remove)}</button>`
-        : `<button type="button" class="st-engine-in">${esc(t.engine_install)}</button>`;
-      box.innerHTML = `<h3>${esc(t.engine)}</h3>${state}${tier}<div class="st-row end">${act}</div>`;
+      const act = job ? '' : e.installed ? `<button type="button" class="st-btn danger st-engine-rm">${esc(t.engine_remove)}</button>`
+        : `<button type="button" class="st-btn st-engine-in">${esc(t.engine_install)}</button>`;
+      const state = job ? `<div class="st-item"><i class="st-dot busy"></i><div class="st-main"><b>${esc(t.engine)}</b><span class="st-meta">${esc(stageOf(job, t))}</span></div></div>`
+        : e.installed ? `<div class="st-item"><i class="st-dot"></i><div class="st-main"><b>MinerU ${esc(e.version)}</b><span class="st-meta">${esc(t.engine_on.replace('{size}', gb(e.bytes)))} · <code title="${esc(e.path)}">${esc(e.path.split('/').slice(-3).join('/'))}</code></span></div>${act}</div>`
+        : `<div class="st-item"><div class="st-main st-meta st-desc">${esc(t.engine_off)}</div>${act}</div>`;
+      const tier = `<div class="st-item"><label class="st-main" for="st-tier"><b>${esc(t.tier)}</b></label><select class="st-tiersel" id="st-tier">${['fast', 'accurate'].map((k) =>
+        `<option value="${k}"${(data.pdfTier || 'fast') === k ? ' selected' : ''}>${esc(t['tier_' + k])}</option>`).join('')}</select></div>`;
+      box.innerHTML = `<h3>${esc(t.engine)}</h3><div class="st-list">${state}${tier}</div>`;
       box.querySelector('.st-tiersel').onchange = async (ev) => { data = await api('/api/settings', { pdf_tier: ev.target.value }); renderEngine(); };
       const inst = box.querySelector('.st-engine-in');
       if (inst) inst.onclick = async () => { inst.disabled = true; watch(await api('/api/engine/install', {}), () => {}); follow(); };
@@ -868,7 +892,7 @@
     const update = (d) => { data = d; modelName = d.models.length ? (d.selectedName || '') : ''; renderSidebar(); if (landing) renderLanding(); render(); };
 
     function wire() {
-      q('.st-close').onclick = () => dlg.close();
+      dlg.querySelectorAll('.st-close').forEach((b) => { b.onclick = () => dlg.close(); });
       const up = q('.st-upd');
       if (up) up.onclick = async () => {   // an answer either way; one found shows as the corner's toast too
         const msg = q('.st-upd-msg'), t = T();

@@ -24,12 +24,17 @@
   --hl: #FFE07A; --hl-ink: #D9A400;   /* the reader's highlights */
   --col: 700px;
   --ease: cubic-bezier(.2, .8, .2, 1);
+  /* a filled button, its words, and what floats over the page (a toast, the settings) */
+  --btn: #6B5CE7; --btn-hover: #5A4AD9; --on-btn: #fff;
+  --pop: 0 1px 2px rgba(30, 22, 8, .05), 0 14px 36px -14px rgba(30, 22, 8, .38);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --surface: #1B1915; --card: #24211C; --ink: #EDE9E3; --ink-2: #C9C3BA; --muted: #9C958B;
     --faint: #5E5850; --line: #3A362F; --line-2: #2E2B25; --accent: #A79FF4; --accent-soft: #2D2850;
     --accent-deep: #CFC9FA; --rule: #8A847C; --hl: #8A7024; --hl-ink: #E8C04A;
+    --btn: #6B5CE7; --btn-hover: #7B6DF0; --on-btn: #fff;
+    --pop: 0 1px 2px rgba(0, 0, 0, .3), 0 18px 44px -14px rgba(0, 0, 0, .65);
   }
   :root:not([data-theme="light"]) .fbody img { background: #fff; border-radius: 4px; }
 }
@@ -581,7 +586,7 @@ html.morphing .chatbtn { pointer-events: none; }
 .sv-err { margin: 6px 0 0; font-size: 12.5px; color: var(--r-limitation); }
 .sv-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .sv-acts button { font: 600 13.5px var(--sans); border-radius: 999px; padding: 7px 16px; cursor: pointer; border: 1px solid var(--line); background: none; color: var(--ink-2); }
-.sv-acts .sv-go { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sv-acts .sv-go { background: var(--btn); border-color: var(--btn); color: var(--on-btn); }
 .sv-acts .sv-go:disabled { opacity: .5; cursor: default; }
 .sv-busy { display: flex; align-items: center; gap: 10px; min-height: 34px; font: 500 13.5px var(--sans); color: var(--muted); }
 .sv-busy svg { width: 24px; height: 24px; flex: none; }

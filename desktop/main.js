@@ -134,8 +134,8 @@ function answer(s) {
   if (win && !win.isDestroyed()) win.webContents.send('update', { ...s, transient: true });
 }
 const REPO = 'https://github.com/chenxiachan/textfold';
-// The first launch after an update says so, with what is new and a door to star the project (ThoughtDAG's). A first
-// install says nothing: the version it records is the next one's "was".
+// The first launch after an update says so, with a link to what is new. A first install says nothing: the version it
+// records is the next one's "was".
 function updatedFrom() {
   const f = path.join(app.getPath('userData'), 'version');
   let was = null;
@@ -155,7 +155,7 @@ function setupUpdates() {
     return;
   }
   const was = updatedFrom();
-  if (was) update = { kind: 'updated', version: app.getVersion(), from: was, notes: `${REPO}/releases/tag/v${app.getVersion()}`, repo: REPO };
+  if (was) update = { kind: 'updated', version: app.getVersion(), from: was, notes: `${REPO}/releases/tag/v${app.getVersion()}` };
   if (process.env.TEXTFOLD_UPDATES) updater.setFeedURL({ provider: 'generic', url: process.env.TEXTFOLD_UPDATES });
   updater.autoDownload = false;   // the reader starts the download, never the app
   updater.on('update-available', (info) => {
