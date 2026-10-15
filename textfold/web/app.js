@@ -123,7 +123,6 @@
         <button type="button" class="rail-btn rail-settings" title="${esc(T.settings)}">⚙</button>
         ${window.TFTutorial && PAPER ? `<button type="button" class="rail-btn rail-help" title="${esc(T.tut_open)}">?</button>` : ''}
       </div>
-      <a class="sb-new" href="/">＋ ${esc(T.new_paper)}</a>
       <div class="sb-find"><input type="search" class="sb-q" value="${esc(sbQuery)}" placeholder="${esc(T.sb_search)}" aria-label="${esc(T.sb_search)}" autocomplete="off" spellcheck="false">` +
         `<button type="button" class="sb-sort${order !== 'kind' ? ' on' : ''}" aria-haspopup="menu" title="${esc(T[`sort_${order}`])}" aria-label="${esc(`${T.sort_label}: ${T[`sort_${order}`]}`)}">${CLOCK}</button>` +
         `<button type="button" class="sb-newf" title="${esc(T.f_new)}" aria-label="${esc(T.f_new)}">${FOLDER_NEW}</button></div>

@@ -10,9 +10,6 @@
 .sb-brand { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 15px; color: var(--ink); text-decoration: none !important; }
 .sb-toggle { border: 0; background: none; color: var(--muted); font-size: 22px; line-height: 1; padding: 2px 8px; border-radius: 6px; cursor: pointer; }
 .sb-toggle:hover { background: var(--surface); color: var(--ink); }
-.sb-new { margin: 4px 12px 10px; padding: 8px 12px; border-radius: 9px; border: 1px solid var(--line); color: var(--ink); font-size: 13.5px;
-  font-weight: 550; text-decoration: none !important; }
-.sb-new:hover { border-color: var(--accent); color: var(--accent); }
 .sb-label { padding: 6px 16px 4px; font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
 .sb-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
 .sb-group { padding: 12px 9px 4px; font-size: 11.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
@@ -52,7 +49,7 @@
 .sb-empty { padding: 10px 9px; font-size: 13px; color: var(--faint); }
 /* the library's search, its order (by kind, by when added or last opened) and the reader's folders (app.js): a folder's documents under it, a little in;
    dragged, a document lights the folder it would go into, or, out of one, the place for those in none */
-.sb-find { display: flex; align-items: center; gap: 2px; margin: 0 10px 8px 12px; }
+.sb-find { display: flex; align-items: center; gap: 2px; margin: 2px 10px 8px 12px; }
 .sb-q { flex: 1; min-width: 0; height: 32px; padding: 0 8px 0 30px; font: 13px var(--sans); color: var(--ink); border: 1px solid var(--line-2); border-radius: 9px;
   outline: none; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke='%238A847C' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='8.5' cy='8.5' r='5'/%3E%3Cpath d='M12.3 12.3L16 16'/%3E%3C/g%3E%3C/svg%3E") no-repeat 10px center / 14px; }
 .sb-q::placeholder { color: var(--faint); }
