@@ -1444,24 +1444,14 @@
     morph(() => { lang = l; applyLang(); renderAll(hot, band); }, defaultAnchor());
   }
 
-  // a paragraph opened to its full text comes to the middle of what the screen shows between the top bar and the zoom
-  // bar, where it reads best (one taller than that shows from its start); closed, it stays where it was, unless its
-  // start is out of sight (closed from below it): then its start comes down below the top bar
-  function sight() {
-    const tb = document.querySelector('.topbar'), zb = document.querySelector('footer.zoom');
-    return [(tb && tb.offsetHeight ? Math.max(0, tb.getBoundingClientRect().bottom) : 0) + 12,
-      (zb && zb.offsetHeight ? zb.getBoundingClientRect().top : innerHeight) - 12];
-  }
   function toggleUnit(uid) {
     if (busy) return;
-    const el = unitEl.get(uid), opening = !localLevel.has(uid);
-    const r = el.getBoundingClientRect(), anchor = { el, y: r.top, frac: 0 };
+    const el = unitEl.get(uid);
+    const r = el.getBoundingClientRect();
     morph(() => {
-      if (opening) localLevel.set(uid, 4); else localLevel.delete(uid);
+      if (localLevel.has(uid)) localLevel.delete(uid); else localLevel.set(uid, 4);
       renderUnit(uid, true);
-      const [hi, lo] = sight(), h = el.getBoundingClientRect().height;
-      anchor.y = Math.max(hi, opening ? (hi + lo - h) / 2 : Math.min(r.top, lo - h));
-    }, anchor);
+    }, { el, y: r.top, frac: 0 });
   }
 
   function defaultAnchor() {
