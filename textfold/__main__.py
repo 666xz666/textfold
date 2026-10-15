@@ -24,7 +24,7 @@ def get(a):
     """A document at one level, on stdout: written first when it has no levels yet (a model is called), unless
     --no-generate. A PDF (or a Word, PowerPoint, Excel, EPUB or HTML file, a picture) goes through the PDF engine; a
     Markdown or text file is read as it is."""
-    from . import engine, fold, models, office, pdfdoc, pdftext, store
+    from . import agents, engine, fold, models, office, pdfdoc, pdftext, store
     f = Path(a.ref).expanduser()
     ext = engine.kind_of(f.name) if f.is_file() else None
     if ext:
@@ -56,6 +56,10 @@ def get(a):
         pid = local.import_file(f)
     else:
         pid = store.resolve(a.ref)
+    if not a.no_generate:
+        chosen = models.load_settings().get("model") or ""
+        if not chosen or agents.runtime_of(chosen):   # an agent's model (or none chosen): the agents on this computer
+            agents.scan()                             # found first, as the server finds them when it starts
     try:
         spec = None if a.no_generate else models.resolve(None)
     except RuntimeError:
